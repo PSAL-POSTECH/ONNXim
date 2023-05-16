@@ -51,7 +51,7 @@ You need to export your model to ONNX. We provide fused ResNet18 in `models` dir
 # Getting Started
 ## method 1 (Docker Image)
 ```
-$ git clone ssh://git@acpws-gitlab.postech.ac.kr:10023/hhk971/ai-framwork-sim.git
+$ git clone https://github.com/PSAL-POSTECH/ONNXim.git 
 $ cd ai-framwork-sim
 $ docker build . -t onnxim
 ```
@@ -68,7 +68,7 @@ run docker image
 ## method 2 (Mannual)
 ### Instrallation
 ```
-$ git clone ssh://git@acpws-gitlab.postech.ac.kr:10023/hhk971/ai-framwork-sim.git
+$ git clone https://github.com/PSAL-POSTECH/ONNXim.git
 $ cd ai-framwork-sim
 $ git submodule update --recursive --init
 ```
@@ -84,6 +84,10 @@ $ make -j
 $ cd ..
 $ ./build/bin/Simulator --config ./configs/systolic_ws_8x8_c1_simple_noc.json --model ./models_list.json
 ```
+
+### Result
+
+![Demo](/img/ONNXim_demo.png)
 
 ## Future Works
 This version only supports GEMM and Conv Operation. We're developing the simulator to support other operations such as pooling.
