@@ -10,6 +10,7 @@ externalproject_add(
   GoogleTest
   URL https://github.com/google/googletest/archive/release-1.8.1.zip
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/lib
+  CMAKE_ARGS -DCMAKE_CXX_FLAGS:STRING="-D_GLIBCXX_USE_CXX11_ABI=0"
   INSTALL_COMMAND ""
 )
 
