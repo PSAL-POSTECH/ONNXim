@@ -1,0 +1,78 @@
+architecture:
+  # ============================================================
+  # Architecture Description
+  # ============================================================
+  version: 0.3
+  subtree:
+    - name: system
+      local:
+        - name: DRAM
+          class: DRAM
+          attributes:
+            type: HBM2
+            width: 256
+            block-size: 8
+            word-bits: 32
+      subtree:
+        - name: simple_ws
+          attributes:
+            technology: 45nm
+          local:
+            - name: accum_spad
+              class: smartbuffer_SRAM
+              attributes:
+                memory_depth: 2048
+                memory_width: 256
+                n_banks: 2
+                block-size: 8
+                word-bits: 32
+                read_bandwidth: 8
+                write_bandwidth: 8
+                multiple-buffering: 2
+            - name: spad
+              class: smartbuffer_SRAM
+              attributes:
+                memory_depth: 8192
+                memory_width: 256
+                n_banks: 4
+                block-size: 8
+                word-bits: 32
+                read_bandwidth: 8
+                write_bandwidth: 8
+                multiple-buffering: 2
+          subtree:
+          - name: PE[0..63]
+            local:
+              - name: pe_spad
+                class: smartbuffer_RF
+                attributes:
+#                  memory_depth: 192
+                  memory_depth: 1
+                  memory_width: 32
+                  block-size: 1
+                  word-bits: 32
+                  meshX: 8
+              - name: mac
+                class: intmac
+                attributes:
+                  datawidth: 32
+                  meshX : 8
+              # input and output registers for the mac unit
+              - name: weight_reg
+                class: reg_storage
+                attributes:
+                  depth: 1
+                  width: 32           # width in bits
+                  meshX: 8
+              - name: input_activation_reg
+                class: reg_storage
+                attributes:
+                  depth: 1
+                  width: 32           # width in bits
+                  meshX: 8
+              - name: output_activation_reg
+                class: reg_storage
+                attributes:
+                  depth: 1
+                  width: 32           # width in bits
+                  meshX: 8

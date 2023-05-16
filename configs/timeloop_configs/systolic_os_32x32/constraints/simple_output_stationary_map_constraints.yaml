@@ -1,0 +1,23 @@
+#
+# The following constraints are not limitations of the hardware architecture and dataflow,
+# but help limit the search space to speed up search
+#
+
+mapspace_constraints:
+  targets:
+    # intuitive optimization to not tile R and S at the GLB level
+    - target: shared_glb
+      type: temporal
+      factors: R=1 S=1
+    # intuitive optimization according to architecture dimensions
+    #- target: shared_glb
+      #type: spatial
+      #      factors:  M=16 N=16
+    # intuitive optimization to not tile R and S at the DRAM level
+    - target: DRAM
+      type: temporal
+      factors: R=1 S=1
+    # optimization to constrain the amplification factor of R and S to only one register
+    - target: output_activation_reg
+      type: temporal
+      factors: R=1 S=1

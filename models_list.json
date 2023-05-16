@@ -1,0 +1,9 @@
+{
+ "models": [
+    {
+        "name": "resnet18",
+        "input_name" : "input",
+        "input_shape" : [1, 224, 224, 3]
+    }
+ ]
+}

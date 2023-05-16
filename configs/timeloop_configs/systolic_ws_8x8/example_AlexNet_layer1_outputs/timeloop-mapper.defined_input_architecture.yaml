@@ -1,0 +1,78 @@
+architecture:
+  version: 0.3
+  subtree:
+  - name: system
+    local:
+    - name: DRAM
+      class: DRAM
+      attributes:
+        block-size: 4
+        technology: 65nm
+        type: LPDDR4
+        width: 64
+        word-bits: 16
+    subtree:
+    - name: simple_ws
+      attributes:
+        technology: 45nm
+      local:
+      - name: shared_glb
+        class: smartbuffer_SRAM
+        attributes:
+          block-size: 4
+          memory_depth: 16384
+          memory_width: 64
+          n_banks: 32
+          n_buffets: 1
+          n_rdwr_ports: 2
+          read_bandwidth: 16
+          technology: 45nm
+          word-bits: 16
+          write_bandwidth: 16
+      subtree:
+      - name: PE[0..255]
+        local:
+        - name: pe_spad
+          class: smartbuffer_RF
+          attributes:
+            block-size: 1
+            memory_depth: 192
+            memory_width: 16
+            meshX: 16
+            n_banks: 1
+            n_buffets: 1
+            n_rdwr_ports: 2
+            technology: 45nm
+            word-bits: 16
+        - name: mac
+          class: intmac
+          attributes:
+            datawidth: 16
+            latency: 5ns
+            meshX: 16
+            num_pipeline_stages: 2
+            technology: 45nm
+        - name: weight_reg
+          class: reg_storage
+          attributes:
+            depth: 1
+            latency: 1ns
+            meshX: 16
+            technology: 45nm
+            width: 16
+        - name: input_activation_reg
+          class: reg_storage
+          attributes:
+            depth: 1
+            latency: 1ns
+            meshX: 16
+            technology: 45nm
+            width: 16
+        - name: output_activation_reg
+          class: reg_storage
+          attributes:
+            depth: 1
+            latency: 1ns
+            meshX: 16
+            technology: 45nm
+            width: 16

@@ -1,0 +1,22 @@
+compound_components:
+  version: 0.3
+  classes:
+    - name: reg_storage
+      attributes:
+        technology: 45nm
+        latency: 1ns
+        width: 16
+        depth: 1
+      subcomponents:
+        - name: storage
+          class: reg
+          attributes:
+            technology: technology
+            latency: latency
+            datawidth : width
+      actions:
+        - name: access
+          subcomponents:
+            - name: storage
+              actions:
+                - name: access

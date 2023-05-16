@@ -1,0 +1,38 @@
+ART_summary:
+  version: 0.3
+  table_summary:
+  - name: system.simple_ws.PE[0..255].mac
+    area: 1239.5
+    primitive_estimations: Aladdin_table
+  - name: system.DRAM
+    area: 1
+    primitive_estimations: dummy_table
+  - name: system.simple_ws.PE[0..255].pe_spad
+    area: 3634.68
+    primitive_estimations:
+    - name: storage
+      estimator: Aladdin_table
+    - name: address_generators[0..1]
+      estimator: Aladdin_table
+  - name: system.simple_ws.PE[0..255].weight_reg
+    area: 5.98
+    primitive_estimations:
+    - name: storage
+      estimator: Aladdin_table
+  - name: system.simple_ws.PE[0..255].input_activation_reg
+    area: 5.98
+    primitive_estimations:
+    - name: storage
+      estimator: Aladdin_table
+  - name: system.simple_ws.PE[0..255].output_activation_reg
+    area: 5.98
+    primitive_estimations:
+    - name: storage
+      estimator: Aladdin_table
+  - name: system.simple_ws.shared_glb
+    area: 1162549.0
+    primitive_estimations:
+    - name: storage
+      estimator: Cacti
+    - name: address_generators[0..1]
+      estimator: Aladdin_table

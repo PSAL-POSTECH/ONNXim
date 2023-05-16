@@ -1,0 +1,40 @@
+    _                _                      
+   / \   ___ ___ ___| | ___ _ __ __ _ _   _ 
+  / _ \ / __/ __/ _ \ |/ _ \ '__/ _` | | | |
+ / ___ \ (_| (_|  __/ |  __/ | | (_| | |_| |
+/_/   \_\___\___\___|_|\___|_|  \__, |\__, |
+                                |___/ |___/ 
+
+Info: generating outputs according to the following specified output flags... 
+ Please use the -f flag to update the preference (default to all output files) 
+{'ERT': 1, 'ERT_summary': 1, 'ART': 1, 'ART_summary': 1, 'energy_estimation': 1, 'flattened_arch': 1}
+Warn: Cannot recognize the top key "architecture_constraints" in file constraints/simple_weight_stationary_arch_constraints.yaml 
+Warn: Cannot recognize the top key "mapspace_constraints" in file constraints/simple_weight_stationary_map_constraints.yaml 
+Warn: Cannot recognize the top key "mapper" in file mapper/mapper.yaml 
+Warn: Cannot recognize the top key "problem" in file ../../layer_shapes/AlexNet/AlexNet_layer1.yaml 
+Info: Parsing file arch/simple_weight_stationary.yaml for architecture info 
+Info: Parsing file arch/components/reg_storage.yaml for compound_components info 
+Info: Parsing file arch/components/smartbuffer_RF.yaml for compound_components info 
+Info: Parsing file arch/components/smartbuffer_SRAM.yaml for compound_components info 
+Info: config file located: /home/workspace/.config/accelergy/accelergy_config.yaml 
+config file content: 
+ {'estimator_plug_ins': ['/usr/local/share/accelergy/estimation_plug_ins'], 'primitive_components': ['/usr/local/share/accelergy/primitive_component_libs'], 'table_plug_ins': {'roots': ['/usr/local/share/accelergy/estimation_plug_ins/accelergy-table-based-plug-ins/set_of_table_templates', '/home/workspace/timeloop-accelergy-exercises/exercises/accelergy/05_pim/PIM_estimation_tables']}, 'version': 0.3}
+Info: primitive component file parsed:  /usr/local/share/accelergy/primitive_component_libs/gem5_primitives.lib.yaml 
+Info: primitive component file parsed:  /usr/local/share/accelergy/primitive_component_libs/primitive_component.lib.yaml 
+Info: primitive component file parsed:  /usr/local/share/accelergy/primitive_component_libs/pim_primitive_component.lib.yaml 
+Info: estimator plug-in identified by:  /usr/local/share/accelergy/estimation_plug_ins/accelergy-cacti-plug-in/cacti.estimator.yaml 
+Info: estimator plug-in identified by:  /usr/local/share/accelergy/estimation_plug_ins/accelergy-aladdin-plug-in/aladdin.estimator.yaml 
+Info: estimator plug-in identified by:  /usr/local/share/accelergy/estimation_plug_ins/accelergy-table-based-plug-ins/table.estimator.yaml 
+table-based-plug-ins Identifies a set of tables named:  test_tables
+table-based-plug-ins Identifies a set of tables named:  32nm_tables
+table-based-plug-ins Identifies a set of tables named:  memristor_tables
+Info: estimator plug-in identified by:  /usr/local/share/accelergy/estimation_plug_ins/dummy_tables/dummy.estimator.yaml 
+Info: CACTI plug-in... Querying CACTI for request:
+ {'class_name': 'SRAM', 'attributes': OrderedDict([('technology', '45nm'), ('width', 64), ('depth', 16384), ('n_rdwr_ports', 2), ('n_banks', 32), ('n_rd_ports', 0), ('n_wr_ports', 0), ('latency', '5ns')]), 'action_name': 'write', 'arguments': {'data_delta': 0, 'address_delta': 0}}
+Warn: No action counts are specified as yaml input 
+Info: flattened architecture is saved to: ./timeloop-mapper.flattened_architecture.yaml 
+Info: energy reference table is saved to: ./timeloop-mapper.ERT.yaml 
+Info: energy reference table summary is saved to: ./timeloop-mapper.ERT_summary.yaml 
+Warn: no runtime energy estimations are generated... not generating energy_estimation.yaml 
+Info: area reference table is saved to: ./timeloop-mapper.ART.yaml 
+Info: area reference table summary is saved to: ./timeloop-mapper.ART_summary.yaml 

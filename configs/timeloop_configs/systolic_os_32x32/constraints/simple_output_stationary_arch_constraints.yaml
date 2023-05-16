@@ -1,0 +1,50 @@
+#
+# The following constraints are limitations of the hardware architecture and dataflow
+#
+
+architecture_constraints:
+  targets:
+    - target: DRAM
+      type: temporal
+      permutation: CPQ
+    #  pe spad only stored outputs
+    - target: pe_spad
+      type: bypass
+      bypass: [Inputs, Weights]
+      keep: [Outputs]
+    # pe spad keeps outputs stationary
+    - target: pe_spad
+      type: temporal
+      permutation: CRSPQ
+    # NoC sending C in x direction, M in y direction; parallel-for loops for C and M only
+    - target: shared_glb
+      type: bypass
+      bypass: [Outputs]
+      keep: [Inputs, Weights]
+    - target: shared_glb
+      type: spatial
+      permutation: MPQ
+      split: 1
+      factors: R=1 S=1 C=1
+    # enforce the registers to only store 1 data of the datatype it stores
+    - target: weight_reg
+      type: temporal
+      factors: R=1 S=1 P=1 Q=1 C=16
+    - target: weight_reg
+      type: bypass
+      keep: [Weights]
+      bypass: [Inputs, Outputs]
+    - target: input_activation_reg
+      type: temporal
+      factors: P=1 Q=1 C=1 N=1
+    - target: input_activation_reg
+      type: bypass
+      keep: [Inputs]
+      bypass: [Outputs, Weights]
+    - target: output_activation_reg
+      type: temporal
+      factors: P=1 Q=1 M=1 N=1
+    - target: output_activation_reg
+      type: bypass
+      keep: [Outputs]
+      bypass: [Inputs, Weights]

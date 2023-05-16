@@ -1,0 +1,68 @@
+architecture:
+  # ============================================================
+  # Architecture Description
+  # ============================================================
+  version: 0.3
+  subtree:
+    - name: system
+      local:
+        - name: DRAM
+          class: DRAM
+          attributes:
+            type: HBM2
+            width: 32
+            block-size: 2
+            word-bits: 16
+      subtree:
+        - name: simple_ws[0]
+          attributes:
+            technology: 45nm
+          local:
+            - name: shared_glb
+              class: smartbuffer_SRAM
+              attributes:
+                memory_depth: 458752
+                memory_width: 32
+                n_banks: 64
+                block-size: 2
+                word-bits: 16
+                read_bandwidth: 32
+                write_bandwidth: 32
+                meshX: 1
+          subtree:
+          - name: PE[0..1023]
+            attributes:
+              meshX: 1
+            local:
+              - name: pe_spad
+                class: smartbuffer_SRAM
+                attributes:
+                  memory_depth: 1
+                  memory_width: 16
+                  block-size: 1
+                  word-bits: 16
+                  meshX: 32
+              - name: mac
+                class: intmac
+                attributes:
+                  datawidth: 16
+                  meshX : 32
+              # input and output registers for the mac unit
+              - name: weight_reg
+                class: reg_storage
+                attributes:
+                  depth: 16
+                  width: 16           # width in bits
+                  meshX: 32
+              - name: input_activation_reg
+                class: reg_storage
+                attributes:
+                  depth: 1
+                  width: 16           # width in bits
+                  meshX: 32
+              - name: output_activation_reg
+                class: reg_storage
+                attributes:
+                  depth: 1
+                  width: 16           # width in bits
+                  meshX: 32

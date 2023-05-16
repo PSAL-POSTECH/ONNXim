@@ -1,0 +1,72 @@
+router 0 node 0 router 1 router 8
+router 1 node 1 router 2 router 9
+router 2 node 2 router 3 router 10
+router 3 node 3 router 4 router 11
+router 4 node 4 router 5 router 12
+router 5 node 5 router 6 router 13
+router 6 node 6 router 7 router 14
+router 7 node 7 router 15
+router 8 node 8 router 9 router 16
+router 9 node 9 router 10 router 17
+router 10 node 10 router 11 router 18
+router 11 node 11 router 12 router 19
+router 12 node 12 router 13 router 20
+router 13 node 13 router 14 router 21
+router 14 node 14 router 15 router 22
+router 15 node 15 router 23
+router 16 node 16 router 17 router 24
+router 17 node 17 router 18 router 25
+router 18 node 18 router 19 router 26
+router 19 node 19 router 20 router 27
+router 20 node 20 router 21 router 28
+router 21 node 21 router 22 router 29
+router 22 node 22 router 23 router 30
+router 23 node 23 router 31
+router 24 node 24 router 25 router 32
+router 25 node 25 router 26 router 33
+router 26 node 26 router 27 router 34
+router 27 node 27 router 28 router 35
+router 28 node 28 router 29 router 36
+router 29 node 29 router 30 router 37
+router 30 node 30 router 31 router 38
+router 31 node 31 router 39
+router 32 node 32 router 33 router 40
+router 33 node 33 router 34 router 41
+router 34 node 34 router 35 router 42
+router 35 node 35 router 36 router 43
+router 36 node 36 router 37 router 44
+router 37 node 37 router 38 router 45
+router 38 node 38 router 39 router 46
+router 39 node 39 router 47
+router 40 node 40 router 41 router 48
+router 41 node 41 router 42 router 49
+router 42 node 42 router 43 router 50
+router 43 node 43 router 44 router 51
+router 44 node 44 router 45 router 52
+router 45 node 45 router 46 router 53
+router 46 node 46 router 47 router 54
+router 47 node 47 router 55
+router 48 node 48 router 49 router 56
+router 49 node 49 router 50 router 57
+router 50 node 50 router 51 router 58
+router 51 node 51 router 52 router 59
+router 52 node 52 router 53 router 60
+router 53 node 53 router 54 router 61
+router 54 node 54 router 55 router 62
+router 55 node 55 router 63
+router 56 node 56 router 57 router 64
+router 57 node 57 router 58 router 65
+router 58 node 58 router 59 router 66
+router 59 node 59 router 60 router 67
+router 60 node 60 router 61 router 68
+router 61 node 61 router 62 router 69
+router 62 node 62 router 63 router 70
+router 63 node 63 router 71
+router 64 node 64 router 65
+router 65 node 65 router 66
+router 66 node 66 router 67
+router 67 node 67 router 68
+router 68 node 68 router 69
+router 69 node 69 router 70
+router 70 node 70 router 71
+router 71 node 71

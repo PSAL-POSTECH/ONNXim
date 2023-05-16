@@ -1,0 +1,12 @@
+[submodule "extern/onnx"]
+	path = extern/onnx
+	url = https://github.com/onnx/onnx.git
+[submodule "extern/protobuf"]
+	path = extern/protobuf
+	url = https://github.com/protocolbuffers/protobuf.git
+[submodule "extern/torch2timeloop"]
+	path = extern/torch2timeloop
+	url = https://github.com/Accelergy-Project/pytorch2timeloop-converter.git
+[submodule "extern/booksim"]
+	path = extern/booksim
+	url = https://github.com/PSAL-POSTECH/booksim.git

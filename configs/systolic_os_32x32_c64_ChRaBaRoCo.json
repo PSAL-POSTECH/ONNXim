@@ -1,0 +1,25 @@
+{
+  "num_cores" : 64,  
+  "core_type" : "systolic_os",
+  "core_freq" : 1000,
+  "core_width" : 32,
+  "core_height" : 32,
+
+  "sram_size" : 448,
+  "sram_width" : 32,
+
+  "dram_type" : "ramulator",
+  "dram_freq" : 877,
+  "dram_channels": 8,
+  "dram_req_size": 32,
+  "dram_latency" : 10,
+  "dram_config_path" : "../configs/ramulator_configs/HBM-config_ChRaBaRoCo.cfg",
+
+  "icnt_type" : "booksim2",
+  "icnt_latency" : 1,
+  "icnt_freq" : 2000,
+  "icnt_config_path" : "../configs/booksim2_configs/fly_c64_m8.icnt",
+
+  "precision" : 1,
+  "layout" : "NCHW"
+}
