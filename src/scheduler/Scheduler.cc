@@ -13,6 +13,14 @@ void Scheduler::schedule_model(std::unique_ptr<Model> model,
   refresh_status();
 }
 
+void Scheduler::schedule_tile(std::unique_ptr<TileGraph> tile_graph, uint32_t sample_size) {
+  _tile_request_queue.push_back(Tile_Request{.request_id = generate_id(),
+                                   .tile_graph = std::move(tile_graph),
+                                   .sample_size = sample_size});
+  spdlog::info("Tile scheduled, Total Request: {}", _tile_request_queue.size());
+  refresh_status();
+}
+
 /*TODO: Add base address for each addr in tiles */
 Tile Scheduler::get_tile(uint32_t core_id) {
   if (_executable_tile_queue.empty()) {

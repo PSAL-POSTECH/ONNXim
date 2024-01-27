@@ -70,6 +70,7 @@ void TileGraph::tile_generate() {
     _tiles.push_back(
       Tile{.status = Tile::Status::INITIALIZED,
             .optype = "example",
+            .layer_id = _root_node_id,
             .batch = 0,
             .Q = 0,
             .P = 0,
@@ -83,4 +84,8 @@ void TileGraph::tile_generate() {
       _tiles.back().instructions.push_back(_instructions[i]);
     }
   }
+}
+
+std::deque<Tile> TileGraph::get_tiles() {
+  return _tiles;
 }

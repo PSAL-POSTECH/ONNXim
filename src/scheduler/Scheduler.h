@@ -2,6 +2,7 @@
 #include <robin_hood.h>
 #include "../Common.h"
 #include "../Model.h"
+#include "../TileGraph.h"
 
 typedef struct {
   uint32_t request_id;
@@ -9,10 +10,17 @@ typedef struct {
   uint32_t sample_size;
 } Request;
 
+typedef struct {
+  uint32_t request_id;
+  std::unique_ptr<TileGraph> tile_graph;
+  uint32_t sample_size;
+} Tile_Request;
+
 class Scheduler {
   public:
     Scheduler(SimulationConfig config, const cycle_type* core_cycle);
     virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size);
+    virtual void schedule_tile(std::unique_ptr<TileGraph> tile_graph, uint32_t sample_size);
     virtual Tile get_tile(uint32_t core_id);
     virtual void finish_tile(uint32_t core_id, Tile tile);
     virtual bool empty();
@@ -29,9 +37,10 @@ class Scheduler {
       uint32_t remain_tiles;
       uint32_t launched_tiles;
     } LayerStat;
-    
+
     const cycle_type* _core_cycle;
     std::deque<Request> _request_queue;
+    std::deque<Tile_Request> _tile_request_queue;
     std::deque<Tile> _executable_tile_queue;
     SimulationConfig _config;
     robin_hood::unordered_map<uint32_t, LayerStat> _layer_stat_map;
@@ -46,7 +55,7 @@ class TimeMultiplexScheduler : public Scheduler {
     // virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size) override;
     virtual Tile get_tile(uint32_t core_id) override;
     virtual void finish_tile(uint32_t core_id, Tile tile) override ;
-  
+
   protected:
     virtual void refresh_status() override;
   private:
@@ -59,7 +68,7 @@ class HalfSplitScheduler : public Scheduler {
     virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size) override;
     virtual Tile get_tile(uint32_t core_id) override;
     virtual void finish_tile(uint32_t core_id, Tile tile) override ;
-    
+
   protected:
     virtual void refresh_status() override;
     robin_hood::unordered_map<uint32_t, std::deque<Tile>> _executable_tile_queue_table;

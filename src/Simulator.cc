@@ -47,7 +47,7 @@ Simulator::Simulator(SimulationConfig config)
     else if (config.core_type == CoreType::SYSTOLIC_WS)
       _cores[core_index] = std::make_unique<SystolicWS>(core_index, _config);
   }
-  
+
   if (config.scheduler_type == "simple") {
     _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles);
   } else if (config.scheduler_type == "time_multiplex") {
@@ -63,6 +63,13 @@ void Simulator::run_once(std::string model_name) {
   _scheduler->schedule_model(
       std::make_unique<Model>(*_models[model_name].get()), 1);
   spdlog::info("schedule model");
+  cycle();
+}
+
+void Simulator::run_tile(std::unique_ptr<TileGraph> tile_graph) {
+  spdlog::info("======Start Simulation=====");
+  _scheduler->schedule_tile(std::move(tile_graph), 1);
+  spdlog::info("schedule tile");
   cycle();
 }
 

@@ -16,6 +16,7 @@ class Simulator {
   Simulator(SimulationConfig config);
   void launch_model(std::unique_ptr<Model> model);
   void run_once(std::string model_name);
+  void run_tile(std::unique_ptr<TileGraph> tile_graph);
   void run_models(std::vector<std::string> models);
   // void run_offline(std::string model_name, uint32_t sample_count);
   // void run_multistream(std::string model_name, uint32_t sample_count,
@@ -34,7 +35,7 @@ class Simulator {
   std::unique_ptr<Interconnect> _icnt;
   std::unique_ptr<Dram> _dram;
   std::unique_ptr<Scheduler> _scheduler;
-  
+
   // period information (us)
   double _core_period;
   double _icnt_period;

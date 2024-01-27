@@ -8,7 +8,7 @@ class TileGraph {
     TileGraph(std::string onnx_path);
 
     void initialize_tile(std::string op_type);
-
+    std::deque<Tile> get_tiles();
   private:
     void tile_generate();
 
