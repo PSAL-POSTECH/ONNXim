@@ -42,24 +42,45 @@ TileGraph::TileGraph(std::string onnx_path) {
     }
     initialize_tile(node_proto.op_type());
   }
+  tile_generate();
 }
 
 void TileGraph::initialize_tile(std::string op_type) {
-  uint64_t addr = _base_addr; // TODO: calculate address
   if (op_type == "load_node") {
-    instructions.push_back(
+    _instructions.push_back(
       Instruction{.opcode = Opcode::MOVIN,
                   .size = _tile_size[0],
-                  .base_addr = addr});
+                  .base_addr = _base_addr});
   } else if (op_type == "compute_node") {
-    instructions.push_back(
+    _instructions.push_back(
       Instruction{.opcode = Opcode::COMP,
                   .size = _tile_size[0],
-                  .base_addr = addr});
+                  .base_addr = _base_addr});
   } else if (op_type == "store_node") {
-    instructions.push_back(
+    _instructions.push_back(
       Instruction{.opcode = Opcode::MOVOUT,
                   .size = _tile_size[0],
-                  .base_addr = addr});
+                  .base_addr = _base_addr});
+  }
+}
+
+// make several tiles from tile graph infos
+void TileGraph::tile_generate() {
+  for (int id = 0; id < _tile_stride[0]; id ++) { // FIXME: loop range would be different
+    _tiles.push_back(
+      Tile{.status = Tile::Status::INITIALIZED,
+            .optype = "example",
+            .batch = 0,
+            .Q = 0,
+            .P = 0,
+            .M = 0,
+            .C = 0,
+            .S = _tile_size[0],
+            .R = _tile_size[1]});
+    for (int i = 0; i < _instructions.size(); i++) {
+      addr_type addr = _instructions[i].base_addr + id * (_tile_size[0] * _tile_size[1]) * _precision; // TODO: calculate address
+      _instructions[i].src_addrs = std::vector<addr_type>(addr); // TODO: src address could be more than 1
+      _tiles.back().instructions.push_back(_instructions[i]);
+    }
   }
 }
