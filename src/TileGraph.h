@@ -8,6 +8,9 @@ class TileGraph {
     TileGraph(std::string onnx_path);
 
     void initialize_tile(std::string op_type);
+    void set_finish() { _finish = true; };
+    bool check_finish() { return _finish; }
+    uint32_t get_id() { return _root_node_id; }
     std::deque<Tile> get_tiles();
   private:
     void tile_generate();
@@ -22,4 +25,6 @@ class TileGraph {
     uint32_t _precision;
     uint32_t _cycle;
     uint64_t _base_addr;
+
+    bool _finish;
 };

@@ -77,7 +77,8 @@ void TileGraph::tile_generate() {
             .M = 0,
             .C = 0,
             .S = _tile_size[0],
-            .R = _tile_size[1]});
+            .R = _tile_size[1],
+            .skip = true});
     for (int i = 0; i < _instructions.size(); i++) {
       addr_type addr = _instructions[i].base_addr + id * (_tile_size[0] * _tile_size[1]) * _precision; // TODO: calculate address
       _instructions[i].src_addrs = std::vector<addr_type>(addr); // TODO: src address could be more than 1

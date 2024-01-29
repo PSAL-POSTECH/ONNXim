@@ -63,36 +63,28 @@ void Scheduler::finish_tile(uint32_t core_id, Tile tile) {
                  _active_layers_map[tile.layer_id].name, *_core_cycle);
     spdlog::info("Total compute time {}",
                  *_core_cycle - _active_layers_map[tile.layer_id].start_cycle);
-    _request_queue.front().model->set_layer_finish(tile.layer_id);
+    _tile_request_queue.front().tile_graph->set_finish();
     _layer_stat_map[tile.layer_id] = _active_layers_map[tile.layer_id];
     _active_layers_map.erase(tile.layer_id);
   }
   refresh_status();
 }
 
-bool Scheduler::empty() { return _request_queue.empty(); }
+bool Scheduler::empty() { return _tile_request_queue.empty(); }
 
 void Scheduler::refresh_status() {
-  if (!_request_queue.empty()) {
-    if (_request_queue.front().model->check_finish()) {
+  if (!_tile_request_queue.empty()) {
+    if (_tile_request_queue.front().tile_graph->check_finish()) {
       spdlog::info("Model finish  at {}", *_core_cycle);
-      _request_queue.pop_front();
+      _tile_request_queue.pop_front();
     }
   }
-  if (!_request_queue.empty() && _executable_tile_queue.empty() &&
+  if (!_tile_request_queue.empty() && _executable_tile_queue.empty() &&
       count_active_layers() == 0) {
-    spdlog::info("executable layer count {}",
-                 _request_queue.front().model->get_executable_layers().size());
-    Operation* new_layer =
-        _request_queue.front().model->get_executable_layers().front();
-    spdlog::info("Start layer {}", new_layer->get_name().c_str());
-    for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++)
-      new_layer->get_output(output_id)->allocate_tensor(_config.precision);
-    assert(new_layer->get_tiles().size());
-    _executable_tile_queue = new_layer->get_tiles();
-    _active_layers_map[new_layer->get_id()] =
-        LayerStat{.id = new_layer->get_id(),
-                  .name = new_layer->get_name(),
+    _executable_tile_queue = _tile_request_queue.front().tile_graph->get_tiles();
+    _active_layers_map[_tile_request_queue.front().tile_graph->get_id()] =
+        LayerStat{.id = _tile_request_queue.front().tile_graph->get_id(),
+                  .name = "element-wise",
                   .launched = true,
                   .start_cycle = *_core_cycle,
                   .total_tiles = (uint32_t)_executable_tile_queue.size(),
