@@ -148,7 +148,8 @@ void SystolicWS::cycle() {
   }
   if (!_vector_pipeline.empty()) {  // Vector unit compute
     _stat_vec_compute_cycle++;
-  }
+  } else if (!_ex_inst_queue.empty())
+    _stat_vec_memory_cycle++;
 
   if (!running()) {
     _stat_idle_cycle++;
