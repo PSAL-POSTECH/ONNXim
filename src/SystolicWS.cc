@@ -21,10 +21,7 @@ void SystolicWS::cycle() {
   if (!_vector_pipeline.empty() &&
       _vector_pipeline.front().finish_cycle <= _core_cycle) {
     Instruction inst = _vector_pipeline.front();
-    if (inst.dest_addr >= ACCUM_SPAD_BASE) {
-      _acc_spad.fill(inst.dest_addr, inst.accum_spad_id);
-    } else
-      assert(0);
+    _spad.fill(inst.dest_addr, inst.accum_spad_id);
     _vector_pipeline.pop();
   }
   /* LD in struction queue */
@@ -133,16 +130,14 @@ void SystolicWS::cycle() {
       } else {
         front.start_cycle = _core_cycle;
       }
-      front.finish_cycle =
-          front.start_cycle +
-          front.size;  // Setting IC as 1 (Might need to modify)
+      front.finish_cycle = front.start_cycle + front.compute_cycle;
       _vector_pipeline.push(front);
     }
     _ex_inst_queue.pop();
-    if (_acc_spad.check_allocated(front.dest_addr, front.accum_spad_id)) {
-      _acc_spad.count_up(front.dest_addr, front.accum_spad_id);
+    if (_spad.check_allocated(front.dest_addr, front.spad_id)) {
+      _spad.count_up(front.dest_addr, front.spad_id);
     } else {
-      _acc_spad.prefetch(front.dest_addr, front.accum_spad_id, front.size, 1);
+      _spad.prefetch(front.dest_addr, front.spad_id, front.size, 1);
     }
   }
 

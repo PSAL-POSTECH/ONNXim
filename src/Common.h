@@ -62,6 +62,7 @@ typedef struct {
   Opcode opcode;
   cycle_type start_cycle;
   cycle_type finish_cycle;
+  cycle_type compute_cycle;
   std::string id;
   std::vector<std::string> dependent_ids;
   std::string dest_id;
