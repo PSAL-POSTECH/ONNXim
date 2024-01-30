@@ -1,8 +1,8 @@
 {
  "models": [
     {
-        "name": "resnet18",
-        "input_name" : "input",
+        "name": "tile_graph_0",
+        "input_name" : "loop_index_node0_output",
         "input_shape" : [1, 224, 224, 3]
     }
  ]
