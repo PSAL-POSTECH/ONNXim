@@ -49,15 +49,12 @@ TileGraph::TileGraph(std::string onnx_path, SimulationConfig config) {
 void TileGraph::initialize_tile(std::string op_type) {
   if (op_type == "load_node") {
     addr_type dest = _config.align_address(SPAD_BASE + _base_addr);
-    std::set<addr_type> src_set;
     uint32_t memory_req_size = (_tile_size[0] * _tile_size[1] * _precision - 1) / _config.dram_req_size + 1;
-    for (int i = 0; i < memory_req_size; i++)
-      src_set.insert(_config.align_address(_base_addr + i * _config.dram_req_size));
     _instructions.push_back(
       Instruction{.opcode = Opcode::MOVIN,
                   .dest_addr = dest,
+                  .src_addr = _base_addr,
                   .size = memory_req_size,
-                  .src_addrs = std::vector<addr_type>(src_set.begin(), src_set.end()),
                   .base_addr = 0});
     _src_addrs.push_back(dest);
     _base_addr_update();
@@ -69,15 +66,12 @@ void TileGraph::initialize_tile(std::string op_type) {
                   .size = 1,
                   .src_addrs = _src_addrs});
   } else if (op_type == "store_node") {
-    std::set<addr_type> src_set;
     uint32_t memory_req_size = (_tile_size[0] * _tile_size[1] * _precision - 1) / _config.dram_req_size + 1;
-    for (int i = 0; i < memory_req_size; i++)
-      src_set.insert(_config.align_address(_base_addr + i * _config.dram_req_size));
     _instructions.push_back(
       Instruction{.opcode = Opcode::MOVOUT,
                   .dest_addr = _base_addr,
+                  .src_addr = _base_addr,
                   .size = memory_req_size,
-                  .src_addrs = std::vector<addr_type>(src_set.begin(), src_set.end()),
                   .base_addr = SPAD_BASE});
     _base_addr_update();
   }
@@ -103,6 +97,7 @@ void TileGraph::_tile_generate() {
       Instruction new_inst = inst; // copy instruction
       for (auto &addr : new_inst.src_addrs)
         addr = addr + offset;
+      new_inst.src_addr = new_inst.src_addr + offset;
       new_inst.dest_addr = new_inst.dest_addr + offset;
       _tiles.back().instructions.push_back(new_inst);
     }

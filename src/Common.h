@@ -67,6 +67,7 @@ typedef struct {
   std::vector<std::string> dependent_ids;
   std::string dest_id;
   addr_type dest_addr;
+  addr_type src_addr;
   uint32_t size;
   std::vector<addr_type> src_addrs;
   int spad_id;

@@ -40,8 +40,9 @@ void SystolicWS::cycle() {
       }
 
       buffer->prefetch(front.dest_addr, buffer_id, front.size, front.size);
-      for (addr_type addr : front.src_addrs) {
+      for (int i = 0; i < front.size; i++) {
         assert(front.base_addr != GARBEGE_ADDR);
+        addr_type addr = front.src_addr + i * _config.dram_req_size;
         MemoryAccess *access =
             new MemoryAccess({.id = generate_mem_access_id(),
                               .dram_address = addr + front.base_addr,
@@ -73,8 +74,9 @@ void SystolicWS::cycle() {
         buffer_id = front.spad_id;
       }
       assert(buffer->check_hit(front.dest_addr, buffer_id));
-      for (addr_type addr : front.src_addrs) {
+      for (int i = 0; i < front.size; i++) {
         assert(front.base_addr != GARBEGE_ADDR);
+        addr_type addr = front.src_addr + i * _config.dram_req_size;
         MemoryAccess *access =
             new MemoryAccess{.id = generate_mem_access_id(),
                              .dram_address = addr + front.base_addr,

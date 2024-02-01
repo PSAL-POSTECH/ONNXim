@@ -95,7 +95,7 @@ void Core::cycle() {
     } else if (inst.opcode == Opcode::MOVOUT ||
                inst.opcode == Opcode::MOVOUT_POOL) {
       /* ST inst queue */
-      if (buffer->check_hit(inst.src_addrs[0], buffer_id)) {
+      if (buffer->check_hit(inst.src_addr, buffer_id)) {
         _st_inst_queue.push(inst);
         issued = true;
       }
