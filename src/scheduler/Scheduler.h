@@ -1,14 +1,8 @@
 #pragma once
 #include <robin_hood.h>
 #include "../Common.h"
-#include "../Model.h"
 #include "../TileGraph.h"
 
-typedef struct {
-  uint32_t request_id;
-  std::unique_ptr<Model> model;
-  uint32_t sample_size;
-} Request;
 
 typedef struct {
   uint32_t request_id;
@@ -19,7 +13,6 @@ typedef struct {
 class Scheduler {
   public:
     Scheduler(SimulationConfig config, const cycle_type* core_cycle);
-    virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size);
     virtual void schedule_tile(std::unique_ptr<TileGraph> tile_graph, uint32_t sample_size);
     virtual Tile get_tile(uint32_t core_id);
     virtual void finish_tile(uint32_t core_id, Tile tile);
@@ -39,7 +32,6 @@ class Scheduler {
     } LayerStat;
 
     const cycle_type* _core_cycle;
-    std::deque<Request> _request_queue;
     std::deque<Tile_Request> _tile_request_queue;
     std::deque<Tile> _executable_tile_queue;
     SimulationConfig _config;
@@ -65,7 +57,6 @@ class TimeMultiplexScheduler : public Scheduler {
 class HalfSplitScheduler : public Scheduler {
   public:
     HalfSplitScheduler(SimulationConfig config, const cycle_type* core_cycle);
-    virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size) override;
     virtual Tile get_tile(uint32_t core_id) override;
     virtual void finish_tile(uint32_t core_id, Tile tile) override ;
 

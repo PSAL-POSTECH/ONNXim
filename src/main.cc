@@ -2,7 +2,6 @@
 
 #include "Simulator.h"
 #include "helper/CommandLineParser.h"
-#include "operations/OperationFactory.h"
 
 namespace po = boost::program_options;
 
@@ -47,7 +46,6 @@ int main(int argc, char** argv) {
   config_file >> config_json;
   config_file.close();
   SimulationConfig config = initialize_config(config_json);
-  OperationFactory::initialize(config);
 
   std::string models_list_path;
   cmd_parser.set_if_defined("models_list", &models_list_path);

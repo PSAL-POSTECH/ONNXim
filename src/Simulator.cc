@@ -58,27 +58,10 @@ Simulator::Simulator(SimulationConfig config)
   }
 }
 
-void Simulator::run_once(std::string model_name) {
-  spdlog::info("======Start Simulation=====");
-  _scheduler->schedule_model(
-      std::make_unique<Model>(*_models[model_name].get()), 1);
-  spdlog::info("schedule model");
-  cycle();
-}
-
 void Simulator::run_tile(std::unique_ptr<TileGraph> tile_graph) {
   spdlog::info("======Start Simulation=====");
   _scheduler->schedule_tile(std::move(tile_graph), 1);
   spdlog::info("schedule tile");
-  cycle();
-}
-
-void Simulator::run_models(std::vector<std::string> models) {
-  spdlog::info("======Start Simulation=====");
-  for (std::string model_name : models)
-    _scheduler->schedule_model(
-        std::make_unique<Model>(*_models[model_name].get()), 1);
-  spdlog::info("schedule model");
   cycle();
 }
 
@@ -161,15 +144,8 @@ void Simulator::cycle() {
   _dram->print_stat();
 }
 
-void Simulator::launch_model(std::unique_ptr<Model> model) {
-  _models[model->get_name()] = std::move(model);
-}
-
 bool Simulator::running() {
   bool running = false;
-  for (auto model = _models.begin(); model != _models.end(); model++) {
-    // running = running | !(*model)->empty();
-  }
   for (auto &core : _cores) {
     running = running || core->running();
   }

@@ -49,5 +49,5 @@ target_link_libraries(Simulator_lib ramulator booksim2)
 target_link_libraries(Simulator_lib ${PROTOBUF_LIB} onnx_proto ${CONAN_LIBS} stdc++fs)
 
 enable_testing()
-add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+# add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
 

@@ -1,7 +1,6 @@
 #include <fstream>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "TileGraph.h"
-#include "operations/OperationFactory.h"
 
 TileGraph::TileGraph(std::string onnx_path, SimulationConfig config) {
   std::ifstream model_istream(onnx_path);

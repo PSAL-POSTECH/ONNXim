@@ -1,8 +1,5 @@
 #include "Common.h"
 #include "helper/HelperFunctions.h"
-#include "operations/Operation.h"
-#include "Tensor.h"
-#include "Mapping.h"
 class TileGraph {
   public:
     TileGraph(std::string onnx_path, SimulationConfig config);
