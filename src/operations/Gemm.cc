@@ -64,3 +64,17 @@ Gemm::Gemm(SimulationConfig config, MappingTable mapping_table,
   _weight_shape = weight_shape;
   _output_shape = output_shape;
 }
+
+addr_type Gemm::make_activation_address(uint32_t N, uint32_t H, uint32_t W,
+                                             uint32_t C,
+                                             std::vector<uint32_t> shape) {
+  addr_type address;
+  if (shape.size() == 4)
+    return Operation::make_activation_address(N, H, W, C, shape);
+  else if (shape.size() == 2) {
+    address = (N * shape[Cdim] + C) * _config.precision;
+  } else {
+    assert(1 && "Shape doesn't match!");
+  }
+  return _config.align_address(address);
+}
