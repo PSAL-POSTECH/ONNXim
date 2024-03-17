@@ -124,7 +124,7 @@ void SystolicWS::cycle() {
       front.finish_cycle = front.start_cycle + get_inst_compute_cycles(front);
       _compute_pipeline.push(front);
       _stat_systolic_inst_issue_count++;
-    } else if (front.opcode == Opcode::COMP ||
+    } else if (front.opcode == Opcode::COMP || front.opcode == Opcode::SOFTMAX ||
                front.opcode == Opcode::IM2COL) {  // vector unit compute
       assert(can_issue_compute(front));           // check dependencys in SRAM
       if (!_vector_pipeline.empty()) {

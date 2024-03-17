@@ -9,6 +9,7 @@
 #include "GemmWS.h"
 #include "GlobalAvgPool.h"
 #include "Operation.h"
+#include "Attention.h"
 // #include "MatMul.h"
 #include "MaxPool.h"
 
@@ -36,6 +37,8 @@ std::unique_ptr<Operation> OperationFactory::create_operation(
     return std::make_unique<AdaptiveAvgPool>(_config, model, node_proto);
   } else if (node_proto.op_type() == "Flatten") {
     return std::make_unique<Flatten>(_config, model, node_proto);
+  } else if (node_proto.op_type() == "Attention") {
+    return std::make_unique<Attention>(_config, model, node_proto);
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr",
                node_proto.op_type().c_str());
@@ -61,6 +64,8 @@ std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
     return std::make_unique<GlobalAvgPool>(*dynamic_cast<GlobalAvgPool*>(op));
   } else if (op->get_optype() == "Flatten") {
     return std::make_unique<Flatten>(*dynamic_cast<Flatten*>(op));
+  } else if (op->get_optype() == "Attention") {
+    return std::make_unique<Attention>(*dynamic_cast<Attention*>(op));
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr", op->get_optype());
   return nullptr;
