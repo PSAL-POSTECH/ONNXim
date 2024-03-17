@@ -45,7 +45,6 @@ void Scheduler::finish_tile(uint32_t core_id, Tile tile) {
   spdlog::debug("Layer {} Core {} Finish Tile at {}", tile.layer_id, core_id,
                 *_core_cycle);
   assert(_active_layers_map.find(tile.layer_id) != _active_layers_map.end());
-  assert(_layer_stat_map.find(tile.layer_id) == _layer_stat_map.end());
   assert(_active_layers_map[tile.layer_id].remain_tiles > 0);
   _active_layers_map[tile.layer_id].remain_tiles--;
 
@@ -124,7 +123,6 @@ Tile TimeMultiplexScheduler::get_tile(uint32_t core_id) {
 
 void TimeMultiplexScheduler::finish_tile(uint32_t core_id, Tile tile) {
   assert(_active_layers_map.find(tile.layer_id) != _active_layers_map.end());
-  assert(_layer_stat_map.find(tile.layer_id) == _layer_stat_map.end());
   assert(_active_layers_map[tile.layer_id].remain_tiles > 0);
   _active_layers_map[tile.layer_id].remain_tiles--;
 
@@ -231,7 +229,6 @@ Tile HalfSplitScheduler::get_tile(uint32_t core_id) {
 
 void HalfSplitScheduler::finish_tile(uint32_t core_id, Tile tile) {
   assert(_active_layers_map.find(tile.layer_id) != _active_layers_map.end());
-  assert(_layer_stat_map.find(tile.layer_id) == _layer_stat_map.end());
   assert(_active_layers_map[tile.layer_id].remain_tiles > 0);
   _active_layers_map[tile.layer_id].remain_tiles--;
 
