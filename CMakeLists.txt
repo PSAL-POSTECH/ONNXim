@@ -19,6 +19,10 @@ set(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/build/bin")
 set(LIBRARY_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/build/lib")
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
 message("BINARY DIR ${CMAKE_BINARY_DIR}")
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-fsanitize=address)
+    add_link_options(-fsanitize=address)
+endif()
 
 # Build source
 add_subdirectory("${PROJECT_SOURCE_DIR}/src")
