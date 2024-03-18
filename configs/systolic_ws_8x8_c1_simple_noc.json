@@ -25,8 +25,5 @@
 
   "precision" : 4,
   "layout" : "NHWC",
-  "scheduler" : "simple",
-
-  "model_seq_len": 128,
-  "model_n_embd": 768
+  "scheduler" : "simple"
 }

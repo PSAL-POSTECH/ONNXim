@@ -82,9 +82,5 @@ SimulationConfig initialize_config(json config) {
   parsed_config.scheduler_type = config["scheduler"];
   parsed_config.precision = config["precision"];
   parsed_config.layout = config["layout"];
-
-  /* gpt model config */
-  parsed_config.model_seq_len = config["model_seq_len"];
-  parsed_config.model_n_embd = config["model_n_embd"];
   return parsed_config;
 }

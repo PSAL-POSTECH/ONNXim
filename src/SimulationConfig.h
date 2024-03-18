@@ -49,10 +49,6 @@ struct SimulationConfig {
   uint32_t precision;
   std::string layout;
 
-  /* gpt model config */
-  uint32_t model_seq_len;
-  uint32_t model_n_embd;
-
   uint64_t align_address(uint64_t addr) {
     return addr - (addr % dram_req_size);
   }

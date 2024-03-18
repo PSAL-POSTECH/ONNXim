@@ -8,10 +8,21 @@ class Attention : public Operation {
     //std::vector<Ptr<BTensor>> get_outputs(std::vector<Ptr<BTensor>> inputs) override;
 
     uint32_t _batch_size;
-    //std::vector<Ptr<NPUTensor>> _query;
-    //std::vector<Ptr<NPUTensor>> _key;
-    //std::vector<Ptr<NPUTensor>> _value;
+    /* q,k,v shape : (nh,{1,l},dk) / (nh,{l,l+1},dk) / (nh,{l,l+1},dk) */
+    std::vector<uint32_t> _query_shape;
+    std::vector<uint32_t> _key_shape;
+    std::vector<uint32_t> _value_shape;
+
+    std::vector<uint32_t> _weight_shape;
+    std::vector<uint32_t> _bias_shape;
+    std::vector<uint32_t> _mask_shape;
+    std::vector<uint32_t> _kv_cache_shape;
+    std::vector<uint32_t> _input_shape;
+    std::vector<uint32_t> _output_shape;
+    std::vector<uint32_t> _liner_output_shape;
+
     uint32_t _seq;
+    uint32_t _q_len;
     uint32_t _nh;
     uint32_t _dk;
 
@@ -24,4 +35,5 @@ class Attention : public Operation {
     void initialize_instructions(Tile& tile, Mapping mapping, int head_idx, int num_heads);
    protected:
     uint32_t sram_size_needed();
+    addr_type make_address(std::vector<uint32_t> index, std::vector<uint32_t> dims);
 };
