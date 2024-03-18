@@ -19,7 +19,14 @@ void GemmWS::initialize_tiles(MappingTable mapping_table) {
                           .R = 1,
                           .Q = 1,
                           .P = 1};
-  Mapping mapping = mapping_table[key];
+  Mapping mapping;
+  try {
+    mapping = mapping_table.at(key);
+  } catch (const std::out_of_range& e) {
+    spdlog::error("Key not found: N: {} C: {} M: {} P: {} Q: {} S: {} R: {}",
+      key.N, key.C, key.M, key.P, key.Q, key.S, key.R);
+    std::exit(EXIT_FAILURE);
+  }
   for (uint32_t N = 0; N < mapping.tile_out_loop.N; N++) {
     for (uint32_t M = 0; M < mapping.tile_out_loop.M; M++) {
       for (uint32_t C = 0; C < mapping.tile_out_loop.C; C++) {

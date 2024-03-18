@@ -48,7 +48,14 @@ void ConvWS::initialize_tiles(MappingTable mapping_table) {
                           .R = _weight_shape[Rdim],
                           .Q = output_shape[Hdim],
                           .P = output_shape[Wdim]};
-  Mapping mapping = mapping_table[key];
+  Mapping mapping;
+  try {
+    mapping = mapping_table.at(key);
+  } catch (const std::out_of_range& e) {
+    spdlog::error("Key not found: N: {} C: {} M: {} P: {} Q: {} S: {} R: {}",
+      key.N, key.C, key.M, key.P, key.Q, key.S, key.R);
+    std::exit(EXIT_FAILURE);
+  }
   assert(mapping.tile_in_loop.C > 1);
   if (_pool_fused) {
     assert(mapping.tile_in_loop.P >= _pool_kernel_shape[0] &&

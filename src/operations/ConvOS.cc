@@ -29,8 +29,14 @@ void ConvOS::initialize_tiles(MappingTable mapping_table) {
                           .R = weight_shape[Rdim],
                           .Q = output_shape[Hdim],
                           .P = output_shape[Wdim]};
-  Mapping mapping = mapping_table[key];
-
+  Mapping mapping;
+  try {
+    mapping = mapping_table.at(key);
+  } catch (const std::out_of_range& e) {
+    spdlog::error("Key not found: N: {} C: {} M: {} P: {} Q: {} S: {} R: {}",
+      key.N, key.C, key.M, key.P, key.Q, key.S, key.R);
+    std::exit(EXIT_FAILURE);
+  }
   // Tiling
   for (uint32_t N = 0; N < mapping.tile_out_loop.N; N++) {
     for (uint32_t tile_q = 0; tile_q < mapping.tile_out_loop.Q; tile_q++) {
