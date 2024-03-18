@@ -10,6 +10,7 @@
 
 class Dram {
  public:
+  virtual ~Dram() = default;
   virtual bool running() = 0;
   virtual void cycle() = 0;
   virtual bool is_full(uint32_t cid, MemoryAccess* request) = 0;

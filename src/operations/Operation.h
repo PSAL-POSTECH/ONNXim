@@ -15,6 +15,7 @@ class Operation {
   Operation(SimulationConfig config, MappingTable mapping_table);
   Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
   Operation(const Operation& operation);
+  virtual ~Operation() = default;
   virtual void set_finish();
 
   virtual std::string get_name() { return _name; }

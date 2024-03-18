@@ -6,6 +6,7 @@
 
 class Interconnect {
  public:
+  virtual ~Interconnect() = default;
   virtual bool running() = 0;
   virtual void cycle() = 0;
   virtual void push(uint32_t src, uint32_t dest, MemoryAccess* request) = 0;

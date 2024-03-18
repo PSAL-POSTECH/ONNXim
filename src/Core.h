@@ -12,6 +12,7 @@
 class Core {
  public:
   Core(uint32_t id, SimulationConfig config);
+  virtual ~Core() = default;
   virtual bool running();
   virtual bool can_issue();
   virtual void issue(Tile tile);
