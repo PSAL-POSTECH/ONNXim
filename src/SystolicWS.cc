@@ -197,11 +197,11 @@ cycle_type SystolicWS::get_vector_compute_cycles(Instruction &inst) {
       add_tree = 2 * add_tree_iter * _config.add_tree_latency;
       scalar_ops = 2 * _config.scalar_mul_latency + _config.scalar_sqrt_latency;
       // 1 addition, 1 subtraction, 1 division, 2 multiplication.
-      vector_ops = vec_op_iter * (2 * _config.add_latency + 3 * _config.mul_latency);
+      vector_ops = vec_op_iter * (2 * _config.add_latency + 3 * _config.mul_latency) * inst.tile_m;
       return add_tree + scalar_ops + vector_ops;
     case Opcode::SOFTMAX:
       // 1 add tree, 1 compare tree
-      add_tree = 2 * add_tree_iter * _config.add_tree_latency;
+      add_tree = 2 * add_tree_iter * _config.add_tree_latency * inst.tile_m;
       vector_ops =
         vec_op_iter * (_config.add_latency + _config.exp_latency + _config.mul_latency);
       return add_tree + vector_ops;
@@ -209,6 +209,8 @@ cycle_type SystolicWS::get_vector_compute_cycles(Instruction &inst) {
       return vec_op_iter * _config.add_latency;
     case Opcode::GELU:
       return vec_op_iter * _config.gelu_latency;
+    case Opcode::COMP:
+      return vec_op_iter * 1;
   }
   spdlog::info("not configured operation. {}", inst.id);
   // assert(0);

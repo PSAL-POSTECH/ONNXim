@@ -162,8 +162,9 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::SOFTMAX,
             .dest_addr = sram_acc_ofs,
-            .size = q_len * seq_len,
+            .size = seq_len * _config.precision,
             .src_addrs = std::vector<addr_type>{sram_l_ofs},
+            .tile_m = q_len,
             .src_from_accum = true,
         });
 
