@@ -81,8 +81,8 @@ void Attention::initialize_tiles(MappingTable mapping_table) {
 void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_idx, int num_heads) {
     // head_idx # start idx
     // num_heads
-    int q_len = _q_len;
-    int seq_len = _seq;
+    uint32_t q_len = _q_len;
+    uint32_t seq_len = _seq;
 
     addr_type sram_query_base = SPAD_BASE;
     addr_type sram_key_base = sram_query_base + q_len * _dk * num_heads * _config.precision;
@@ -198,7 +198,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
 
 void Attention::calculate_loops() {
     for (int i = 0; i < _batch_size; i++) {
-        uint32_t q_len = _seq;
+        uint32_t q_len = _q_len;
         uint32_t seq_len = _seq;
 
         uint32_t total_size_per_head = 2 * q_len * _dk + 2 * _dk * seq_len + seq_len * q_len;
