@@ -3,29 +3,41 @@
 #include "Model.h"
 #include "operations/OperationFactory.h"
 
-Model::Model(std::string onnx_path, SimulationConfig config, std::string name) {
+Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name) {
   std::ifstream model_istream(onnx_path);
   google::protobuf::io::IstreamInputStream zero_copy_input(&model_istream);
   _model_proto.ParseFromZeroCopyStream(&zero_copy_input) && model_istream.eof();
   _name = name;
   _root_node_id = generate_id();
   _config = config;
-  
+  _model_config = model_config;
   auto input = _model_proto.graph().input();
 
-  assert(input.size() == 1);
-  
-  auto iter = input.begin();
-  _input_name = iter->name();
-  printf("INPUT = %s\n", iter->name().c_str());
+  for (auto iter: input) {
+    std::vector<uint32_t> input_dim;
+    std::string input_name = iter.name();
+    auto input_shape = iter.type().tensor_type().shape();
 
-  auto input_shape = iter->type().tensor_type().shape();
-  uint32_t dim_size = input_shape.dim_size();
+    /* Parsing input tensor shape */
+    for (int dim_idx=0; dim_idx<input_shape.dim_size(); dim_idx++) {
+      /* Get axis, dynamic axis */
+      int dim_value = input_shape.dim(dim_idx).dim_value();
+      std::string dim_param = input_shape.dim(dim_idx).dim_param();
+      spdlog::debug("input name: {} val: {} param: {}", input_name, dim_value, dim_param);
+      if (dim_value==0 && dim_param!="") {
+        /* Dynamic axis */
+        input_dim.push_back(_model_config[dim_param]);
+      } else {
+        input_dim.push_back(dim_value);
+      }
+    }
 
-  _input_dim.push_back(1);
-  _input_dim.push_back(input_shape.dim(2).dim_value());
-  _input_dim.push_back(input_shape.dim(3).dim_value());
-  _input_dim.push_back(input_shape.dim(1).dim_value());
+    auto input_tensor = std::make_unique<Tensor>(_root_node_id, input_name, input_dim, true);
+    int id = input_tensor->get_id();
+    input_tensor->allocate_tensor(_config.precision * 16);
+    input_tensor->set_produced();
+    _tensor_map[id] = std::move(input_tensor);
+  }
 
   for(auto initializer : _model_proto.graph().initializer()) {
     //initialize weights
@@ -41,9 +53,6 @@ Model::Model(const Model& model) {
   _model_proto = model._model_proto;
   _root_node_id = _root_node_id;
   _input_tensor = _input_tensor;
-
-  _input_name = model._input_name;
-  _input_dim = model._input_dim;
   
   for(auto const& [key, val] : model._tensor_map) {
     _tensor_map[key] = std::make_unique<Tensor>(*val.get());
@@ -53,7 +62,6 @@ Model::Model(const Model& model) {
     _operation_map[key]->_model = this;
   }
   for(auto layer : model._executable_layer) {
-    
     _executable_layer.push_back(_operation_map[layer->get_id()].get());
     spdlog::trace("add op {0:x}", fmt::ptr(_executable_layer.front()));
   }
@@ -75,27 +83,22 @@ Tensor* Model::find_tensor(std::string name) {
 void Model::add_tensor(std::unique_ptr<Tensor> edge) {
   _tensor_map[edge->get_id()] = std::move(edge);
 }
-
-void Model::initialize_model(std::string input_name, std::vector<uint32_t> &input_dims, MappingTable mapping_table) {
+int skip_count = 0;
+void Model::initialize_model(MappingTable mapping_table) {
   std::vector<std::unique_ptr<Tensor>> input_tensors;
 
-  auto input_tensor = std::make_unique<Tensor>(_root_node_id, input_name, input_dims, true);
-  // auto input_tensor = std::make_unique<Tensor>(_root_node_id, std::string("data"), input_dims, true);
-  input_tensor->allocate_tensor(_config.precision * 16);
-  _input_tensor = input_tensor.get();
-  int id = input_tensor->get_id();
-  _tensor_map[id] = std::move(input_tensor);
   for(auto node_proto : _model_proto.graph().node()) {
     auto node = OperationFactory::create_operation(this, node_proto);
     if(node != nullptr) {
+      int node_id = node->get_id();
       _operation_map[node->get_id()] = std::move(node);
     }
   }
-  
-  for(int child = 0; child < _input_tensor->num_child_nodes(); child++) {
-    Operation *op = _operation_map[_input_tensor->get_child_node(child)].get();
-    if(op->check_executable()) {
-      _executable_layer.push_back(op);
+
+  for (auto& [key, val]: _operation_map) {
+    if(val->check_executable()) {
+      spdlog::debug("runnable op, {}", val->get_optype());
+      _executable_layer.push_back(val.get());
     } 
   }
 

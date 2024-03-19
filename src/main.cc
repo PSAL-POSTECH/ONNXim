@@ -55,19 +55,16 @@ int main(int argc, char** argv) {
   auto simulator = std::make_unique<Simulator>(config);
   for (json model_config : models_list["models"]) {
     std::string model_name = model_config["name"];
-    std::string input_name = model_config["input_name"];
     std::string onnx_path =
         fmt::format("{}/{}/{}.onnx", model_base_path, model_name, model_name);
     std::string mapping_path = fmt::format("{}/{}/{}.mapping", model_base_path,
                                            model_name, model_name);
-    auto model = std::make_unique<Model>(onnx_path, config, model_name);
+    auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name);
 
-    std::vector<uint32_t> input_dim = {1, 224, 224, 3};
-    // std::vector<uint32_t> input_dim = {1, 14, 14, 64};
     printf("Launching model\n");
     MappingTable mapping_table = parse_mapping_file(mapping_path);
 
-    model->initialize_model(input_name, input_dim, mapping_table);
+    model->initialize_model(mapping_table);
     simulator->launch_model(std::move(model));
     spdlog::info("Launch model: {}", model_name);
     simulator->run_once(model_name);
