@@ -10,6 +10,8 @@
 #include "GlobalAvgPool.h"
 #include "Operation.h"
 #include "Attention.h"
+#include "Cast.h"
+#include "EmbedLayerNorm.h"
 // #include "MatMul.h"
 #include "MaxPool.h"
 
@@ -39,6 +41,10 @@ std::unique_ptr<Operation> OperationFactory::create_operation(
     return std::make_unique<Flatten>(_config, model, node_proto);
   } else if (node_proto.op_type() == "Attention") {
     return std::make_unique<Attention>(_config, model, node_proto);
+  } else if (node_proto.op_type() == "Cast") {
+    return std::make_unique<Cast>(_config, model, node_proto);
+  } else if (node_proto.op_type() == "EmbedLayerNormalization") {
+    return std::make_unique<EmbedLayerNorm>(_config, model, node_proto);
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr",
                node_proto.op_type().c_str());
@@ -66,6 +72,10 @@ std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
     return std::make_unique<Flatten>(*dynamic_cast<Flatten*>(op));
   } else if (op->get_optype() == "Attention") {
     return std::make_unique<Attention>(*dynamic_cast<Attention*>(op));
+  } else if (op->get_optype() == "Cast") {
+    return std::make_unique<Cast>(*dynamic_cast<Cast*>(op));
+  } else if (op->get_optype() == "EmbedLayerNormalization") {
+    return std::make_unique<EmbedLayerNorm>(*dynamic_cast<EmbedLayerNorm*>(op));
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr", op->get_optype());
   return nullptr;
