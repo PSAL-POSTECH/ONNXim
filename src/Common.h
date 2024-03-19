@@ -56,6 +56,9 @@ enum class Opcode {
   COMP,
   IM2COL,
   SOFTMAX,
+  LAYERNORM,
+  ADD,
+  GELU,
   BAR
 };
 

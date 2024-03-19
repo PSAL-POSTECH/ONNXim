@@ -125,7 +125,8 @@ void SystolicWS::cycle() {
       _compute_pipeline.push(front);
       _stat_systolic_inst_issue_count++;
     } else if (front.opcode == Opcode::COMP || front.opcode == Opcode::SOFTMAX ||
-               front.opcode == Opcode::IM2COL) {  // vector unit compute
+               front.opcode == Opcode::IM2COL || front.opcode == Opcode::LAYERNORM ||
+               front.opcode == Opcode::ADD || front.opcode == Opcode::GELU) {  // vector unit compute
       assert(can_issue_compute(front));           // check dependencys in SRAM
       if (!_vector_pipeline.empty()) {
         front.start_cycle =
@@ -135,7 +136,7 @@ void SystolicWS::cycle() {
       }
       front.finish_cycle =
           front.start_cycle +
-          front.size;  // Setting IC as 1 (Might need to modify)
+          get_vector_compute_cycles(front);  // Setting IC as 1 (Might need to modify)
       _vector_pipeline.push(front);
     }
     _ex_inst_queue.pop();
@@ -163,6 +164,55 @@ void SystolicWS::cycle() {
 
 cycle_type SystolicWS::get_inst_compute_cycles(Instruction inst) {
   return _config.core_height + _config.core_width - 2 + MAX(inst.size, 4);
+}
+
+cycle_type SystolicWS::calculate_add_tree_iterations(uint32_t vector_size) {
+  uint32_t calculation_unit = _config.vector_process_bit >> 3;
+  if (vector_size <= calculation_unit) {
+    return 1;
+  }
+
+  uint32_t ret = vector_size / calculation_unit;
+  if (vector_size % calculation_unit != 0) {
+    ret++;
+  }
+  return ret + calculate_add_tree_iterations(ret);
+}
+
+cycle_type SystolicWS::calculate_vector_op_iterations(uint32_t vector_size) {
+  uint32_t calculation_unit = _config.vector_process_bit >> 3;
+  uint32_t ret = vector_size / calculation_unit;
+  if (vector_size % calculation_unit != 0) {
+    ret++;
+  }
+  return ret;
+}
+
+cycle_type SystolicWS::get_vector_compute_cycles(Instruction &inst) {
+  cycle_type vec_op_iter = calculate_vector_op_iterations(inst.size);
+  cycle_type add_tree_iter = calculate_add_tree_iterations(inst.size);
+  cycle_type add_tree, scalar_ops, vector_ops;
+  switch (inst.opcode) {
+    case Opcode::LAYERNORM:
+      add_tree = 2 * add_tree_iter * _config.add_tree_latency;
+      scalar_ops = 2 * _config.scalar_mul_latency + _config.scalar_sqrt_latency;
+      // 1 addition, 1 subtraction, 1 division, 2 multiplication.
+      vector_ops = vec_op_iter * (2 * _config.add_latency + 3 * _config.mul_latency);
+      return add_tree + scalar_ops + vector_ops;
+    case Opcode::SOFTMAX:
+      // 1 add tree, 1 compare tree
+      add_tree = 2 * add_tree_iter * _config.add_tree_latency;
+      vector_ops =
+        vec_op_iter * (_config.add_latency + _config.exp_latency + _config.mul_latency);
+      return add_tree + vector_ops;
+    case Opcode::ADD:
+      return vec_op_iter * _config.add_latency;
+    case Opcode::GELU:
+      return vec_op_iter * _config.gelu_latency;
+  }
+  spdlog::info("not configured operation. {}", inst.id);
+  // assert(0);
+  return 0;
 }
 
 void SystolicWS::print_stats() {
