@@ -117,10 +117,6 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
                 if (q_len == 1 && seq_idx > 0) continue;
                 dram_query_addrs.insert(make_address(query_idx, _query_shape));
             }
-
-            // dram_key_addrs.push_back(_key[req_idx]->get_addr(std::vector<uint32_t>{h_idx, i}));
-            // dram_value_addrs.push_back(_value[req_idx]->get_addr(std::vector<uint32_t>{h_idx,
-            // i}));
         }
         spdlog::debug("dram_query_addrs.size(): {}", dram_query_addrs.size());
         spdlog::debug("dram_key_addrs.size(): {}", dram_key_addrs.size());
@@ -157,9 +153,9 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
             .size = q_len * seq_len,
             .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
 
-            //.tile_m = seq_len,
-            //.tile_k = _dk,
-            //.tile_n = q_len,
+            .tile_m = seq_len,
+            .tile_k = _dk,
+            .tile_n = q_len,
         });
         // Softmax (l -> l)
 
@@ -168,7 +164,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
             .dest_addr = sram_acc_ofs,
             .size = q_len * seq_len,
             .src_addrs = std::vector<addr_type>{sram_l_ofs},
-            //.src_from_accum = true,
+            .src_from_accum = true,
         });
 
         // [ ] change output offset
@@ -180,10 +176,10 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
             .size = q_len * _dk,
             .src_addrs = std::vector<addr_type>{sram_acc_ofs, sram_v_ofs},
 
-            //.tile_m = _dk,
-            //.tile_k = seq_len,
-            //.tile_n = q_len,
-            //.src_from_accum = true,
+            .tile_m = _dk,
+            .tile_k = seq_len,
+            .tile_n = q_len,
+            .src_from_accum = true,
         });
 
         // MOVOUT

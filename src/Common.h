@@ -73,6 +73,12 @@ typedef struct {
   int accum_spad_id;
   uint32_t operand_id  = 0;
   addr_type base_addr;
+
+  uint32_t tile_m;
+  uint32_t tile_k;
+  uint32_t tile_n;
+
+  bool src_from_accum = false;
 } Instruction;
 
 typedef struct {
@@ -93,6 +99,7 @@ typedef struct {
   uint32_t C;
   uint32_t S;
   uint32_t R;
+
   TileStat stat;
   std::deque<Instruction> instructions;
   bool accum;
