@@ -32,6 +32,13 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
       }
     }
 
+    /* NCHW to NHWC convert */
+    if (input.size()==1 && input_dim.size()==4 && input_dim.at(2)==input_dim.at(3)) {
+      uint32_t channel = input_dim.at(1);
+      input_dim.erase(input_dim.begin() + 1);
+      input_dim.push_back(channel);
+    }
+
     auto input_tensor = std::make_unique<Tensor>(_root_node_id, input_name, input_dim, true);
     int id = input_tensor->get_id();
     input_tensor->allocate_tensor(_config.precision * 16);
