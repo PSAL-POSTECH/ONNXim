@@ -82,6 +82,7 @@ typedef struct {
   uint32_t tile_n;
 
   bool src_from_accum = false;
+  bool zero_init = false;
 } Instruction;
 
 typedef struct {

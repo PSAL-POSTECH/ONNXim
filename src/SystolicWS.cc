@@ -41,7 +41,6 @@ void SystolicWS::cycle() {
         buffer = &_spad;
         buffer_id = front.spad_id;
       }
-
       buffer->prefetch(front.dest_addr, buffer_id, front.size, front.size);
       for (addr_type addr : front.src_addrs) {
         assert(front.base_addr != GARBEGE_ADDR);
@@ -138,12 +137,13 @@ void SystolicWS::cycle() {
           front.start_cycle +
           get_vector_compute_cycles(front);  // Setting IC as 1 (Might need to modify)
       _vector_pipeline.push(front);
+
     }
     _ex_inst_queue.pop();
     if (_acc_spad.check_allocated(front.dest_addr, front.accum_spad_id)) {
       _acc_spad.count_up(front.dest_addr, front.accum_spad_id);
     } else {
-      _acc_spad.prefetch(front.dest_addr, front.accum_spad_id, front.size, 1);
+      _acc_spad.prefetch(front.dest_addr, front.accum_spad_id, front.size, front.zero_init? front.size : 1);
     }
   }
 

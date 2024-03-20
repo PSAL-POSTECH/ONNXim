@@ -6,6 +6,11 @@ GemmWS::GemmWS(SimulationConfig config, Model* model,
                onnx::NodeProto& node_proto)
     : Gemm(config, model, node_proto) {}
 
+GemmWS::GemmWS(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, bool has_bias)
+        : GemmWS(config, model, node_proto) {
+        this->has_bias = has_bias;
+}
+
 GemmWS::GemmWS(SimulationConfig config, MappingTable mapping_table,
                std::vector<uint32_t> input_shape,
                std::vector<uint32_t> weight_shape,
@@ -77,14 +82,23 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
         if (M >= mapping.total_loop.M) continue;
         bias_addrs.insert(make_activation_address(0, 0, 0, M, _output_shape));
       }
-      tile.instructions.push_back(Instruction{
-          .opcode = Opcode::MOVIN,
-          .dest_addr = ACCUM_SPAD_BASE +
-                       (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
-          .size = (uint32_t)bias_addrs.size() * n_loop,
-          .src_addrs =
-              std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
-          .operand_id = _INPUT_OPERAND + 2});
+      if (has_bias) {
+        tile.instructions.push_back(Instruction{
+            .opcode = Opcode::MOVIN,
+            .dest_addr = ACCUM_SPAD_BASE +
+                        (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
+            .size = (uint32_t)bias_addrs.size() * n_loop,
+            .src_addrs = std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
+            .operand_id = _INPUT_OPERAND + 2});
+      } else {
+        tile.instructions.push_back(Instruction{
+            .opcode = Opcode::COMP,
+            .dest_addr = ACCUM_SPAD_BASE +
+                        (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
+            .size = (uint32_t)bias_addrs.size() * n_loop,
+            .src_addrs = std::vector<addr_type>(),
+            .operand_id = _INPUT_OPERAND + 2});
+      }
     }
   }
 

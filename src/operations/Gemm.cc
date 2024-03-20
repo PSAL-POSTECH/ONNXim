@@ -32,13 +32,16 @@ Gemm::Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
 
   _input_shape = get_input(0)->get_dims();
   _weight_shape = get_input(1)->get_dims();
-  std::vector<uint32_t> bias_shape = get_input(2)->get_dims();
   _output_shape.resize(2);
   _output_shape[Ndim] = _input_shape[Ndim];
   _output_shape[Cdim] = _weight_shape[Mdim];
 
   spdlog::trace("output_shape : {}", _output_shape);
-  assert(bias_shape[0] == _output_shape[Cdim]);
+  std::vector<uint32_t> bias_shape;
+  if (node_proto.input().size() == 3) {
+    bias_shape = get_input(2)->get_dims();
+    assert(bias_shape[0] == _output_shape[Cdim]);
+  }
 
   Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(0));
   if (pre_defind_tensor == nullptr) {

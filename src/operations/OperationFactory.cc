@@ -30,6 +30,8 @@ std::unique_ptr<Operation> OperationFactory::create_operation(
              node_proto.op_type() == "FusedGemm") {
     if (_config.core_type == CoreType::SYSTOLIC_WS)
       return std::make_unique<GemmWS>(_config, model, node_proto);
+  } else if (node_proto.op_type() == "MatMul") {
+    return std::make_unique<GemmWS>(_config, model, node_proto, false);
   } else if (node_proto.op_type() == "MaxPool") {
     return std::make_unique<MaxPool>(_config, model, node_proto);
   } else if (node_proto.op_type() == "GlobalAveragePool") {
@@ -59,6 +61,8 @@ std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
       return std::make_unique<ConvWS>(*dynamic_cast<ConvWS*>(op));
   } else if (op->get_optype() == "Gemm" || op->get_optype() == "FusedGemm") {
     if (_config.core_type == CoreType::SYSTOLIC_WS)
+      return std::make_unique<GemmWS>(*dynamic_cast<GemmWS*>(op));
+  } else if (op->get_optype() == "MatMul") {
       return std::make_unique<GemmWS>(*dynamic_cast<GemmWS*>(op));
   } else if (op->get_optype() == "MaxPool") {
     return std::make_unique<MaxPool>(*dynamic_cast<MaxPool*>(op));
