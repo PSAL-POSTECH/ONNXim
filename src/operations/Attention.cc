@@ -18,23 +18,29 @@ Attention::Attention(SimulationConfig config, Model* model,
     _weight_shape = get_input(1)->get_dims();
     _bias_shape = get_input(2)->get_dims();
     _mask_shape = get_input(3)->get_dims();
-    if (node_proto.input().size()==5)
+    if (node_proto.input().size()==5) {
         _kv_cache_shape = get_input(4)->get_dims();
-
+        /* If "past_seq_len" is not 0 */
+        if (_kv_cache_shape.at(3))
+            has_kv_cache = true;
+    }
     /* Get sequence length and embedding
      * Note: Batch size is assumed to 1 */
     _batch_size = 1;
     _dk = _weight_shape.at(0);
-    _seq = _input_shape.at(0);
     _q_len = _input_shape.at(0);
+    if (has_kv_cache)
+        _seq = _kv_cache_shape.at(3) + 1;
+    else
+        _seq = _input_shape.at(0);
 
     _query_shape = std::vector<uint32_t>{_nh, _q_len, _dk};
     _key_shape = std::vector<uint32_t>{_nh, _dk, _seq};
     _value_shape = std::vector<uint32_t>{_nh, _seq, _dk};
 
-    _input_shape = std::vector<uint32_t>{_seq, _dk};
+    _input_shape = std::vector<uint32_t>{_q_len, _dk};
     _output_shape = std::vector<uint32_t>{_seq, _dk};
-    _liner_output_shape = std::vector<uint32_t>{_seq, _weight_shape[1]};
+    _liner_output_shape = std::vector<uint32_t>{_q_len, _weight_shape[1]};
 
     Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(0));
     if (pre_defind_tensor == nullptr) {
@@ -58,6 +64,7 @@ void Attention::initialize_tiles(MappingTable mapping_table) {
         _tiles.push_back(tile);
     }
 
+    /* Fused Attention body */
     for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
         int heads_per_tile = _heads_per_tile[req_idx];
         int head_idx = 0;
@@ -150,7 +157,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
-            .size = q_len * seq_len,
+            .size = q_len * seq_len, //Right?
             .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
 
             .tile_m = seq_len,
@@ -174,7 +181,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = output_ofs,
-            .size = q_len * _dk,
+            .size = q_len * _dk, // Right?
             .src_addrs = std::vector<addr_type>{sram_acc_ofs, sram_v_ofs},
 
             .tile_m = _dk,

@@ -26,6 +26,9 @@ class Attention : public Operation {
     uint32_t _nh;
     uint32_t _dk;
 
+    /* For kv cache */
+    bool has_kv_cache = false;
+
     std::vector<uint32_t> _heads_per_tile;
 
     void calculate_loops();
