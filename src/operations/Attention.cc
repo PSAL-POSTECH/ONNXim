@@ -27,7 +27,8 @@ Attention::Attention(SimulationConfig config, Model* model,
     /* Get sequence length and embedding
      * Note: Batch size is assumed to 1 */
     _batch_size = 1;
-    _dk = _weight_shape.at(0);
+    _dmodel = _weight_shape.at(0);
+    _dk = _dmodel / _nh;
     _q_len = _input_shape.at(0);
     if (has_kv_cache)
         _seq = _kv_cache_shape.at(3) + 1;
@@ -38,8 +39,8 @@ Attention::Attention(SimulationConfig config, Model* model,
     _key_shape = std::vector<uint32_t>{_nh, _dk, _seq};
     _value_shape = std::vector<uint32_t>{_nh, _seq, _dk};
 
-    _input_shape = std::vector<uint32_t>{_q_len, _dk};
-    _output_shape = std::vector<uint32_t>{_q_len, _dk};
+    _input_shape = std::vector<uint32_t>{_q_len, _dmodel};
+    _output_shape = std::vector<uint32_t>{_q_len, _dmodel};
     _liner_output_shape = std::vector<uint32_t>{_q_len, _weight_shape[1]};
     spdlog::debug("Fused attention: input shape: [{}, {}]", _input_shape.at(0), _input_shape.at(1));
     spdlog::debug("Fused attention: output shape: [{}, {}]", _output_shape.at(0), _output_shape.at(1));
@@ -115,22 +116,24 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         std::set<addr_type> dram_query_addrs;  // = _query[req_idx]->get_all_addrs();
         std::set<addr_type> dram_key_addrs;    // = _key[req_idx]->get_all_addrs();
         std::set<addr_type> dram_value_addrs;
+        std::set<addr_type> dram_output_addrs;
 
         for (int i = 0; i < _dk; i++) {
             for (int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
                 // key:  h, d_k, seq_len
-                std::vector<uint32_t> query_idx = {(uint32_t)h_idx, (uint32_t)seq_idx, (uint32_t)i};
-                std::vector<uint32_t> key_idx = {(uint32_t)h_idx, (uint32_t)i, (uint32_t)seq_idx};
-                std::vector<uint32_t> value_idx = {(uint32_t)h_idx, (uint32_t)seq_idx, (uint32_t)i};
+                std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
+                std::vector<uint32_t> key_idx =   {(uint32_t)(h_idx+_nh), (uint32_t)i, (uint32_t)seq_idx};
+                std::vector<uint32_t> value_idx = {(uint32_t)(h_idx+_nh*2), (uint32_t)seq_idx, (uint32_t)i};
+                std::vector<uint32_t> output_idx = {(uint32_t)(h_idx+_nh*3), (uint32_t)seq_idx, (uint32_t)i};
 
                 dram_key_addrs.insert(make_address(key_idx, _key_shape));
                 dram_value_addrs.insert(make_address(value_idx, _value_shape));
 
                 if (q_len == 1 && seq_idx > 0) continue;
                 dram_query_addrs.insert(make_address(query_idx, _query_shape));
+                dram_output_addrs.insert(make_address(output_idx, _query_shape)); // Used query_shape intentionally
             }
         }
-
         // -- load --
         // MOVIN query, key, value
         tile.instructions.push_back(Instruction{
@@ -196,11 +199,8 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::MOVOUT,
             .dest_addr = output_ofs,
-            .size = q_len * _dk * _config.precision,
-            .src_addrs = std::vector<addr_type>{output_ofs},
-            //std::move(std::static_pointer_cast<NPUTensor>(_outputs[req_idx])
-            //                           ->_inners[h_idx]
-            //                           ->get_all_addrs()),
+            .size = (uint32_t)dram_output_addrs.size(),
+            .src_addrs = std::vector<addr_type>(dram_output_addrs.begin(), dram_output_addrs.end()),
             .operand_id = _OUTPUT_OPERAND,
         });
     }

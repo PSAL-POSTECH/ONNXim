@@ -23,6 +23,7 @@ class Attention : public Operation {
 
     uint32_t _seq;
     uint32_t _q_len;
+    uint32_t _dmodel;
     uint32_t _nh;
     uint32_t _dk;
 
