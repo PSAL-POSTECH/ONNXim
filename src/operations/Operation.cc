@@ -13,6 +13,10 @@ Operation::Operation(SimulationConfig config, Model* model,
   _config = config;
   spdlog::trace("Node {} op_type {}", _name.c_str(), _optype.c_str());
   for (std::string input_proto : node_proto.input()) {
+    /* Skip none input */
+    if (input_proto == "")
+      continue;
+
     Tensor* input_tensor = _model->find_tensor(input_proto);
     if (input_tensor == nullptr) {
       std::vector<uint32_t> dims;
