@@ -65,39 +65,41 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
   int loop_size = _config.core_width;
 
   /* MOVIN BIAS */
-  for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
-    int M_offset = tout_m_offset + Ms;
-    int m_loop = M_offset + loop_size > mapping.total_loop.M
-                     ? mapping.total_loop.M - M_offset
-                     : loop_size;
-    if(m_loop <= 0) break;
-    for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
-      std::set<addr_type> bias_addrs;
-      int N_offset = tout_n_offset + Ns;
-      int n_loop = N_offset + loop_size > mapping.total_loop.N
-                       ? mapping.total_loop.N - N_offset
-                       : loop_size;
-      for (int iter_m = 0; iter_m < m_loop; iter_m++) {
-        int M = tout_m_offset + Ms + iter_m;
-        if (M >= mapping.total_loop.M) continue;
-        bias_addrs.insert(make_activation_address(0, 0, 0, M, _output_shape));
-      }
-      if (has_bias) {
-        tile.instructions.push_back(Instruction{
-            .opcode = Opcode::MOVIN,
-            .dest_addr = ACCUM_SPAD_BASE +
-                        (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
-            .size = (uint32_t)bias_addrs.size() * n_loop,
-            .src_addrs = std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
-            .operand_id = _INPUT_OPERAND + 2});
-      } else {
-        tile.instructions.push_back(Instruction{
-            .opcode = Opcode::COMP,
-            .dest_addr = ACCUM_SPAD_BASE +
-                        (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
-            .size = (uint32_t)bias_addrs.size() * n_loop,
-            .src_addrs = std::vector<addr_type>(),
-            .operand_id = _INPUT_OPERAND + 2});
+  if (!tile.accum) {
+    for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
+      int M_offset = tout_m_offset + Ms;
+      int m_loop = M_offset + loop_size > mapping.total_loop.M
+                      ? mapping.total_loop.M - M_offset
+                      : loop_size;
+      if(m_loop <= 0) break;
+      for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
+        std::set<addr_type> bias_addrs;
+        int N_offset = tout_n_offset + Ns;
+        int n_loop = N_offset + loop_size > mapping.total_loop.N
+                        ? mapping.total_loop.N - N_offset
+                        : loop_size;
+        for (int iter_m = 0; iter_m < m_loop; iter_m++) {
+          int M = tout_m_offset + Ms + iter_m;
+          if (M >= mapping.total_loop.M) continue;
+          bias_addrs.insert(make_activation_address(0, 0, 0, M, _output_shape));
+        }
+        if (has_bias) {
+          tile.instructions.push_back(Instruction{
+              .opcode = Opcode::MOVIN,
+              .dest_addr = ACCUM_SPAD_BASE +
+                          (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
+              .size = (uint32_t)bias_addrs.size() * n_loop,
+              .src_addrs = std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
+              .operand_id = _INPUT_OPERAND + 2});
+        } else {
+          tile.instructions.push_back(Instruction{
+              .opcode = Opcode::COMP,
+              .dest_addr = ACCUM_SPAD_BASE +
+                          (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
+              .size = (uint32_t)bias_addrs.size() * n_loop,
+              .src_addrs = std::vector<addr_type>(),
+              .operand_id = _INPUT_OPERAND + 2});
+        }
       }
     }
   }
