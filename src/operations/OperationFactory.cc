@@ -13,6 +13,7 @@
 #include "Cast.h"
 #include "EmbedLayerNorm.h"
 #include "SkipLayerNorm.h"
+#include "BiasGelu.h"
 // #include "MatMul.h"
 #include "MaxPool.h"
 
@@ -50,6 +51,8 @@ std::unique_ptr<Operation> OperationFactory::create_operation(
     return std::make_unique<EmbedLayerNorm>(_config, model, node_proto);
   } else if (node_proto.op_type() == "SkipLayerNormalization") {
     return std::make_unique<SkipLayerNorm>(_config, model, node_proto);
+  } else if (node_proto.op_type() == "BiasGelu") {
+    return std::make_unique<BiasGelu>(_config, model, node_proto);
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr",
                node_proto.op_type().c_str());
@@ -85,6 +88,8 @@ std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
     return std::make_unique<EmbedLayerNorm>(*dynamic_cast<EmbedLayerNorm*>(op));
   } else if (op->get_optype() == "SkipLayerNormalization") {
     return std::make_unique<SkipLayerNorm>(*dynamic_cast<SkipLayerNorm*>(op));
+  } else if (op->get_optype() == "BiasGelu") {
+    return std::make_unique<BiasGelu>(*dynamic_cast<BiasGelu*>(op));
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr", op->get_optype());
   return nullptr;
