@@ -17,15 +17,20 @@ SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model* model,
     _seq = _input_shape.at(0);
     _dk = _input_shape.at(1);
 
-    _output_shape = std::vector<uint32_t>{_seq, _dk};
-    Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(0));
-    if (pre_defind_tensor == nullptr) {
-        std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-            _id, node_proto.output(0), _output_shape, false);
-            _outputs.push_back(output_tensor.get()->get_id());
-        _model->add_tensor(std::move(output_tensor));
-    } else {
-        pre_defind_tensor->redefine_tensor(_id, _output_shape);
+    for (int i=0;i<node_proto.output().size();i++) {
+        _output_shape = std::vector<uint32_t>{_seq, _dk};
+        if (node_proto.output(i)=="")
+            continue;
+
+        Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(i));
+        if (pre_defind_tensor == nullptr) {
+            std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
+                _id, node_proto.output(i), _output_shape, false);
+                _outputs.push_back(output_tensor.get()->get_id());
+            _model->add_tensor(std::move(output_tensor));
+        } else {
+            pre_defind_tensor->redefine_tensor(_id, _output_shape);
+        }
     }
     calculate_loops();
 }
