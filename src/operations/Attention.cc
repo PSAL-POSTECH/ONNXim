@@ -39,8 +39,13 @@ Attention::Attention(SimulationConfig config, Model* model,
     _value_shape = std::vector<uint32_t>{_nh, _seq, _dk};
 
     _input_shape = std::vector<uint32_t>{_q_len, _dk};
-    _output_shape = std::vector<uint32_t>{_seq, _dk};
+    _output_shape = std::vector<uint32_t>{_q_len, _dk};
     _liner_output_shape = std::vector<uint32_t>{_q_len, _weight_shape[1]};
+    spdlog::debug("Fused attention: input shape: [{}, {}]", _input_shape.at(0), _input_shape.at(1));
+    spdlog::debug("Fused attention: output shape: [{}, {}]", _output_shape.at(0), _output_shape.at(1));
+    spdlog::debug("Fused attention: query shape: [{}, {}, {}]", _query_shape.at(0), _query_shape.at(1), _query_shape.at(2));
+    spdlog::debug("Fused attention: key shape: [{}, {}, {}]", _key_shape.at(0), _key_shape.at(1), _key_shape.at(2));
+    spdlog::debug("Fused attention: value shape: [{}, {}, {}]", _value_shape.at(0), _value_shape.at(1), _value_shape.at(2));
 
     Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(0));
     if (pre_defind_tensor == nullptr) {
