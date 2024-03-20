@@ -11,7 +11,6 @@ EmbedLayerNorm::EmbedLayerNorm(SimulationConfig config, Model* model, onnx::Node
   _output_shape.push_back(_weight_shape.at(1)); 
   spdlog::trace("output_shape : {}", _output_shape);
 
-  /* output */
   Tensor* embed_output = _model->find_tensor(node_proto.output(0));
   if (embed_output == nullptr) {
     std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
@@ -31,6 +30,17 @@ EmbedLayerNorm::EmbedLayerNorm(SimulationConfig config, Model* model, onnx::Node
     _model->add_tensor(std::move(output_tensor));
   } else {
     mask_output->redefine_tensor(_id, _output_shape);
+  }
+  if (node_proto.output().size()==3) {
+    Tensor* embed_sum = _model->find_tensor(node_proto.output(2));
+    if (embed_sum == nullptr) {
+      std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
+          _id, node_proto.output(2), _output_shape, false);
+      _outputs.push_back(output_tensor.get()->get_id());
+      _model->add_tensor(std::move(output_tensor));
+    } else {
+      embed_sum->redefine_tensor(_id, _output_shape);
+    }
   }
 }
 
