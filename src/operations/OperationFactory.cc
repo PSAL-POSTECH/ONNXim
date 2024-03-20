@@ -51,7 +51,7 @@ std::unique_ptr<Operation> OperationFactory::create_operation(
     return std::make_unique<EmbedLayerNorm>(_config, model, node_proto);
   } else if (node_proto.op_type() == "SkipLayerNormalization") {
     return std::make_unique<SkipLayerNorm>(_config, model, node_proto);
-  } else if (node_proto.op_type() == "BiasGelu") {
+  } else if (node_proto.op_type() == "BiasGelu" || node_proto.op_type() == "FastGelu") {
     return std::make_unique<BiasGelu>(_config, model, node_proto);
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr",
@@ -88,7 +88,7 @@ std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
     return std::make_unique<EmbedLayerNorm>(*dynamic_cast<EmbedLayerNorm*>(op));
   } else if (op->get_optype() == "SkipLayerNormalization") {
     return std::make_unique<SkipLayerNorm>(*dynamic_cast<SkipLayerNorm*>(op));
-  } else if (op->get_optype() == "BiasGelu") {
+  } else if (op->get_optype() == "BiasGelu" || op->get_optype() == "FastGelu") {
     return std::make_unique<BiasGelu>(*dynamic_cast<BiasGelu*>(op));
   }
   spdlog::warn("Node Proto optype \"{}\" returned nullptr", op->get_optype());

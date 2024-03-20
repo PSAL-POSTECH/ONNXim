@@ -130,9 +130,6 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
                 dram_query_addrs.insert(make_address(query_idx, _query_shape));
             }
         }
-        spdlog::debug("dram_query_addrs.size(): {}", dram_query_addrs.size());
-        spdlog::debug("dram_key_addrs.size(): {}", dram_key_addrs.size());
-        spdlog::debug("dram_value_addrs.size(): {}", dram_key_addrs.size());
 
         // -- load --
         // MOVIN query, key, value
