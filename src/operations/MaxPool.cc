@@ -101,7 +101,7 @@ void MaxPool::initialize_instructions(Tile& tile, Mapping mapping) {
   // uint32_t h_kernel = _kernel_shape[0];
   // uint32_t w_kernel = _kernel_shape[1];
   // uint32_t kernel_size = h_kernel * w_kernel;   // Compare size
-  // uint32_t compare_size_in_vector = _config.process_bit /       // Maximum compare size in a vector unit
+  // uint32_t compare_size_in_vector = _config.vector_process_bit /       // Maximum compare size in a vector unit
   //                                     (_config.precision * 8);
 
   // uint32_t N = tile.batch;

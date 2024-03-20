@@ -7,7 +7,7 @@
 
   "sram_size" : 448,
   "sram_width" : 32,
-  "process_bit" : 32,
+  "vector_process_bit" : 32,
 
   "dram_type" : "ramulator",
   "dram_freq" : 877,

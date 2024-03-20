@@ -5,7 +5,7 @@
   "core_width" : 8,
   "core_height" : 8,
 
-  "process_bit" : 32,
+  "vector_process_bit" : 32,
 
   "sram_size" : 448,
   "sram_width" : 32,

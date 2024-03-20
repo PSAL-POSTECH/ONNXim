@@ -40,8 +40,16 @@ SimulationConfig initialize_config(json config) {
   parsed_config.core_height = config["core_height"];
 
   /* Vector configs */
-  parsed_config.process_bit = config["process_bit"];
-  
+  parsed_config.vector_process_bit = config["vector_process_bit"];
+  parsed_config.add_latency = config["add_latency"];
+  parsed_config.mul_latency = config["mul_latency"];
+  parsed_config.exp_latency = config["exp_latency"];
+  parsed_config.gelu_latency = config["gelu_latency"];
+  parsed_config.add_tree_latency = config["add_tree_latency"];
+  parsed_config.scalar_sqrt_latency = config["scalar_sqrt_latency"];
+  parsed_config.scalar_add_latency = config["scalar_add_latency"];
+  parsed_config.scalar_mul_latency = config["scalar_mul_latency"];
+
   /* SRAM configs */
   parsed_config.sram_size = config["sram_size"];
   parsed_config.sram_width = config["sram_width"];
