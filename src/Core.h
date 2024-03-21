@@ -43,10 +43,24 @@ class Core {
   cycle_type _max_request_rr_cycle;
   cycle_type _min_request_rr_cycle;
 
+  cycle_type _compute_memory_stall_cycle;
+  cycle_type _layernorm_stall_cycle;
+  cycle_type _softmax_stall_cycle;
+  cycle_type _add_stall_cycle;
+  cycle_type _gelu_stall_cycle;
+  cycle_type _load_memory_cycle;
+  cycle_type _store_memory_cycle;
+
   /* Vector Unit Params */
   cycle_type _stat_vec_compute_cycle;
   cycle_type _stat_vec_memory_cycle;  // Does not acctuall count yet
   cycle_type _stat_vec_idle_cycle;    // Does not acctuall count yet
+
+  cycle_type _stat_matmul_cycle;
+  cycle_type _stat_layernorm_cycle;
+  cycle_type _stat_add_cycle;
+  cycle_type _stat_gelu_cycle;
+  cycle_type _stat_softmax_cycle;
 
   int _running_layer;
   std::deque<Tile> _tiles;

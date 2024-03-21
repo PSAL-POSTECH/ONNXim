@@ -156,6 +156,55 @@ void SystolicWS::cycle() {
     _stat_vec_compute_cycle++;
   }
 
+  // xxx will it work well on double buffered code? no.
+  bool is_idle = _compute_pipeline.empty();
+  is_idle = is_idle && _vector_pipeline.empty();
+
+  if (is_idle) {
+    _stat_memory_cycle++;
+
+    if (_ex_inst_queue.empty()) {
+      _store_memory_cycle++;
+    } else {
+      _load_memory_cycle++;
+      switch (_ex_inst_queue.front().opcode) {
+        case Opcode::GEMM:
+        case Opcode::GEMM_PRELOAD:
+          _compute_memory_stall_cycle++;
+          break;
+        case Opcode::LAYERNORM:
+          _layernorm_stall_cycle++;
+          break;
+        case Opcode::SOFTMAX:
+          _softmax_stall_cycle++;
+          break;
+        case Opcode::ADD:
+          _add_stall_cycle++;
+          break;
+        case Opcode::GELU:
+          _gelu_stall_cycle++;
+          break;
+      }
+    }
+  } else if (!_compute_pipeline.empty()) {
+      _stat_matmul_cycle++;
+  } else {
+    switch (_vector_pipeline.front().opcode) {
+      case Opcode::LAYERNORM:
+        _stat_layernorm_cycle++;
+        break;
+      case Opcode::SOFTMAX:
+        _stat_softmax_cycle++;
+        break;
+      case Opcode::ADD:
+        _stat_add_cycle++;
+        break;
+      case Opcode::GELU:
+        _stat_gelu_cycle++;
+        break;
+    }
+  }
+
   if (!running()) {
     _stat_idle_cycle++;
   }
