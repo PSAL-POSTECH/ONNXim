@@ -71,9 +71,11 @@ public:
   Mapping& operator[](const Mapping::LoopCounts &key) { return _mapping_table[key]; }
   static MappingTable parse_mapping_file(std::string mapping_path, SimulationConfig config);
   const Mapping& fallback_mapping(Mapping::LoopCounts &key);
+  void gemm_mapping(Mapping::LoopCounts &key);
   const Mapping& at(Mapping::LoopCounts &key);
 
 private:
+  uint32_t divup(uint32_t src, uint32_t div) { return (src+div-1)/div; }
   typedef std::map<Mapping::LoopCounts, Mapping> _MappingTable;
   _MappingTable _mapping_table;
   SimulationConfig _config;

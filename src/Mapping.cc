@@ -37,8 +37,55 @@ MappingTable MappingTable::parse_mapping_file(
   return map;
 }
 
+void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
+  uint32_t DIM;
+  uint32_t dim_I, dim_J, dim_K;
+
+  assert(_config.core_height==_config.core_width);
+  DIM = _config.core_height;
+  dim_I = key.N;
+  dim_J = key.M;
+  dim_K = key.C;
+
+  const uint32_t dim_I_padded = (dim_I / DIM + (dim_I % DIM != 0 )) * DIM;
+  const uint32_t dim_J_padded = (dim_J / DIM + (dim_J % DIM != 0 )) * DIM;
+  const uint32_t dim_K_padded = (dim_K / DIM + (dim_K % DIM != 0 )) * DIM;
+
+  uint32_t tile_I, tile_J, tile_K;
+  uint32_t db_partitions_rows, db_mats_in_partition, db_mats_in_acc;
+  uint32_t db_max_tile_i_j, db_max_tile_k;
+
+  db_partitions_rows = ((_config.spad_size * 1024 / (2 * DIM)) / 2);
+  db_mats_in_partition = db_partitions_rows / DIM;
+  db_mats_in_acc = (_config.accum_spad_size * 1024 / (2 * DIM)) / DIM;
+  db_max_tile_i_j = (uint32_t)sqrt(db_mats_in_acc);
+  db_max_tile_k = db_mats_in_partition / db_max_tile_i_j;
+
+  tile_I = std::min(dim_I_padded/DIM, db_max_tile_i_j);
+  tile_J = std::min(dim_J_padded/DIM, db_max_tile_i_j);
+  tile_K = std::min(dim_K_padded/DIM, db_max_tile_k);
+
+  /* create mapping entry */
+  Mapping mapping;
+  mapping.total_loop = {dim_I, dim_K, dim_J, 1, 1, 1, 1};
+  mapping.tile_out_loop = {divup(dim_I, tile_I),
+                          divup(dim_K, tile_K),
+                          divup(dim_J, tile_J), 1, 1, 1, 1};
+  mapping.tile_in_loop = {tile_I, tile_K, tile_J, 1, 1, 1, 1};
+  _mapping_table[key] = mapping;
+  spdlog::info("Used gemmini gemm mapping: Total N:{} C:{} M:{}, " \
+    "Outer N:{} C:{} M:{}, " \
+    "Inner N:{} C:{} M:{}",
+    mapping.total_loop.N, mapping.total_loop.C, mapping.total_loop.M,
+    mapping.tile_out_loop.N, mapping.tile_out_loop.C, mapping.tile_out_loop.M,
+    mapping.tile_in_loop.N, mapping.tile_in_loop.C, mapping.tile_in_loop.M
+  );
+}
+
 const Mapping& MappingTable::fallback_mapping(Mapping::LoopCounts &key) {
-  return _mapping_table[key];
+  if (key.P==1 && key.Q==1 && key.S==1 && key.R==1)
+    gemm_mapping(key);
+  return _mapping_table.at(key);
 }
 
 const Mapping& MappingTable::at(Mapping::LoopCounts &key) {
