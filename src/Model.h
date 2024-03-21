@@ -32,6 +32,9 @@ class Model {
     std::vector<Operation*> _executable_layer;
     SimulationConfig _config;
 
+    /* Number of simulating attention block */
+    int nr_skip = 0; // NR_SKIP == 2 * NR_ATTEN
+
     bool check_exist_in_exeutable(uint32_t id);
 };
 

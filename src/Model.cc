@@ -99,6 +99,11 @@ void Model::initialize_model(MappingTable mapping_table) {
     if(node != nullptr) {
       int node_id = node->get_id();
       _operation_map[node->get_id()] = std::move(node);
+      if (node_proto.op_type() == "SkipLayerNormalization")
+        if (_model_config["nr_atten"] != -1 && ++nr_skip >= int(_model_config["nr_atten"])*2) {
+          _operation_map[node_id].get()->_outputs.clear();
+          break;
+        }
     }
   }
 
