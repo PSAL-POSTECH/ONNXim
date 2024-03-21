@@ -53,6 +53,7 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   const uint32_t dim_K_padded = (dim_K / _dim + (dim_K % _dim != 0 )) * _dim;
 
   uint32_t tile_I, tile_J, tile_K;
+  uint32_t inner_I, inner_J, inner_K;
   uint32_t db_partitions_rows, db_mats_in_partition, db_mats_in_acc;
   uint32_t db_max_tile_i_j, db_max_tile_k;
 
@@ -66,14 +67,17 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   tile_J = std::min(dim_J_padded/_dim, db_max_tile_i_j);
   tile_K = std::min(dim_K_padded/_dim, db_max_tile_k);
 
+  inner_I = ceil_div(dim_I, tile_I);
+  inner_J = ceil_div(dim_J, tile_J);
+  inner_K = ceil_div(dim_K, tile_K);
   /* create mapping entry */
   Mapping mapping;
   mapping.total_loop = {dim_I, dim_K, dim_J, 1, 1, 1, 1};
-  mapping.tile_out_loop = {ceil_div(dim_I, tile_I),
-                          ceil_div(dim_K, tile_K),
-                          ceil_div(dim_J, tile_J), 1, 1, 1, 1};
-  mapping.tile_in_loop = {tile_I, tile_K, tile_J, 1, 1, 1, 1};
+  mapping.tile_out_loop = {tile_I, tile_K, tile_J, 1, 1, 1, 1};
+  mapping.tile_in_loop = {inner_I, inner_K, inner_J, 1, 1, 1, 1};
   _mapping_table[key] = mapping;
+  spdlog::info("sram_size: {} accum_size: {}", _config.spad_size * 1024, _config.accum_spad_size * 1024);
+  spdlog::info("required_sram_size: {} required_accum_size: {}", (inner_I+inner_J)*inner_K*_config.precision, (inner_I*inner_J)*_config.precision);
   spdlog::info("Used gemmini gemm mapping: Total N:{} C:{} M:{}, " \
     "Outer N:{} C:{} M:{}, " \
     "Inner N:{} C:{} M:{}",
