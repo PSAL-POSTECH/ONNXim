@@ -72,11 +72,21 @@ public:
   static MappingTable parse_mapping_file(std::string mapping_path, SimulationConfig config);
   const Mapping& fallback_mapping(Mapping::LoopCounts &key);
   void gemm_mapping(Mapping::LoopCounts &key);
+  void conv_mapping(Mapping::LoopCounts &key);
   const Mapping& at(Mapping::LoopCounts &key);
-
+  int _calc_conv_mapping(bool acc,
+		int stride, int input_dilation, int kernel_dilation,
+		bool downsample, bool trans_weight_0132, bool trans_input_3120,
+		int batches, int porows, int pocols, int ochs,
+		int krows, int kcols, int kchs,
+		int pool_size, int pool_stride);
+  Mapping calc_conv_mapping(Mapping::LoopCounts &key);
 private:
-  uint32_t divup(uint32_t src, uint32_t div) { return (src+div-1)/div; }
+  uint32_t ceil_div(uint32_t src, uint32_t div) { return (src+div-1)/div; }
   typedef std::map<Mapping::LoopCounts, Mapping> _MappingTable;
   _MappingTable _mapping_table;
   SimulationConfig _config;
+  uint32_t _dim;
+  uint32_t _max_spad_rows;
+  uint32_t _max_acc_rows;
 };
