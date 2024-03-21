@@ -162,7 +162,8 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
-            .size = q_len * seq_len, //Right?
+            .size = q_len * seq_len * _config.precision / _config.dram_req_size,
+            .compute_size = q_len * seq_len,
             .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
 
             .tile_m = seq_len,
@@ -174,7 +175,8 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::SOFTMAX,
             .dest_addr = sram_acc_ofs,
-            .size = seq_len * _config.precision,
+            .size = seq_len * _config.precision / _config.dram_req_size,
+            .compute_size = seq_len * _config.precision,
             .src_addrs = std::vector<addr_type>{sram_l_ofs},
             .tile_m = q_len,
             .src_from_accum = true,
@@ -186,7 +188,8 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = output_ofs,
-            .size = q_len * _dk, // Right?
+            .size = q_len * _dk * _config.precision / _config.dram_req_size,
+            .compute_size = q_len * _dk,
             .src_addrs = std::vector<addr_type>{sram_acc_ofs, sram_v_ofs},
 
             .tile_m = _dk,

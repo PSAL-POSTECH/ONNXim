@@ -181,14 +181,16 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
           tile.instructions.push_back(Instruction{
               .opcode = Opcode::GEMM_PRELOAD,
               .dest_addr = out_sp_addr,
-              .size = (uint32_t)n_loop,
+              // Accumulat buffer already allocated
+              .compute_size = (uint32_t)n_loop,
               .src_addrs =
                   std::vector<addr_type>{act_sp_addr, weight_sp_addr}});
         } else {
           tile.instructions.push_back(Instruction{
               .opcode = Opcode::GEMM,
               .dest_addr = out_sp_addr,
-              .size = (uint32_t)n_loop,
+              // Accumulat buffer already allocated
+              .compute_size = (uint32_t)n_loop,
               .src_addrs =
                   std::vector<addr_type>{act_sp_addr, weight_sp_addr}});
         }

@@ -102,7 +102,7 @@ void SystolicWS::cycle() {
       assert(can_issue_compute(front));
       if (!_compute_pipeline.empty()) {
         /* Preload can be hided */
-        uint32_t offset = _compute_pipeline.back().size;
+        uint32_t offset = _compute_pipeline.back().compute_size;
         offset = MAX(offset, 4);
         if (front.opcode == Opcode::GEMM_PRELOAD) {
           // State mul-pre
@@ -238,8 +238,8 @@ cycle_type SystolicWS::calculate_vector_op_iterations(uint32_t vector_size) {
 }
 
 cycle_type SystolicWS::get_vector_compute_cycles(Instruction &inst) {
-  cycle_type vec_op_iter = calculate_vector_op_iterations(inst.size);
-  cycle_type add_tree_iter = calculate_add_tree_iterations(inst.size);
+  cycle_type vec_op_iter = calculate_vector_op_iterations(inst.compute_size);
+  cycle_type add_tree_iter = calculate_add_tree_iterations(inst.compute_size);
   cycle_type add_tree, scalar_ops, vector_ops;
   switch (inst.opcode) {
     case Opcode::LAYERNORM:

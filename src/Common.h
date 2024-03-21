@@ -70,7 +70,8 @@ typedef struct {
   std::vector<std::string> dependent_ids;
   std::string dest_id;
   addr_type dest_addr;
-  uint32_t size;
+  uint32_t size;          // Used for sram allocation. Multiple of _config.dram_req_size
+  uint32_t compute_size;
   std::vector<addr_type> src_addrs;
   int spad_id;
   int accum_spad_id;

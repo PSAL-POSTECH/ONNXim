@@ -77,7 +77,8 @@ void BiasGelu::initialize_instructions(Tile &tile, Mapping mapping, uint32_t tok
     tile.instructions.push_back(Instruction{
         .opcode = Opcode::GELU,
         .dest_addr = accum_base,
-        .size = _dk * tokens * _config.precision,
+        .size = _dk * tokens * _config.precision / _config.dram_req_size,
+        .compute_size = _dk * tokens * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base},
     });
 

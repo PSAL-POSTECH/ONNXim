@@ -10,7 +10,7 @@ Sram::Sram(SimulationConfig config, const cycle_type& core_cycle, bool accum)
   }
   _data_width = config.dram_req_size;
   int precision = config.precision;
-  _current_size[0] = 0;
+  _current_size[0] = 0; // multiple of _data_width
   _current_size[1] = 0;
   _accum = accum;
 }
