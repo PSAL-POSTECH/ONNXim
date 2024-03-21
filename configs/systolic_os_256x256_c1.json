@@ -5,7 +5,7 @@
   "core_width" : 256,
   "core_height" : 256,
 
-  "sram_size" : 28672,
+  "spad_size" : 28672,
   "sram_width" : 256,
 
   "dram_type" : "ramulator",

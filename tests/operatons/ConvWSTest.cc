@@ -21,7 +21,6 @@ SimulationConfig get_default_conv_config() {
   config.accum_spad_size = 1024;
   config.precision = 4;
   config.dram_req_size = 32;
-  config.sram_size = 1024;
   config.layout = "NHWC";
   return config;
 }

@@ -51,10 +51,9 @@ SimulationConfig initialize_config(json config) {
   parsed_config.scalar_mul_latency = config["scalar_mul_latency"];
 
   /* SRAM configs */
-  parsed_config.sram_size = config["sram_size"];
   parsed_config.sram_width = config["sram_width"];
-  parsed_config.spad_size = config["sram_size"];
-  parsed_config.accum_spad_size = config["sram_size"];
+  parsed_config.spad_size = config["spad_size"];
+  parsed_config.accum_spad_size = config["accum_spad_size"];
 
   /* DRAM config */
   if ((std::string)config["dram_type"] == "simple")

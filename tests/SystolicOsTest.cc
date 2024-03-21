@@ -12,7 +12,7 @@ TEST(SystolicOSTileExecutionTest, BasicAssertions) {
   // config.core_type = CoreType::SYSTOLIC_OS;
   // config.core_height = 8;
   // config.core_width = 8;
-  // config.sram_size = 192;
+  // config.spad_size = 192;
   // config.precision = 4;
   // config.dram_req_size = 32;
 

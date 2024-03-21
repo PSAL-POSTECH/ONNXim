@@ -34,7 +34,6 @@ struct SimulationConfig {
 
   /* SRAM config */
   uint32_t sram_width;
-  uint32_t sram_size;
   uint32_t spad_size;
   uint32_t accum_spad_size;
 

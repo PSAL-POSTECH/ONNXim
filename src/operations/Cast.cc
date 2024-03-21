@@ -20,7 +20,7 @@ Cast::Cast(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
   _total_loop = std::accumulate(_input_shape.begin(), _input_shape.end(), 1U, [](uint32_t a, uint32_t b) {
     return (uint64_t)a * (uint64_t)b;
   });
-  _element_in_tile = _config.sram_size / (config.precision * 2); // Doubled buffer
+  _element_in_tile = _config.spad_size / (config.precision * 2); // Doubled buffer
 }
 
 void Cast::initialize_tiles(MappingTable mapping_table) {
