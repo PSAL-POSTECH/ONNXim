@@ -28,7 +28,7 @@ GemmWS make_GemmWS(SimulationConfig config, std::string mapping_str, uint32_t n,
   std::string input_name = "input";
   std::vector<uint32_t> input_dims = {n, 1, 1, c};
 
-  MappingTable mapping_table;
+  MappingTable mapping_table = MappingTable(config);
   Mapping mapping(mapping_str);
 
   Mapping::LoopCounts key{

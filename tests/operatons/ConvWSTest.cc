@@ -28,7 +28,7 @@ SimulationConfig get_default_conv_config() {
 
 ConvWS make_ConvWS(SimulationConfig config, std::string mapping_str, convInfo info) {
   std::string input_name = "input";
-  MappingTable mapping_table;
+  MappingTable mapping_table = MappingTable(config);
   Mapping mapping(mapping_str);
 
   Mapping::LoopCounts key{

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "Common.h"
+#include "SimulationConfig.h"
 
 struct Mapping {
   enum LoopName { N, C, M, S, R, Q, P };
@@ -63,5 +64,17 @@ struct Mapping {
   uint32_t spatial_S = 0;
   std::vector<LoopName> tile_out_loop_order;
 };
-typedef std::map<Mapping::LoopCounts, Mapping> MappingTable;
-MappingTable parse_mapping_file(std::string file_path);
+
+class MappingTable {
+public:
+  MappingTable(SimulationConfig config);
+  Mapping& operator[](const Mapping::LoopCounts &key) { return _mapping_table[key]; }
+  static MappingTable parse_mapping_file(std::string mapping_path, SimulationConfig config);
+  const Mapping& fallback_mapping(Mapping::LoopCounts &key);
+  const Mapping& at(Mapping::LoopCounts &key);
+
+private:
+  typedef std::map<Mapping::LoopCounts, Mapping> _MappingTable;
+  _MappingTable _mapping_table;
+  SimulationConfig _config;
+};

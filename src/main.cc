@@ -62,7 +62,7 @@ int main(int argc, char** argv) {
     auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name);
 
     printf("Launching model\n");
-    MappingTable mapping_table = parse_mapping_file(mapping_path);
+    MappingTable mapping_table = MappingTable::parse_mapping_file(mapping_path, config);
 
     model->initialize_model(mapping_table);
     simulator->launch_model(std::move(model));

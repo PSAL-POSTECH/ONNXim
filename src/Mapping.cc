@@ -5,9 +5,14 @@
 #include <string>
 // #include "Common.h"
 
-std::map<Mapping::LoopCounts, Mapping> parse_mapping_file(
-    std::string mapping_path) {
-  std::map<Mapping::LoopCounts, Mapping> map;
+MappingTable::MappingTable (SimulationConfig config) {
+  _mapping_table = _MappingTable();
+  _config = config;
+}
+
+MappingTable MappingTable::parse_mapping_file(
+    std::string mapping_path, SimulationConfig config) {
+  MappingTable map = MappingTable(config);
   std::ifstream mapping_file;
   std::string line;
   mapping_file.open(mapping_path);
@@ -32,6 +37,18 @@ std::map<Mapping::LoopCounts, Mapping> parse_mapping_file(
   return map;
 }
 
+const Mapping& MappingTable::fallback_mapping(Mapping::LoopCounts &key) {
+  return _mapping_table[key];
+}
+
+const Mapping& MappingTable::at(Mapping::LoopCounts &key) {
+  auto it = _mapping_table.find(key);
+  if (it != _mapping_table.end())
+    return it->second;
+  else
+    return fallback_mapping(key);
+}
+
 uint32_t Mapping::LoopCounts::get_loop(Mapping::LoopName name) {
   switch (name) {
     case Mapping::LoopName::N:
@@ -50,6 +67,8 @@ uint32_t Mapping::LoopCounts::get_loop(Mapping::LoopName name) {
       return Q;
     default:
       assert(0);
+      /* Unreachable */
+      return 0;
   }
 }
 
