@@ -20,8 +20,8 @@ MappingTable MappingTable::parse_mapping_file(
   std::string line;
   mapping_file.open(mapping_path);
   if (mapping_file.fail()) {
-    spdlog::error("Invalid mapping file path : {}", mapping_path);
-    throw std::runtime_error("Data error");
+    spdlog::info("No mapping file path : {}", mapping_path);
+    return map;
   }
   while (getline(mapping_file, line)) {
     Mapping mapping(line);
