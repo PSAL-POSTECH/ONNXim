@@ -40,8 +40,9 @@ Gemm::Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
   for (int i=0; i<_input_shape.size()-2;i++)
     _batch_size *= _input_shape.at(i);
 
-  spdlog::debug("GemmWS: input_shape: {}", _input_shape);
-  spdlog::debug("GemmWS: output_shape : {}", _output_shape);
+  spdlog::trace("GemmWS: input_shape: {}", _input_shape);
+  spdlog::trace("GemmWS: output_shape : {}", _output_shape);
+
   std::vector<uint32_t> bias_shape;
   if (node_proto.input().size() == 3) {
     bias_shape = get_input(2)->get_dims();

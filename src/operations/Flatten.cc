@@ -17,7 +17,6 @@ Flatten::Flatten(SimulationConfig config, Model* model,
   assert(_axis >= 0 && _axis < 4);
   std::vector<uint32_t> input_shape = get_input(0)->get_dims();
   std::vector<uint32_t> output_shape(_axis + 1, 1);
-  spdlog::trace("output_shape : ");
 
   for (int i = 0; i < input_shape.size(); i++) {
     if (i < _axis) {
@@ -27,8 +26,7 @@ Flatten::Flatten(SimulationConfig config, Model* model,
     }
   }
 
-  spdlog::trace("output name : {} {}", node_proto.output(0).c_str(),
-                output_shape);
+  spdlog::trace("output name : {} {}", node_proto.output(0).c_str(), output_shape);
 
   Tensor* predefined_tensor = _model->find_tensor(node_proto.output(0));
   if (predefined_tensor == nullptr) {

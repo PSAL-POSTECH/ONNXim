@@ -26,7 +26,6 @@ AdaptiveAvgPool::AdaptiveAvgPool(SimulationConfig config, Model* model,
   assert(kernel_dim == 2);
   std::vector<uint32_t> input_shape = get_input(0)->get_dims();
   std::vector<uint32_t> output_shape = input_shape;
-  spdlog::trace("output_shape : ");
 
   /* Asuming input H W size are multiple of output H W*/
   assert(!(input_shape[Hdim] % _kernel_shape[0]) &&
@@ -37,13 +36,6 @@ AdaptiveAvgPool::AdaptiveAvgPool(SimulationConfig config, Model* model,
 
   spdlog::trace("output name : {} {}", node_proto.output(0).c_str(),
                 output_shape);
-  _skip = input_shape[Hdim] == output_shape[Hdim] &&
-          input_shape[Wdim] == output_shape[Wdim];
-  if (_skip) {
-    Tensor* input_tensor = _model->find_tensor(node_proto.input(0));
-    _outputs.push_back(input_tensor->get_id());
-    return;
-  }
 
   Tensor* predefined_tensor = _model->find_tensor(node_proto.output(0));
   if (predefined_tensor == nullptr) {
@@ -80,7 +72,8 @@ void AdaptiveAvgPool::initialize_tiles(MappingTable mapping_table) {
                                 .batch = N,
                                 .Q = H,
                                 .P = W,
-                                .C = C});
+                                .C = C,
+                                .skip = true});
           initialize_instructions(_tiles.back(), Mapping{});
         }
       }

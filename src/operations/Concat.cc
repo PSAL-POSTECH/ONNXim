@@ -18,7 +18,6 @@ Concat::Concat(SimulationConfig config, Model* model,
 	std::vector<uint32_t> output_shape;
 	std::vector<uint32_t> input0_shape = get_input(0)->get_dims();
 	std::vector<uint32_t> input1_shape = get_input(1)->get_dims();
-	spdlog::trace("output_shape : ");
 	output_shape.resize(input0_shape.size());
 	for (int i = 0; i < input0_shape.size(); i++) {
 		if (i == _axis)

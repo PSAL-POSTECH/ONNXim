@@ -33,7 +33,6 @@ MaxPool::MaxPool(SimulationConfig config, Model* model,
   assert(kernel_dim == 2);
   std::vector<uint32_t> output_shape;
   std::vector<uint32_t> input_shape = get_input(0)->get_dims();
-  spdlog::trace("output_shape : ");
   output_shape.resize(input_shape.size());
   output_shape[Ndim] = input_shape[Ndim];
   output_shape[Cdim] = input_shape[Cdim];
