@@ -17,7 +17,7 @@ GemmWS::GemmWS(SimulationConfig config, MappingTable mapping_table,
                std::vector<uint32_t> output_shape)
     : Gemm(config, mapping_table, input_shape, weight_shape, output_shape) {}
 void GemmWS::initialize_tiles(MappingTable mapping_table) {
-  Mapping::LoopCounts key{.N = _output_shape[Ndim],
+  Mapping::LoopCounts key{.N = _output_shape[_input_shape.size()-2 + Ndim] * _batch_size,
                           .C = _weight_shape[Cdim_w],
                           .M = _weight_shape[Mdim],
                           .S = 1,

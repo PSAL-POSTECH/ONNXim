@@ -13,6 +13,7 @@ public:
     std::vector<uint32_t> _skip_shape;
     std::vector<uint32_t> _output_shape;
 
+    uint32_t _batch_size;
     uint32_t _seq;
     uint32_t _dk;
     uint32_t _tokens_per_tile;

@@ -15,6 +15,7 @@ class Gemm : public Operation {
   std::vector<uint32_t> _output_shape;
   std::vector<uint32_t> _input_shape;
   std::vector<uint32_t> _weight_shape;
+  int _batch_size;
 
  private:
   uint32_t _alpha;

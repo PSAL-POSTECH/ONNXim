@@ -9,12 +9,12 @@ BiasGelu::BiasGelu(SimulationConfig config, Model* model,
     _input_shape = get_input(0)->get_dims();
     _bias_shape = get_input(1)->get_dims();
 
-    /* Get sequence length and embedding
-     * Note: Batch size is assumed to 1 */
-    _seq = _input_shape.at(0);
-    _dk = _input_shape.at(1);
+    assert(_input_shape.size()==3);
+    _batch_size = _input_shape.at(0);
+    _seq = _input_shape.at(1);
+    _dk = _input_shape.at(2);
 
-    _output_shape = std::vector<uint32_t>{_seq, _dk};
+    _output_shape = _input_shape;
     Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(0));
     if (pre_defind_tensor == nullptr) {
         std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
@@ -28,8 +28,8 @@ BiasGelu::BiasGelu(SimulationConfig config, Model* model,
 }
 
 void BiasGelu::initialize_tiles(MappingTable mapping_table) {
-    for (uint32_t tokens= 0; tokens < _seq; tokens+=_tokens_per_tile) {
-        uint32_t remain_tokens = std::min(_seq-tokens, _tokens_per_tile);
+    for (uint32_t tokens= 0; tokens<_seq*_batch_size; tokens+=_tokens_per_tile) {
+        uint32_t remain_tokens = std::min(_seq*_batch_size-tokens, _tokens_per_tile);
         auto tile = Tile{
             .status = Tile::Status::INITIALIZED,
             .optype = get_name(),
@@ -97,7 +97,7 @@ void BiasGelu::calculate_loops() {
 
     _tokens_per_tile = (sram_capacity / size_per_token) - 1; 
     assert (_tokens_per_tile >= 1);
-    if (_tokens_per_tile > _seq) _tokens_per_tile = _seq;
+    if (_tokens_per_tile > _seq * _batch_size) _tokens_per_tile = _seq * _batch_size;
 
     spdlog::info("tokens_per_tile: {}", _tokens_per_tile);
 }

@@ -24,26 +24,24 @@ Attention::Attention(SimulationConfig config, Model* model,
         if (_kv_cache_shape.at(3))
             has_kv_cache = true;
     }
-    /* Get sequence length and embedding
-     * Note: Batch size is assumed to 1 */
-    _batch_size = 1;
+    assert(_input_shape.size()==3);
+    _batch_size = _input_shape.at(0);
     _dmodel = _weight_shape.at(0);
     _dk = _dmodel / _nh;
-    _q_len = _input_shape.at(0);
+    _q_len = _input_shape.at(1);
     if (has_kv_cache)
         _seq = _kv_cache_shape.at(3) + 1;
     else
-        _seq = _input_shape.at(0);
+        _seq = _input_shape.at(1);
 
     _query_shape = std::vector<uint32_t>{_nh, _q_len, _dk};
     _key_shape = std::vector<uint32_t>{_nh, _dk, _seq};
     _value_shape = std::vector<uint32_t>{_nh, _seq, _dk};
 
-    _input_shape = std::vector<uint32_t>{_q_len, _dmodel};
-    _output_shape = std::vector<uint32_t>{_q_len, _dmodel};
-    _liner_output_shape = std::vector<uint32_t>{_q_len, _weight_shape[1]};
-    spdlog::debug("Fused attention: input shape: [{}, {}]", _input_shape.at(0), _input_shape.at(1));
-    spdlog::debug("Fused attention: output shape: [{}, {}]", _output_shape.at(0), _output_shape.at(1));
+    _output_shape = std::vector<uint32_t>{_batch_size, _q_len, _dmodel};
+    _liner_output_shape = std::vector<uint32_t>{_batch_size, _q_len, _weight_shape[1]};
+    spdlog::debug("Fused attention: input shape: [{}, {}, {}]", _input_shape.at(0), _input_shape.at(1), _input_shape.at(2));
+    spdlog::debug("Fused attention: output shape: [{}, {}, {}]", _output_shape.at(0), _output_shape.at(1), _output_shape.at(2));
     spdlog::debug("Fused attention: query shape: [{}, {}, {}]", _query_shape.at(0), _query_shape.at(1), _query_shape.at(2));
     spdlog::debug("Fused attention: key shape: [{}, {}, {}]", _key_shape.at(0), _key_shape.at(1), _key_shape.at(2));
     spdlog::debug("Fused attention: value shape: [{}, {}, {}]", _value_shape.at(0), _value_shape.at(1), _value_shape.at(2));
@@ -73,20 +71,21 @@ void Attention::initialize_tiles(MappingTable mapping_table) {
     /* Fused Attention body */
     for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
         int heads_per_tile = _heads_per_tile[req_idx];
-        int head_idx = 0;
+        for (int head_off=0; head_off<_nh; head_off+=heads_per_tile) {
+            uint32_t remain_heads = std::min(_nh-head_off, (uint32_t)heads_per_tile);
+            auto tile = Tile{
+                .status = Tile::Status::INITIALIZED,
+                .optype = get_name(),
+                .layer_id = _id,
+                //.K = 0,
+                .accum = false,
+            };
+            /* dummy mapping */
+            Mapping mapping;
+            initialize_instructions(tile, mapping, head_off, heads_per_tile);
 
-        auto tile = Tile{
-            .status = Tile::Status::INITIALIZED,
-            .optype = get_name(),
-            .layer_id = _id,
-            //.K = 0,
-            .accum = false,
-        };
-        /* dummy mapping */
-        Mapping mapping;
-        initialize_instructions(tile, mapping, 0, heads_per_tile);
-
-        _tiles.push_back(tile);
+            _tiles.push_back(tile);
+        }
     }
 }
 

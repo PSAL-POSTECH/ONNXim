@@ -12,13 +12,13 @@ SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model* model,
     _bias_shape = get_input(3)->get_dims();
     _dense_bias_shape = get_input(3)->get_dims();
 
-    /* Get sequence length and embedding
-     * Note: Batch size is assumed to 1 */
-    _seq = _input_shape.at(0);
-    _dk = _input_shape.at(1);
+    assert(_input_shape.size()==3);
+    _batch_size = _input_shape.at(0);
+    _seq = _input_shape.at(1);
+    _dk = _input_shape.at(2);
 
     for (int i=0;i<node_proto.output().size();i++) {
-        _output_shape = std::vector<uint32_t>{_seq, _dk};
+        _output_shape = _input_shape;
         if (node_proto.output(i)=="")
             continue;
 
@@ -36,8 +36,8 @@ SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model* model,
 }
 
 void SkipLayerNorm::initialize_tiles(MappingTable mapping_table) {
-    for (uint32_t tokens= 0; tokens < _seq; tokens+=_tokens_per_tile) {
-        uint32_t remain_tokens = std::min(_seq-tokens, _tokens_per_tile);
+    for (uint32_t tokens=0; tokens < _seq*_batch_size; tokens+=_tokens_per_tile) {
+        uint32_t remain_tokens = std::min(_seq*_batch_size-tokens, _tokens_per_tile);
         auto tile = Tile{
             .status = Tile::Status::INITIALIZED,
             .optype = get_name(),
@@ -104,7 +104,7 @@ void SkipLayerNorm::calculate_loops() {
 
     _tokens_per_tile = sram_capacity / size_per_token;
     assert (_tokens_per_tile >= 1);
-    if (_tokens_per_tile > _seq) _tokens_per_tile = _seq;
+    if (_tokens_per_tile > _seq * _batch_size) _tokens_per_tile = _seq * _batch_size;
 
     spdlog::info("tokens_per_tile: {}", _tokens_per_tile);
 }
