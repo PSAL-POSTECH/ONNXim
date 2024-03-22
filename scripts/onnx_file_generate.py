@@ -8,12 +8,14 @@ Optimizer onnx graph for inference
 import onnxruntime as rt
 import torch
 import torchvision.models as models
+from onnxruntime.transformers import optimizer
 # import pytorch2timeloop
 import argparse
-
+import pathlib
 
 parser = argparse.ArgumentParser(prog = 'ONNX generator')
 parser.add_argument('--model')
+parser.add_argument('--weight', type=int, default=1)
 args = parser.parse_args()
 torchvision_models = {
   'resnet18' : models.resnet18(),
@@ -50,7 +52,7 @@ torch.onnx.export(
   model,
   input,
   'tmp.onnx',
-  export_params = True,
+  export_params = bool(args.weight),
   input_names = ['input'],
   output_names = ['output'],
   dynamic_axes = {
@@ -60,8 +62,9 @@ torch.onnx.export(
 
 opt = rt.SessionOptions()
 # enable level 3 optimizations
-print("Converting ONNX FILE")
-opt.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_EXTENDED
+print(f"Converting ONNX FILE: {args.model}")
+pathlib.Path(f'../models/{args.model}/').mkdir(parents=True, exist_ok=True)
+opt.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
 opt.optimized_model_filepath = f'../models/{args.model}/{args.model}.onnx'
-sess = rt.InferenceSession('tmp.onnx', opt)
+sess = rt.InferenceSession('tmp.onnx', sess_options=opt)
 print("DONE")
