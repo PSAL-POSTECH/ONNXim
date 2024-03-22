@@ -1,8 +1,8 @@
-#include "Cast.h"
+#include "Dummy.h"
 #include "../Model.h"
 #include "../Tensor.h"
 
-Cast::Cast(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
+Dummy::Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
     : Operation(config, model, node_proto) {
   _input_shape = get_input(0)->get_dims();
   _output_shape = _input_shape;
@@ -23,11 +23,11 @@ Cast::Cast(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
   _element_in_tile = _config.spad_size / (config.precision * 2); // Doubled buffer
 }
 
-void Cast::initialize_tiles(MappingTable mapping_table) {
+void Dummy::initialize_tiles(MappingTable mapping_table) {
   for (uint64_t i=0; i<_total_loop; i+=_element_in_tile) {
     uint32_t remainder = std::min(_element_in_tile, (uint32_t(_total_loop - i)));
     _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
-                          .optype="Cast",
+                          .optype="Dummy",
                           .layer_id=_id,
                           .C = remainder,
                           .skip = true});
@@ -35,5 +35,5 @@ void Cast::initialize_tiles(MappingTable mapping_table) {
   }
 }
 
-void Cast::initialize_instructions(Tile& tile, Mapping mapping) {
+void Dummy::initialize_instructions(Tile& tile, Mapping mapping) {
 }

@@ -3,9 +3,9 @@
 #include "Operation.h"
 #include <numeric>
 
-class Cast: public Operation {
+class Dummy: public Operation {
 public:
-   Cast(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+   Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
 
    std::vector<uint32_t> _input_shape;
    std::vector<uint32_t> _output_shape;

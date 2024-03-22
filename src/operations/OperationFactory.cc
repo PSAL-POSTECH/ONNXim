@@ -10,7 +10,7 @@
 #include "GlobalAvgPool.h"
 #include "Operation.h"
 #include "Attention.h"
-#include "Cast.h"
+#include "Dummy.h"
 #include "EmbedLayerNorm.h"
 #include "SkipLayerNorm.h"
 #include "BiasGelu.h"
@@ -46,17 +46,19 @@ std::unique_ptr<Operation> OperationFactory::create_operation(
   } else if (node_proto.op_type() == "Attention") {
     return std::make_unique<Attention>(_config, model, node_proto);
   } else if (node_proto.op_type() == "Cast") {
-    return std::make_unique<Cast>(_config, model, node_proto);
+    return std::make_unique<Dummy>(_config, model, node_proto);
   } else if (node_proto.op_type() == "EmbedLayerNormalization") {
     return std::make_unique<EmbedLayerNorm>(_config, model, node_proto);
   } else if (node_proto.op_type() == "SkipLayerNormalization") {
     return std::make_unique<SkipLayerNorm>(_config, model, node_proto);
   } else if (node_proto.op_type() == "BiasGelu" || node_proto.op_type() == "FastGelu") {
     return std::make_unique<BiasGelu>(_config, model, node_proto);
+  } else if (node_proto.op_type() == "ReorderOutput") {
+    return std::make_unique<Dummy>(_config, model, node_proto);
   }
-  spdlog::warn("Node Proto optype \"{}\" returned nullptr",
+  spdlog::warn("Node Proto optype \"{}\" returned dummy operator!",
                node_proto.op_type().c_str());
-  return nullptr;
+  return std::make_unique<Dummy>(_config, model, node_proto);
 }
 
 std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
@@ -83,14 +85,16 @@ std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
   } else if (op->get_optype() == "Attention") {
     return std::make_unique<Attention>(*dynamic_cast<Attention*>(op));
   } else if (op->get_optype() == "Cast") {
-    return std::make_unique<Cast>(*dynamic_cast<Cast*>(op));
+    return std::make_unique<Dummy>(*dynamic_cast<Dummy*>(op));
   } else if (op->get_optype() == "EmbedLayerNormalization") {
     return std::make_unique<EmbedLayerNorm>(*dynamic_cast<EmbedLayerNorm*>(op));
   } else if (op->get_optype() == "SkipLayerNormalization") {
     return std::make_unique<SkipLayerNorm>(*dynamic_cast<SkipLayerNorm*>(op));
   } else if (op->get_optype() == "BiasGelu" || op->get_optype() == "FastGelu") {
     return std::make_unique<BiasGelu>(*dynamic_cast<BiasGelu*>(op));
+  } else if (op->get_optype() == "ReorderOutput") {
+    return std::make_unique<Dummy>(*dynamic_cast<Dummy*>(op));
   }
-  spdlog::warn("Node Proto optype \"{}\" returned nullptr", op->get_optype());
-  return nullptr;
+  spdlog::warn("Node Proto optype \"{}\" returned dummy operator!", op->get_optype());
+  return std::make_unique<Dummy>(*dynamic_cast<Dummy*>(op));
 }
