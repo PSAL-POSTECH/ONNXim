@@ -100,8 +100,6 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
     addr_type sram_key_base = sram_query_base + q_len * _dk * num_heads * _config.precision;
     addr_type sram_value_base = sram_key_base + _dk * seq_len * num_heads * _config.precision;
     addr_type sram_logit_base = ACCUM_SPAD_BASE;  // for logits
-    addr_type sram_accumulation_base =
-        sram_logit_base + q_len * seq_len * num_heads * _config.precision;
 
     for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
         int h_idx = head_idx + h_ofs;
@@ -110,7 +108,6 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         addr_type sram_k_ofs = sram_key_base + h_ofs * (_dk * seq_len) * _config.precision;
         addr_type sram_v_ofs = sram_value_base + h_ofs * (_dk * seq_len) * _config.precision;
         addr_type sram_l_ofs = sram_logit_base + h_ofs * (q_len * seq_len) * _config.precision;
-        addr_type sram_acc_ofs = sram_accumulation_base + h_ofs * (q_len * _dk) * _config.precision;
 
         std::set<addr_type> dram_query_addrs;  // = _query[req_idx]->get_all_addrs();
         std::set<addr_type> dram_key_addrs;    // = _key[req_idx]->get_all_addrs();
@@ -173,8 +170,8 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
 
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::SOFTMAX,
-            .dest_addr = sram_acc_ofs,
-            .size = seq_len * _config.precision / _config.dram_req_size,
+            .dest_addr = sram_l_ofs,
+            .size = q_len * seq_len * _config.precision / _config.dram_req_size,
             .compute_size = seq_len * _config.precision,
             .src_addrs = std::vector<addr_type>{sram_l_ofs},
             .tile_m = q_len,
@@ -182,14 +179,13 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         });
 
         // [ ] change output offset
-        addr_type output_ofs = sram_acc_ofs + q_len * _dk * _config.precision;
         // GEMM (l*v -> acc)
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::GEMM,
-            .dest_addr = output_ofs,
+            .dest_addr = sram_l_ofs,
             .size = q_len * _dk * _config.precision / _config.dram_req_size,
             .compute_size = q_len * _dk,
-            .src_addrs = std::vector<addr_type>{sram_acc_ofs, sram_v_ofs},
+            .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
 
             .tile_m = _dk,
             .tile_k = seq_len,
@@ -200,7 +196,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         // MOVOUT
         tile.instructions.push_back(Instruction{
             .opcode = Opcode::MOVOUT,
-            .dest_addr = output_ofs,
+            .dest_addr = sram_l_ofs,
             .size = (uint32_t)dram_output_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_output_addrs.begin(), dram_output_addrs.end()),
             .operand_id = _OUTPUT_OPERAND,
@@ -213,20 +209,32 @@ void Attention::calculate_loops() {
         uint32_t q_len = _q_len;
         uint32_t seq_len = _seq;
 
-        uint32_t total_size_per_head = 2 * q_len * _dk + 2 * _dk * seq_len + seq_len * q_len;
-        total_size_per_head *= _config.precision;  // unit: byte
+        uint32_t total_spad_size_per_head = 2*seq_len*_dk + q_len*_dk;
+        uint32_t total_acc_size_per_head = seq_len*q_len;
+        // query: q_len * _dk
+        // key: seq_len * _dk
+        // value: seq_len * _dk
+        // query_key: seq_len * q_len
+        // out: q_len * _dk
+        total_acc_size_per_head *= _config.precision;
+        total_spad_size_per_head *= _config.precision;
 
-        uint32_t sram_capacity = _config.spad_size KB / 2;  // unit: byte
+        uint32_t spad_capacity = _config.spad_size KB / 2;  // unit: byte
+        uint32_t acc_spad_capacity = _config.accum_spad_size KB / 2;
 
-        uint32_t heads_per_tile = sram_capacity / total_size_per_head;
-        assert (heads_per_tile >= 1);
+        uint32_t heads_per_tile = std::min(spad_capacity / total_spad_size_per_head,
+                                            acc_spad_capacity/ total_acc_size_per_head);
         if (heads_per_tile > _nh) heads_per_tile = _nh;
-
-
-        spdlog::info("({}) heads_per_tile: {}", i, heads_per_tile);
-        spdlog::info("q_len: {}, seq_len: {}, dk: {}", q_len, seq_len, _dk);
-        spdlog::info("sram capacity: {}, one head size: {}", sram_capacity, total_size_per_head);
-
+        assert (heads_per_tile >= 1);
+        spdlog::info("[Fused Attention] ({}) heads_per_tile: {}", i, heads_per_tile);
+        spdlog::info("[Fused Attention] q_len: {}, seq_len: {}, dk: {}", q_len, seq_len, _dk);
+        spdlog::info("[Fused Attention] spad capacity: 0x{:x}, acc spad capacity: 0x{:x}, " \
+            "one head spad size: 0x{:x}, acc spad size: 0x{:x}",
+            spad_capacity, acc_spad_capacity, total_spad_size_per_head, total_acc_size_per_head);
+        if (heads_per_tile <=0) {
+            spdlog::error("Spad capacity is too small!");
+            exit(EXIT_FAILURE);
+        }
         _heads_per_tile.push_back(heads_per_tile);
     }
 }
