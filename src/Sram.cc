@@ -41,26 +41,30 @@ void Sram::flush(int buffer_id) {
   _cache_table[buffer_id].clear();
 }
 
-void Sram::prefetch(addr_type address, int buffer_id, size_t allocated_size,
+int Sram::prefetch(addr_type address, int buffer_id, size_t allocated_size,
                     size_t count) {
   if (_cache_table[buffer_id].find(address) == _cache_table[buffer_id].end()) {
     if (!check_remain(allocated_size, buffer_id)) {
       print_all(buffer_id);
       assert(0);
+      return 0;
     }
     _current_size[buffer_id] += allocated_size;
   } else if (_cache_table[buffer_id].find(address) !=
                  _cache_table[buffer_id].end() &&
              _accum) {
     assert(_cache_table[buffer_id][address].size == allocated_size);
+    return 0;
   } else {
     assert(0);
+    return 0;
   }
 
   _cache_table[buffer_id][address] = SramEntry{.valid = false,
                                                .size = allocated_size,
                                                .remain_req_count = count,
                                                .timestamp = _core_cycle};
+  return 1;
 }
 
 void Sram::fill(addr_type address, int buffer_id) {

@@ -12,7 +12,7 @@ class Sram {
 
   void cycle();
   void flush(int buffer_id);
-  void prefetch(addr_type address, int buffer_id, size_t allocated_size, size_t count);
+  int prefetch(addr_type address, int buffer_id, size_t allocated_size, size_t count);
   void count_up(addr_type, int buffer_id);
   void fill(addr_type address, int buffer_id);
   int get_size() { return _size; }
