@@ -7,7 +7,7 @@ EmbedLayerNorm::EmbedLayerNorm(SimulationConfig config, Model* model, onnx::Node
   _input_shape = get_input(0)->get_dims();
   _weight_shape = get_input(2)->get_dims();
 
-  assert(_input_shape.size()==3);
+  assert(_input_shape.size()==2);
   _output_shape.push_back(_input_shape.at(0));
   _output_shape.push_back(_input_shape.at(1)); 
   _output_shape.push_back(_weight_shape.at(1)); 
