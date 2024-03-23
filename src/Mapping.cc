@@ -76,9 +76,9 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   mapping.tile_out_loop = {tile_I, tile_K, tile_J, 1, 1, 1, 1};
   mapping.tile_in_loop = {inner_I, inner_K, inner_J, 1, 1, 1, 1};
   _mapping_table[key] = mapping;
-  spdlog::info("sram_size: {} accum_size: {}", _config.spad_size * 1024, _config.accum_spad_size * 1024);
-  spdlog::info("required_sram_size: {} required_accum_size: {}", (inner_I+inner_J)*inner_K*_config.precision, (inner_I*inner_J)*_config.precision);
-  spdlog::info("Used gemmini gemm mapping: Total N:{} C:{} M:{}, " \
+  spdlog::info("[GEMM] spad_size: {} accum_size: {}", _config.spad_size * 1024, _config.accum_spad_size * 1024);
+  spdlog::info("[GEMM] required_sram_size: {} required_accum_size: {}", (inner_I+inner_J)*inner_K*_config.precision, (inner_I*inner_J)*_config.precision);
+  spdlog::info("[GEMM] Used gemmini gemm mapping: Total N:{} C:{} M:{}, " \
     "Outer N:{} C:{} M:{}, " \
     "Inner N:{} C:{} M:{}",
     mapping.total_loop.N, mapping.total_loop.C, mapping.total_loop.M,
@@ -506,7 +506,7 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 	mapping.tile_in_loop = {(uint32_t)batches, (uint32_t)kchs, (uint32_t)ochs,
                           (uint32_t)krows, (uint32_t)kcols, (uint32_t)orows, (uint32_t)ocols};
 
-	spdlog::info("Used gemmini convolution mapping: " \
+	spdlog::info("[Conv] Used gemmini convolution mapping: " \
 		"[T] N{} C{} M{} P{} Q{} S{} R{}, " \
 		"[O] N{} C{} M{} P{} Q{} S{} R{}, " \
 		"[I] N{} C{} M{} P{} Q{} S{} R{}",

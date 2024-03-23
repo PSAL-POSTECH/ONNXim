@@ -106,5 +106,5 @@ void SkipLayerNorm::calculate_loops() {
     assert (_tokens_per_tile >= 1);
     if (_tokens_per_tile > _seq * _batch_size) _tokens_per_tile = _seq * _batch_size;
 
-    spdlog::info("tokens_per_tile: {}", _tokens_per_tile);
+    spdlog::info("[SkipLayerNorm] tokens_per_tile: {}", _tokens_per_tile);
 }
