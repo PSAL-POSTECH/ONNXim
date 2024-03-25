@@ -13,7 +13,7 @@ void SystolicWS::cycle() {
     if (inst.dest_addr >= ACCUM_SPAD_BASE)
       _acc_spad.fill(inst.dest_addr, inst.accum_spad_id);
     else
-      assert(0);
+      _spad.fill(inst.dest_addr, inst.spad_id);
     _compute_pipeline.pop();
   }
 
@@ -21,10 +21,10 @@ void SystolicWS::cycle() {
   if (!_vector_pipeline.empty() &&
       _vector_pipeline.front().finish_cycle <= _core_cycle) {
     Instruction inst = _vector_pipeline.front();
-    if (inst.dest_addr >= ACCUM_SPAD_BASE) {
+    if (inst.dest_addr >= ACCUM_SPAD_BASE)
       _acc_spad.fill(inst.dest_addr, inst.accum_spad_id);
-    } else
-      assert(0);
+    else
+      _spad.fill(inst.dest_addr, inst.spad_id);
     _vector_pipeline.pop();
   }
   /* LD in struction queue */
@@ -144,13 +144,25 @@ void SystolicWS::cycle() {
 
     }
     _ex_inst_queue.pop();
-    if (_acc_spad.check_allocated(front.dest_addr, front.accum_spad_id)) {
-      _acc_spad.count_up(front.dest_addr, front.accum_spad_id);
+    if (front.dest_addr >= ACCUM_SPAD_BASE) {
+      if (_acc_spad.check_allocated(front.dest_addr, front.accum_spad_id)) {
+        _acc_spad.count_up(front.dest_addr, front.accum_spad_id);
+      } else {
+        int ret = _acc_spad.prefetch(front.dest_addr, front.accum_spad_id, front.size, front.zero_init? front.size : 1);
+        if (!ret) {
+          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
+          std::exit(EXIT_FAILURE);
+        }
+      }
     } else {
-      int ret = _acc_spad.prefetch(front.dest_addr, front.accum_spad_id, front.size, front.zero_init? front.size : 1);
-      if (!ret) {
-        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
-        std::exit(EXIT_FAILURE);
+      if (_spad.check_allocated(front.dest_addr, front.spad_id)) {
+        _spad.count_up(front.dest_addr, front.spad_id);
+      } else {
+        int ret = _spad.prefetch(front.dest_addr, front.spad_id, front.size, front.zero_init? front.size : 1);
+        if (!ret) {
+          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
+          std::exit(EXIT_FAILURE);
+        }
       }
     }
   }
