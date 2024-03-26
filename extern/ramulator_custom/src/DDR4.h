@@ -178,7 +178,7 @@ public:
     } refresh_mode = RefreshMode::Refresh_1X;
 
     int prefetch_size = 8; // 8n prefetch DDR
-    int channel_width = 32;
+    int channel_width = 16;
 
     struct SpeedEntry {
         int rate;
