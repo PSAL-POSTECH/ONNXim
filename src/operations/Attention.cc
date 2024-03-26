@@ -260,6 +260,7 @@ void Attention::initialize_non_fused_tiles(MappingTable mapping_table) {
                 tile.layer_id = _id;
                 _tiles.push_back(tile);
             }
+            _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
         }
     }
 }

@@ -22,17 +22,22 @@ Tile Scheduler::get_tile(uint32_t core_id) {
   } else {
     Tile tile = _executable_tile_queue.front();
     if (tile.status == Tile::Status::BAR) {
-      LayerStat stat = _layer_stat_map[tile.layer_id];
-      if (stat.launched_tiles + stat.remain_tiles == stat.total_tiles) {
+      LayerStat stat = _active_layers_map[tile.layer_id];
+      if (stat.launched_tiles == stat.finished_tiles) {
         /* POP only if all lauched tiles are finished */
         _executable_tile_queue.pop_front();
-        _layer_stat_map[tile.layer_id].launched_tiles++;
-        _layer_stat_map[tile.layer_id].remain_tiles--;
+        _active_layers_map[tile.layer_id].launched_tiles++;
+        _active_layers_map[tile.layer_id].finished_tiles++;
+        _active_layers_map[tile.layer_id].remain_tiles--;
+        if (!_active_layers_map[tile.layer_id].remain_tiles) {
+          _active_layers_map[tile.layer_id].remain_tiles++;
+          finish_tile(core_id, tile);
+        }
       }
       Tile empty_tile{.status = Tile::Status::EMPTY};
       return empty_tile;
     } else {
-      _layer_stat_map[tile.layer_id].launched_tiles++;
+      _active_layers_map[tile.layer_id].launched_tiles++;
       _executable_tile_queue.pop_front();
       spdlog::debug("Layer {} Core {} Get Tile at {}", tile.layer_id, core_id,
                     *_core_cycle);
@@ -47,6 +52,7 @@ void Scheduler::finish_tile(uint32_t core_id, Tile tile) {
   assert(_active_layers_map.find(tile.layer_id) != _active_layers_map.end());
   assert(_active_layers_map[tile.layer_id].remain_tiles > 0);
   _active_layers_map[tile.layer_id].remain_tiles--;
+  _active_layers_map[tile.layer_id].finished_tiles++;
 
   if (_active_layers_map[tile.layer_id].remain_tiles == 0) {
     _active_layers_map[tile.layer_id].finish_cycle = *_core_cycle;
@@ -88,6 +94,7 @@ void Scheduler::refresh_status() {
                   .start_cycle = *_core_cycle,
                   .total_tiles = (uint32_t)_executable_tile_queue.size(),
                   .remain_tiles = (uint32_t)_executable_tile_queue.size(),
+                  .finished_tiles = 0,
                   .launched_tiles = 0};
   }
 }

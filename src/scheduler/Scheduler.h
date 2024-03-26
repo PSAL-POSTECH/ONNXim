@@ -27,6 +27,7 @@ class Scheduler {
       cycle_type memory_stall_cycle;
       uint32_t total_tiles;
       uint32_t remain_tiles;
+      uint32_t finished_tiles;
       uint32_t launched_tiles;
     } LayerStat;
     
