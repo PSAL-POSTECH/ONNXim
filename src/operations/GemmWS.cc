@@ -47,6 +47,8 @@ void GemmWS::initialize_tiles(MappingTable mapping_table) {
                               .R = 1,
                               .accum = C != 0});
         initialize_instructions(_tiles.back(), mapping);
+        if (!_tiles.back().instructions.size())
+          _tiles.pop_back();
       }
     }
   }
