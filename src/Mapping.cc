@@ -63,13 +63,22 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   db_max_tile_i_j = (uint32_t)sqrt(db_mats_in_acc);
   db_max_tile_k = db_mats_in_partition / db_max_tile_i_j;
 
-  tile_I = std::min(dim_I_padded/_dim, db_max_tile_i_j);
-  tile_J = std::min(dim_J_padded/_dim, db_max_tile_i_j);
-  tile_K = std::min(dim_K_padded/_dim, db_max_tile_k);
+  tile_I = std::min(dim_I_padded/_dim, ceil_div(dim_I, db_max_tile_i_j*_dim));
+  tile_J = std::min(dim_J_padded/_dim, ceil_div(dim_J, db_max_tile_i_j*_dim));
+  tile_K = std::min(dim_K_padded/_dim, ceil_div(dim_K, db_max_tile_k*_dim));
 
-  inner_I = ceil_div(dim_I, tile_I);
-  inner_J = ceil_div(dim_J, tile_J);
-  inner_K = ceil_div(dim_K, tile_K);
+  inner_I = ceil_div(dim_I_padded, tile_I);
+  inner_J = ceil_div(dim_J_padded, tile_J);
+  inner_K = ceil_div(dim_K_padded, tile_K);
+
+  inner_I -= inner_I & (_dim)-1;
+  inner_J -= inner_J & (_dim)-1;
+  inner_K -= inner_K & (_dim)-1;
+
+  tile_I = ceil_div(dim_I, inner_I);
+  tile_J = ceil_div(dim_J, inner_J);
+  tile_K = ceil_div(dim_K, inner_K);
+
   /* create mapping entry */
   Mapping mapping;
   mapping.total_loop = {dim_I, dim_K, dim_J, 1, 1, 1, 1};

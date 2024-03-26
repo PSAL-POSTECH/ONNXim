@@ -5,8 +5,8 @@
   "core_width" : 8,
   "core_height" : 8,
 
-  "spad_size" : 1024,
-  "accum_spad_size" : 32,
+  "spad_size" : 64,
+  "accum_spad_size" : 16,
   "sram_width" : 32,
 
   "vector_process_bit" : 32,
@@ -20,11 +20,11 @@
   "scalar_mul_latency" : 1,
 
   "dram_type" : "ramulator",
-  "dram_freq" : 877,
-  "dram_channels": 8,
+  "dram_freq" : 200,
+  "dram_channels": 1,
   "dram_req_size": 32,
   "dram_latency" : 10,
-  "dram_config_path" : "../configs/ramulator_configs/HBM-config.cfg",
+  "dram_config_path" : "../configs/ramulator_configs/DDR4-config.cfg",
 
   "icnt_type" : "simple",
   "icnt_latency" : 1,
