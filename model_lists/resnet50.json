@@ -1,0 +1,8 @@
+{
+ "models": [
+    {
+        "name": "resnet50",
+        "batch_size" : 1
+    }
+ ]
+}

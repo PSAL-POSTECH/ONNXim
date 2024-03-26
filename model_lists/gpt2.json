@@ -1,0 +1,12 @@
+{
+ "models": [
+    {
+        "name": "gpt2",
+        "batch_size" : 1,
+        "seq_len": 1024,
+        "past_seq_len": 0,
+        "total_seq_len": 1024,
+        "nr_atten": 1
+    }
+ ]
+}
