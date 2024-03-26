@@ -54,7 +54,7 @@ void SkipLayerNorm::initialize_tiles(MappingTable mapping_table) {
 
 void SkipLayerNorm::initialize_instructions(Tile &tile, Mapping mapping, uint32_t token_offset, uint32_t tokens) {
     addr_type sram_base = SPAD_BASE;
-    addr_type accum_base = ACCUM_SPAD_BASE;
+    addr_type sram_bias_base = sram_base + _batch_size * _seq * _dk * _config.precision;
 
     /* Load two tile (input: tokens x _dk, skip: tokens x _dk) */
     std::set<addr_type> dram_addrs;
@@ -75,7 +75,7 @@ void SkipLayerNorm::initialize_instructions(Tile &tile, Mapping mapping, uint32_
 
     tile.instructions.push_back(Instruction{
         .opcode = Opcode::MOVIN,
-        .dest_addr = accum_base,
+        .dest_addr = sram_bias_base,
         .size = (uint32_t)dram_skip_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_skip_addrs.begin(), dram_skip_addrs.end()),
         .operand_id = _INPUT_OPERAND+1,  // query
@@ -83,15 +83,22 @@ void SkipLayerNorm::initialize_instructions(Tile &tile, Mapping mapping, uint32_
 
     tile.instructions.push_back(Instruction{
         .opcode = Opcode::LAYERNORM,
-        .dest_addr = accum_base,
+        .dest_addr = sram_base,
         .size = _dk * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base},
         .tile_m = tokens,
     });
 
     tile.instructions.push_back(Instruction{
+        .opcode = Opcode::ADD,
+        .dest_addr = sram_base,
+        .size = tokens * _dk * _config.precision,
+        .src_addrs = std::vector<addr_type>{sram_base, sram_bias_base},
+    });
+
+    tile.instructions.push_back(Instruction{
         .opcode = Opcode::MOVOUT,
-        .dest_addr = accum_base,
+        .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
         .src_addrs = std::vector<addr_type>{sram_base},
         .operand_id = _OUTPUT_OPERAND,
