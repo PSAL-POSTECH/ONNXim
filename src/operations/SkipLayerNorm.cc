@@ -100,7 +100,7 @@ void SkipLayerNorm::initialize_instructions(Tile &tile, Mapping mapping, uint32_
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
-        .src_addrs = std::vector<addr_type>{sram_base},
+        .src_addrs = std::vector<addr_type>(dram_addrs.begin(), dram_addrs.end()),
         .operand_id = _OUTPUT_OPERAND,
     });
 }
