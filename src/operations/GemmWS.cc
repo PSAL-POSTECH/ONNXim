@@ -65,7 +65,6 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
                                                   _config.precision;
 
   int loop_size = _config.core_width;
-
   /* MOVIN BIAS */
   if (!tile.accum) {
     for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
@@ -150,9 +149,10 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               .size = (uint32_t)input_set.size(),
               .src_addrs =
                   std::vector<addr_type>(input_set.begin(), input_set.end()),
-              .operand_id = _INPUT_OPERAND});
+              .operand_id = _INPUT_OPERAND,
+              .tile_k = mapping.tile_in_loop.C,
+              .tile_n = mapping.tile_in_loop.N});
         }
-
         /* MOVIN Weight */
         if (Ns == 0) {
           std::set<addr_type> weight_set;
@@ -176,7 +176,9 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               .size = (uint32_t)weight_set.size(),
               .src_addrs =
                   std::vector<addr_type>(weight_set.begin(), weight_set.end()),
-              .operand_id = _INPUT_OPERAND + 1});
+              .operand_id = _INPUT_OPERAND + 1,
+              .tile_m = mapping.tile_in_loop.M,
+              .tile_k = mapping.tile_in_loop.C});
         }
         /*Compute */
         if (Ns == 0) {
