@@ -2,6 +2,7 @@
 #include "../Model.h"
 #include "../Tensor.h"
 #include "GemmWS.h"
+#include "Softmax.h"
 
 Attention::Attention(SimulationConfig config, Model* model,
                onnx::NodeProto& node_proto)
@@ -59,6 +60,12 @@ Attention::Attention(SimulationConfig config, Model* model,
 }
 
 void Attention::initialize_tiles(MappingTable mapping_table) {
+    /* Check using fusion */
+    if (!use_fused) {
+        initialize_non_fused_tiles(mapping_table);
+        return;
+    }
+
     /* linear projection */
     GemmWS linear_projection = GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
     linear_projection.initialize_tiles(mapping_table);
@@ -67,6 +74,7 @@ void Attention::initialize_tiles(MappingTable mapping_table) {
         tile.layer_id = _id;
         _tiles.push_back(tile);
     }
+    _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
 
     /* Fused Attention body */
     for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
@@ -204,6 +212,58 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
     }
 }
 
+void Attention::initialize_non_fused_tiles(MappingTable mapping_table) {
+    /* linear projection */
+    GemmWS linear_projection = GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
+    linear_projection.initialize_tiles(mapping_table);
+    std::deque<Tile> tiles = linear_projection.get_tiles();
+    for (Tile& tile : tiles) {
+        tile.layer_id = _id;
+        _tiles.push_back(tile);
+    }
+    _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+
+    std::vector<uint32_t> single_head_query_shape = std::vector<uint32_t>{_q_len, _dk};
+    std::vector<uint32_t> single_head_key_shape = std::vector<uint32_t>{_dk, _seq};
+    std::vector<uint32_t> single_head_value_shape = std::vector<uint32_t>{_seq, _dk};
+    std::vector<uint32_t> single_output_shape = std::vector<uint32_t>{_q_len, _dk};
+    std::vector<uint32_t> query_key_shape = std::vector<uint32_t>{_q_len, _seq};
+
+    /* Fused Attention body */
+    for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
+        for (int head_off=0; head_off<_nh; head_off++) {
+            /* Key query matmul */
+            GemmWS key_query = GemmWS(_config, mapping_table, single_head_query_shape, single_head_key_shape, query_key_shape);
+            key_query.initialize_tiles(mapping_table);
+            std::deque<Tile> key_query_tiles = key_query.get_tiles();
+            for (Tile& tile : key_query_tiles) {
+                tile.layer_id = _id;
+                _tiles.push_back(tile);
+            }
+            _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+
+            /* Softmax */
+            Softmax attention_score = Softmax(_config, mapping_table, query_key_shape);
+            attention_score.initialize_tiles(mapping_table);
+            std::deque<Tile> attention_score_tiles = key_query.get_tiles();
+            for (Tile& tile : attention_score_tiles) {
+                tile.layer_id = _id;
+                _tiles.push_back(tile);
+            }
+            _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+
+            /* attention x value */
+            GemmWS attention = GemmWS(_config, mapping_table, query_key_shape, single_head_value_shape, single_output_shape);
+            attention.initialize_tiles(mapping_table);
+            std::deque<Tile> attention_tiles = attention.get_tiles();
+            for (Tile& tile : attention_tiles) {
+                tile.layer_id = _id;
+                _tiles.push_back(tile);
+            }
+        }
+    }
+}
+
 void Attention::calculate_loops() {
     for (int i = 0; i < _batch_size; i++) {
         uint32_t q_len = _q_len;
@@ -225,7 +285,13 @@ void Attention::calculate_loops() {
         uint32_t heads_per_tile = std::min(spad_capacity / total_spad_size_per_head,
                                             acc_spad_capacity/ total_acc_size_per_head);
         if (heads_per_tile > _nh) heads_per_tile = _nh;
-        assert (heads_per_tile >= 1);
+
+        if (heads_per_tile <= 0) {
+            use_fused = false;
+            spdlog::info("[Attention] Use non fusion attention!");
+            break;
+        }
+
         spdlog::info("[Fused Attention] ({}) heads_per_tile: {}", i, heads_per_tile);
         spdlog::info("[Fused Attention] q_len: {}, seq_len: {}, dk: {}", q_len, seq_len, _dk);
         spdlog::info("[Fused Attention] spad capacity: 0x{:x}, acc spad capacity: 0x{:x}, " \
