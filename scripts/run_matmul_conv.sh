@@ -1,12 +1,12 @@
 #!/bin/bash
 
-models=("matmul_32" "matmul_64" "matmul_128" "matmul_256" "matmul_512" "matmul_1024" "matmul_2048" "conv_64" "conv_256" "conv_1024")
+models=("matmul_2048") #"matmul_32" "matmul_64" "matmul_128" "matmul_256" "matmul_512" "matmul_1024" "matmul_2048" "conv_64" "conv_256" "conv_1024")
 #models=("conv_64" "conv_256" "conv_1024")
 configs=("systolic_ws_8x8_c1_simple_noc_transformer" "systolic_ws_8x8_c1_booksim2_transformer" "systolic_ws_8x8_c4_simple_noc_transformer" "systolic_ws_8x8_c4_booksim2_transformer")
 i=5
 
-python3 $ONNXIM_HOME/scripts/matmul_generate.py
-python3 $ONNXIM_HOME/scripts/conv_generate.py
+python3 $ONNXIM_HOME/scripts/generate_matmul_onnx.py
+python3 $ONNXIM_HOME/scripts/generate_conv_onnx.py
 
 if [ ! -d "$ONNXIM_HOME/results" ]; then
     mkdir $ONNXIM_HOME/results

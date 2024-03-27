@@ -16,7 +16,7 @@ class size_matmul(torch.nn.Module):
     def forward(self, x):
         return self.fc(x)
 
-Path(f"{HOME}/matmul_model_lists").mkdir(parents=True, exist_ok=True)
+Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
 for size in size_list:
     Path(f"{HOME}/models/matmul_{size}").mkdir(parents=True, exist_ok=True)
     m = size_matmul(size)

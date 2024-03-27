@@ -12,7 +12,9 @@ from onnxruntime.transformers import optimizer
 # import pytorch2timeloop
 import argparse
 import pathlib
+import os
 
+HOME = os.getenv("ONNXIM_HOME", default="../")
 parser = argparse.ArgumentParser(prog = 'ONNX generator')
 parser.add_argument('--model')
 parser.add_argument('--weight', type=int, default=1)
@@ -63,8 +65,8 @@ torch.onnx.export(
 opt = rt.SessionOptions()
 # enable level 3 optimizations
 print(f"Converting ONNX FILE: {args.model}")
-pathlib.Path(f'../models/{args.model}/').mkdir(parents=True, exist_ok=True)
+pathlib.Path(f'{HOME}/models/{args.model}/').mkdir(parents=True, exist_ok=True)
 opt.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
-opt.optimized_model_filepath = f'../models/{args.model}/{args.model}.onnx'
+opt.optimized_model_filepath = f'{HOME}/models/{args.model}/{args.model}.onnx'
 sess = rt.InferenceSession('tmp.onnx', sess_options=opt)
 print("DONE")
