@@ -69,6 +69,9 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
   if (!tile.accum) {
     for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
       int M_offset = tout_m_offset + Ms;
+      if (M_offset >= mapping.total_loop.N)
+        break;
+
       int m_loop = M_offset + loop_size > mapping.total_loop.M
                       ? mapping.total_loop.M - M_offset
                       : loop_size;
@@ -76,6 +79,9 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
       for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
         std::set<addr_type> bias_addrs;
         int N_offset = tout_n_offset + Ns;
+        if (N_offset >= mapping.total_loop.N)
+          break;
+
         int n_loop = N_offset + loop_size > mapping.total_loop.N
                         ? mapping.total_loop.N - N_offset
                         : loop_size;
