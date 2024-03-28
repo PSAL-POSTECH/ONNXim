@@ -41,9 +41,13 @@ void SystolicWS::cycle() {
         buffer = &_spad;
         buffer_id = front.spad_id;
       }
+      if (front.size==0) {
+        spdlog::error("Destination size is 0! opcode: {}, addr: 0x{:x}", (int)front.opcode, front.dest_addr);
+      }
       int ret = buffer->prefetch(front.dest_addr, buffer_id, front.size, front.size);
       if (!ret) {
-        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
+        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(front.dest_addr, buffer_id), buffer->check_allocated(front.dest_addr, buffer_id));
+        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size);
         std::exit(EXIT_FAILURE);
       }
       for (addr_type addr : front.src_addrs) {
@@ -150,7 +154,9 @@ void SystolicWS::cycle() {
       } else {
         int ret = _acc_spad.prefetch(front.dest_addr, front.accum_spad_id, front.size, front.zero_init? front.size : 1);
         if (!ret) {
+          spdlog::error("Destination allocated: {} Size remain: {}", _acc_spad.check_allocated(front.dest_addr, front.accum_spad_id), _acc_spad.check_allocated(front.dest_addr, front.accum_spad_id));
           spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
+          _acc_spad.print_all(front.accum_spad_id);
           std::exit(EXIT_FAILURE);
         }
       }
@@ -160,7 +166,9 @@ void SystolicWS::cycle() {
       } else {
         int ret = _spad.prefetch(front.dest_addr, front.spad_id, front.size, front.zero_init? front.size : 1);
         if (!ret) {
+          spdlog::error("Destination allocated: {} Size remain: {}", _spad.check_allocated(front.dest_addr, front.spad_id), _spad.check_allocated(front.dest_addr, front.spad_id));
           spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
+          _spad.print_all(front.spad_id);
           std::exit(EXIT_FAILURE);
         }
       }

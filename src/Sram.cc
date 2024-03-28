@@ -91,4 +91,6 @@ void Sram::print_all(int buffer_id) {
   for (auto& [key, val] : _cache_table[buffer_id]) {
     spdlog::info("{:x} : {}", key, val.size);
   }
+  spdlog::info("Allocated size: {:x}", _current_size[buffer_id]);
+  spdlog::info("Size: {:x}", _size KB / _data_width / 2);
 }
