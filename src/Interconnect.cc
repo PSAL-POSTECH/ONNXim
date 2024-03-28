@@ -80,7 +80,11 @@ Booksim2Interconnect::Booksim2Interconnect(SimulationConfig config) {
   _config = config;
   _n_nodes = config.num_cores + config.dram_channels;
   spdlog::info("Initialize Booksim2"); 
-  _config_path = fs::path(__FILE__).parent_path().append((std::string)config.icnt_config_path).string();
+  char* onnxim_path_env = std::getenv("ONNXIM_HOME");
+  std::string onnxim_path = onnxim_path_env != NULL?
+    std::string(onnxim_path_env) : std::string("./");
+
+  _config_path = fs::path(onnxim_path).append("configs").append((std::string)config.icnt_config_path).string();
   spdlog::info("Config path : {}", _config_path);
   _booksim = std::make_unique<booksim2::Interconnect>(_config_path, _n_nodes);
   _ctrl_size = 8;

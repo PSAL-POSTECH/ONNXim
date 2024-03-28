@@ -1,10 +1,12 @@
 #include <fstream>
 #include <chrono>
+#include <filesystem>
 
 #include "Simulator.h"
 #include "helper/CommandLineParser.h"
 #include "operations/OperationFactory.h"
 
+namespace fs = std::filesystem;
 namespace po = boost::program_options;
 
 int main(int argc, char** argv) {
@@ -28,7 +30,11 @@ int main(int argc, char** argv) {
         e.what());
     throw(e);
   }
-  std::string model_base_path = "./models";
+  char* onnxim_path_env = std::getenv("ONNXIM_HOME");
+  std::string onnxim_path = onnxim_path_env != NULL?
+    std::string(onnxim_path_env) : std::string("./");
+
+  std::string model_base_path = fs::path(onnxim_path).append("models");
   std::string level = "info";
   cmd_parser.set_if_defined("log_level", &level);
   if (level == "trace")

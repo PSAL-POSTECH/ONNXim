@@ -20,8 +20,11 @@ Simulator::Simulator(SimulationConfig config)
   if (config.dram_type == DramType::SIMPLE) {
     _dram = std::make_unique<SimpleDram>(config);
   } else if (config.dram_type == DramType::RAMULATOR) {
-    std::string ramulator_config = fs::path(__FILE__)
-                                       .parent_path()
+    char* onnxim_path_env = std::getenv("ONNXIM_HOME");
+    std::string onnxim_path = onnxim_path_env != NULL?
+      std::string(onnxim_path_env) : std::string("./");
+    std::string ramulator_config = fs::path(onnxim_path)
+                                       .append("configs")
                                        .append(config.dram_config_path)
                                        .string();
     spdlog::info("Ramulator config: {}", ramulator_config);
