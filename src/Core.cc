@@ -48,11 +48,14 @@ void Core::issue(Tile op) {
   _current_spad = (_current_spad + 1) % 2;
   _spad.flush(_current_spad);
   op.spad_id = _current_spad;
-  if (!op.accum) {
+  if (!op.accum || !(_current_layer_id == op.layer_id && _current_fused_op_id == op.fused_op_id)) {
     /* Accumeulate tile uses same acc spad buffer */
     _current_acc_spad = (_current_acc_spad + 1) % 2;
     _acc_spad.flush(_current_acc_spad);
   }
+  _current_layer_id = op.layer_id;
+  _current_fused_op_id = op.fused_op_id;
+
   op.accum_spad_id = _current_acc_spad;
   op.status = Tile::Status::RUNNING;
   if (op.skip) {
@@ -96,13 +99,19 @@ void Core::cycle() {
     bool issued = false;
     if (inst.opcode == Opcode::MOVIN) {
       /*LD inst queue */
+      if (inst.size == 0) {
+        spdlog::error("[Core {}] MVIN issue addr: {:x}, size: {:x}", _id, inst.dest_addr, inst.size);
+      }
       if (!buffer->check_allocated(inst.dest_addr, buffer_id) &&
           buffer->check_remain(inst.size, buffer_id)) {
         _ld_inst_queue.push(inst);
         issued = true;
       } else {
         /*Invalid state */
-        assert(0);
+        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(inst.dest_addr, buffer_id), buffer->check_allocated(inst.dest_addr, buffer_id));
+        spdlog::error("[Core {}] MVIN issue panic addr: {:x}, size: {:x}", _id, inst.dest_addr, inst.size);
+        buffer->print_all(buffer_id);
+        exit(EXIT_FAILURE);
       }
     } else if (inst.opcode == Opcode::MOVOUT ||
                inst.opcode == Opcode::MOVOUT_POOL) {

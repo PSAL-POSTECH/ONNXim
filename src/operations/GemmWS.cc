@@ -90,6 +90,9 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
           if (M >= mapping.total_loop.M) continue;
           bias_addrs.insert(make_activation_address(0, 0, 0, M, _output_shape));
         }
+        if (bias_addrs.size() == 0) {
+          spdlog::error("weird!!");
+        }
         if (has_bias) {
           tile.instructions.push_back(Instruction{
               .opcode = Opcode::MOVIN,
@@ -186,12 +189,22 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               .tile_m = mapping.tile_in_loop.M,
               .tile_k = mapping.tile_in_loop.C});
         }
+        std::set<addr_type> output_set;
+        for (int iter_n = 0; iter_n < n_loop; iter_n++) {
+          for (int iter_m = 0; iter_m < m_loop; iter_m++) {
+            int N = N_offset + iter_n;
+            int M = M_offset + iter_m;
+            output_set.insert(make_activation_address(N, 0, 0, M, _output_shape));
+          }
+        }
+
         /*Compute */
         if (Ns == 0) {
           tile.instructions.push_back(Instruction{
               .opcode = Opcode::GEMM_PRELOAD,
               .dest_addr = out_sp_addr,
               // Accumulat buffer already allocated
+              .size = (uint32_t)output_set.size(),
               .compute_size = (uint32_t)n_loop,
               .src_addrs =
                   std::vector<addr_type>{act_sp_addr, weight_sp_addr}});
@@ -200,20 +213,13 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               .opcode = Opcode::GEMM,
               .dest_addr = out_sp_addr,
               // Accumulat buffer already allocated
+              .size = (uint32_t)output_set.size(),
               .compute_size = (uint32_t)n_loop,
               .src_addrs =
                   std::vector<addr_type>{act_sp_addr, weight_sp_addr}});
         }
         /*MOVOUT result at the last loop*/
         if (Cs == mapping.tile_in_loop.C - 1 && Ms == mapping.tile_in_loop.M - 1){
-          std::set<addr_type> output_set;
-          for (int iter_n = 0; iter_n < n_loop; iter_n++) {
-            for (int iter_m = 0; iter_m < m_loop; iter_m++) {
-              int N = N_offset + iter_n;
-              int M = M_offset + iter_m;
-              output_set.insert(make_activation_address(N, 0, 0, M, _output_shape));
-            }
-          }
           tile.instructions.push_back(Instruction{
               .opcode = Opcode::MOVOUT,
               .dest_addr = out_sp_addr,

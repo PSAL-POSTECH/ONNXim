@@ -79,6 +79,8 @@ class Core {
 
   int _current_spad;
   int _current_acc_spad;
+  uint32_t _current_layer_id;
+  uint32_t _current_fused_op_id;
   Sram _spad;
   Sram _acc_spad;
 };

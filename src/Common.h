@@ -97,6 +97,7 @@ typedef struct {
   Status status = Status::EMPTY;
   std::string optype;
   uint32_t layer_id;
+  uint32_t fused_op_id; /* For fused operation */
   uint32_t batch;
   uint32_t Q;
   uint32_t P;

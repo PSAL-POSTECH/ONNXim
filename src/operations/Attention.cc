@@ -67,13 +67,17 @@ void Attention::initialize_tiles(MappingTable mapping_table) {
     }
 
     /* linear projection */
+    uint32_t fused_op_id = 0;
     GemmWS linear_projection = GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
+    linear_projection.has_bias = false;
     linear_projection.initialize_tiles(mapping_table);
     std::deque<Tile> tiles = linear_projection.get_tiles();
     for (Tile& tile : tiles) {
         tile.layer_id = _id;
+        tile.fused_op_id = fused_op_id;
         _tiles.push_back(tile);
     }
+    fused_op_id++;
     _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
 
     /* Fused Attention body */
@@ -85,6 +89,7 @@ void Attention::initialize_tiles(MappingTable mapping_table) {
                 .status = Tile::Status::INITIALIZED,
                 .optype = get_name(),
                 .layer_id = _id,
+                .fused_op_id = fused_op_id++,
                 //.K = 0,
                 .accum = false,
             };
@@ -214,15 +219,18 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
 
 void Attention::initialize_non_fused_tiles(MappingTable mapping_table) {
     /* linear projection */
+    uint32_t fused_op_id = 0;
     GemmWS linear_projection = GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
+    linear_projection.has_bias = false;
     linear_projection.initialize_tiles(mapping_table);
     std::deque<Tile> tiles = linear_projection.get_tiles();
     for (Tile& tile : tiles) {
         tile.layer_id = _id;
+        tile.fused_op_id = fused_op_id;
         _tiles.push_back(tile);
     }
     _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
-
+    fused_op_id++;
     std::vector<uint32_t> single_head_query_shape = std::vector<uint32_t>{_q_len, _dk};
     std::vector<uint32_t> single_head_key_shape = std::vector<uint32_t>{_dk, _seq};
     std::vector<uint32_t> single_head_value_shape = std::vector<uint32_t>{_seq, _dk};
@@ -234,13 +242,16 @@ void Attention::initialize_non_fused_tiles(MappingTable mapping_table) {
         for (int head_off=0; head_off<_nh; head_off++) {
             /* Key query matmul */
             GemmWS key_query = GemmWS(_config, mapping_table, single_head_query_shape, single_head_key_shape, query_key_shape);
+            key_query.has_bias = false;
             key_query.initialize_tiles(mapping_table);
             std::deque<Tile> key_query_tiles = key_query.get_tiles();
             for (Tile& tile : key_query_tiles) {
                 tile.layer_id = _id;
+                tile.fused_op_id = fused_op_id;
                 _tiles.push_back(tile);
             }
             _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+            fused_op_id++;
 
             /* Softmax */
             Softmax attention_score = Softmax(_config, mapping_table, query_key_shape);
@@ -254,13 +265,16 @@ void Attention::initialize_non_fused_tiles(MappingTable mapping_table) {
 
             /* attention x value */
             GemmWS attention = GemmWS(_config, mapping_table, query_key_shape, single_head_value_shape, single_output_shape);
+            attention.has_bias = false;
             attention.initialize_tiles(mapping_table);
             std::deque<Tile> attention_tiles = attention.get_tiles();
             for (Tile& tile : attention_tiles) {
                 tile.layer_id = _id;
+                tile.fused_op_id = fused_op_id;
                 _tiles.push_back(tile);
             }
             _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+            fused_op_id++;
         }
     }
 }
