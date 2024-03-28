@@ -14,6 +14,8 @@ import argparse
 import pathlib
 import os
 
+size_list = [1, 2, 4, 8, 16, 32]
+
 HOME = os.getenv("ONNXIM_HOME", default="../")
 parser = argparse.ArgumentParser(prog = 'ONNX generator')
 parser.add_argument('--model')
@@ -69,4 +71,18 @@ pathlib.Path(f'{HOME}/models/{args.model}/').mkdir(parents=True, exist_ok=True)
 opt.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
 opt.optimized_model_filepath = f'{HOME}/models/{args.model}/{args.model}.onnx'
 sess = rt.InferenceSession('tmp.onnx', sess_options=opt)
+
+pathlib.Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
+for size in size_list:
+    # GPT2 summarize json
+    config = {
+        "models": [
+                {
+                    "name": f"{args.model}",
+                    "batch_size": size,
+                 }
+            ]
+        }
+    with open(f"{HOME}/model_lists/{args.model}_{size}.json", "w") as json_file:
+        json.dump(config, json_file, indent=4)
 print("DONE")
