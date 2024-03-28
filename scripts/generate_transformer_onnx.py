@@ -37,7 +37,7 @@ for size in size_list:
                 {
                     "name": f"gpt2",
                     "batch_size": size,
-                    "nr_atten": 1,
+                    "nr_atten": -1,
                     "sequence_length": 1024,
                     "seq_len": 1024,
                     "past_seq_len": 0,
@@ -54,7 +54,7 @@ for size in size_list:
                 {
                     "name": f"gpt2",
                     "batch_size": size,
-                    "nr_atten": 1,
+                    "nr_atten": -1,
                     "sequence_length": 1,
                     "seq_len": 1,
                     "past_seq_len": 1023,
@@ -72,7 +72,7 @@ for size in size_list:
                 {
                     "name": f"bert",
                     "batch_size": size,
-                    "nr_atten": 1,
+                    "nr_atten": -1,
                     "sequence_length": 1024,
                     "seq_len": 1024,
                     "past_seq_len": 0,
