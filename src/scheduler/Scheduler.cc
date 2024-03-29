@@ -10,22 +10,23 @@ void Scheduler::schedule_model(std::unique_ptr<Model> model,
                                    .sample_size = sample_size});
   spdlog::info("MODEL {} Scheduled, Total Request: {}",
                _request_queue.back().model->get_name(), _request_queue.size());
+  _core_executable_tile_queue.resize(_config.num_cores);
   refresh_status();
 }
 
 /*TODO: Add base address for each addr in tiles */
 Tile Scheduler::get_tile(uint32_t core_id) {
-  if (_executable_tile_queue.empty()) {
+  if (_core_executable_tile_queue[core_id].empty()) {
     Tile tile;
     tile.status = Tile::Status::EMPTY;
     return tile;
   } else {
-    Tile tile = _executable_tile_queue.front();
+    Tile tile = _core_executable_tile_queue[core_id].front();
     if (tile.status == Tile::Status::BAR) {
       LayerStat stat = _active_layers_map[tile.layer_id];
       if (stat.launched_tiles == stat.finished_tiles) {
         /* POP only if all lauched tiles are finished */
-        _executable_tile_queue.pop_front();
+        _core_executable_tile_queue[core_id].pop_front();
         _active_layers_map[tile.layer_id].launched_tiles++;
         _active_layers_map[tile.layer_id].finished_tiles++;
         _active_layers_map[tile.layer_id].remain_tiles--;
@@ -38,7 +39,7 @@ Tile Scheduler::get_tile(uint32_t core_id) {
       return empty_tile;
     } else {
       _active_layers_map[tile.layer_id].launched_tiles++;
-      _executable_tile_queue.pop_front();
+      _core_executable_tile_queue[core_id].pop_front();
       spdlog::debug("Layer {} Core {} Get Tile at {}", tile.layer_id, core_id,
                     *_core_cycle);
       return tile;
@@ -76,7 +77,12 @@ void Scheduler::refresh_status() {
       _request_queue.pop_front();
     }
   }
-  if (!_request_queue.empty() && _executable_tile_queue.empty() &&
+  bool all_empty = true;
+  for (int i = 0; i < _config.num_cores; i++) {
+    all_empty = all_empty && _core_executable_tile_queue[i].empty();
+  }
+  all_empty = all_empty && _executable_tile_queue.empty();
+  if (!_request_queue.empty() && all_empty &&
       count_active_layers() == 0) {
     spdlog::info("executable layer count {}",
                  _request_queue.front().model->get_executable_layers().size());
@@ -98,6 +104,16 @@ void Scheduler::refresh_status() {
                   .remain_tiles = (uint32_t)_executable_tile_queue.size(),
                   .finished_tiles = 0,
                   .launched_tiles = 0};
+    int global_id = 0;
+    while(!_executable_tile_queue.empty()) {
+      Tile tile = _executable_tile_queue.front();
+      if (tile.core_id == -1) { // -1 is global id
+        tile.core_id = global_id;
+        global_id = (global_id + 1) % _config.num_cores; // increase with round robin
+      }
+      _core_executable_tile_queue[tile.core_id].push_back(tile);
+      _executable_tile_queue.pop_front();
+    }
   }
 }
 
