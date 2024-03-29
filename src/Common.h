@@ -112,6 +112,7 @@ typedef struct {
   bool skip;
   int spad_id;
   int accum_spad_id;
+  int core_id = -1;
 } Tile;
 
 uint32_t generate_id();
