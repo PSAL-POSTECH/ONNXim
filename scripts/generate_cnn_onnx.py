@@ -8,11 +8,11 @@ Optimizer onnx graph for inference
 import onnxruntime as rt
 import torch
 import torchvision.models as models
-from onnxruntime.transformers import optimizer
 # import pytorch2timeloop
 import argparse
 import pathlib
 import os
+import json
 
 size_list = [1, 2, 4, 8, 16, 32]
 
@@ -46,7 +46,7 @@ else:
   input = torch.randn(1, 3, 299, 299, requires_grad=True)
   input_shape = (3, 299, 299)
 
-top_dir = '../models'
+top_dir = os.path.join(HOME, "models")
 convert_fc = True
 exception_module_names = []
 
