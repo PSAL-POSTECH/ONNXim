@@ -180,9 +180,9 @@ bool Core::can_issue_compute(Instruction inst) {
   for (addr_type addr : inst.src_addrs) {
     if (inst.src_from_accum && addr >= ACCUM_SPAD_BASE) {
       result = result && _acc_spad.check_hit(addr, inst.accum_spad_id);
-      continue;
+    } else {
+      result = result && _spad.check_hit(addr, inst.spad_id);
     }
-    result = result && _spad.check_hit(addr, inst.spad_id);
   }
   if (!result) {
     for (addr_type addr : inst.src_addrs) {

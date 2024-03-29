@@ -3,6 +3,7 @@
 class SystolicWS : public Core {
  public:
   SystolicWS(uint32_t id, SimulationConfig config);
+  virtual bool can_issue() override;
   virtual void cycle() override;
   virtual void print_stats() override;
 

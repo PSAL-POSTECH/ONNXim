@@ -3,6 +3,48 @@
 SystolicWS::SystolicWS(uint32_t id, SimulationConfig config)
     : Core(id, config) {}
 
+bool SystolicWS::can_issue() {
+  int result = true;
+  result &= Core::can_issue();
+  if (!_ld_inst_queue.empty()) {
+    int ld_result;
+    if ( _ld_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
+      ld_result = _current_acc_spad == _ld_inst_queue.front().accum_spad_id;
+    } else {
+      ld_result = _current_spad == _ld_inst_queue.front().spad_id;
+    }
+    result &= ld_result;
+    if (!ld_result)
+      spdlog::debug("Core-{} tried to run too many tile... while load not finished!", _id);
+  }
+
+  if (!_st_inst_queue.empty()) {
+    int st_result;
+    if ( _st_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
+      st_result = _current_acc_spad == _st_inst_queue.front().accum_spad_id;
+    } else {
+      st_result = _current_spad == _st_inst_queue.front().spad_id;
+    }
+    result &= st_result;
+    if (!st_result)
+      spdlog::debug("Core-{} tried to run too many tile... while store not finished!", _id);
+  }
+
+  if (!_ex_inst_queue.empty()) {
+    int ex_result;
+    if ( _ex_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
+      ex_result = _current_acc_spad == _ex_inst_queue.front().accum_spad_id;
+    } else {
+      ex_result = _current_spad == _ex_inst_queue.front().spad_id;
+    }
+    result &= ex_result;
+    if (!ex_result)
+      spdlog::debug("Core-{} tried to run too many tile... while execute not finished!", _id);
+  }
+
+  return result;
+}
+
 void SystolicWS::cycle() {
   /*
   Compute unit

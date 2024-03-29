@@ -53,49 +53,5 @@ void Concat::initialize_tiles(MappingTable& mapping_table) {
 }
 
 void Concat::initialize_instructions(Tile& tile, Mapping mapping) {
-// 	std::vector<uint32_t> output_shape = get_output(0)->get_dims();
-// 	std::vector<uint32_t> input0_shape = get_input(0)->get_dims();
-// 	std::vector<uint32_t> input1_shape = get_input(1)->get_dims();
-
-// 	std::set<addr_type> input_set;
-// 	std::string input_id = fmt::format("INPUT-{}", tile.layer_id);
-
-// 	for (int N = 0; N < input0_shape[Ndim]; N++) {
-// 		for (int C = 0; C < input0_shape[Cdim]; C++) {
-// 			for (int Q = 0; Q < input0_shape[Hdim]; Q++) {
-// 				for (int P = 0; P < input0_shape[Wdim]; P++) {
-// 					input_set.insert(make_activation_address(N, Q, P, C, input0_shape));
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	for (int N = 0; N < input1_shape[Ndim]; N++) {
-// 		for (int C = 0; C < input1_shape[Cdim]; C++) {
-// 			for (int Q = 0; Q < input1_shape[Hdim]; Q++) {
-// 				for (int P = 0; P < input1_shape[Wdim]; P++) {
-// 					input_set.insert(make_activation_address(N, Q, C, P, input1_shape));
-// 				}
-// 			}
-// 		}
-// 	}
-
-// 	tile.instructions.push_back(
-// 				Instruction{.opcode = Opcode::MOVIN,
-// 										.id = input_id,
-// 										.addrs = std::vector<addr_type>(
-// 													input_set.begin(), input_set.end())});
-
-// 	std::set<addr_type> output_set;
-// 	std::string output_id = fmt::format("OUT-{}", tile.layer_id);	
-
-// 	output_set.insert(make_activation_address(0, 0, 0, 0, output_shape));
-
-// 	tile.instructions.push_back(
-// 				Instruction{.opcode = Opcode::MOVOUT,
-// 										.id = output_id,
-// 										.dependent_ids = std::vector<std::string>{input_id},
-// 										.addrs = std::vector<addr_type>(
-// 													output_set.begin(), output_set.end())});
 }
 

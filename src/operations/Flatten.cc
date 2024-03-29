@@ -52,40 +52,4 @@ void Flatten::initialize_tiles(MappingTable& mapping_table) {
 }
 
 void Flatten::initialize_instructions(Tile& tile, Mapping mapping) {
-  // 	std::vector<uint32_t> output_shape = get_output(0)->get_dims();
-  // 	std::vector<uint32_t> input_shape = get_input(0)->get_dims();
-
-  // 	std::set<addr_type> input_set;
-  // 	std::string input_id = fmt::format("INPUT-{}", tile.layer_id);
-
-  // 	for (int N = 0; N < input_shape[Ndim]; N++) {
-  // 		for (int C = 0; C < input_shape[Cdim]; C++) {
-  // 			for (int Q = 0; Q < input_shape[Hdim]; Q++) {
-  // 				for (int P = 0; P < input_shape[Wdim]; P++){
-  // 					input_set.insert(make_activation_address(N, Q, P,
-  // C, input_shape));
-  // 				}
-  // 			}
-  // 		}
-  // 	}
-
-  // 	tile.instructions.push_back(
-  // 							Instruction{.opcode =
-  // Opcode::MOVIN, 													.id = input_id,
-  // .addrs = std::vector<addr_type>( 																input_set.begin(), input_set.end())});
-
-  // 	std::set<addr_type> output_set;
-  // 	std::string output_id = fmt::format("OUT-{}", tile.layer_id);
-
-  // 	output_set.insert(make_activation_address(0, 0, 0, 0, output_shape));
-
-  // 	tile.instructions.push_back(
-  // 				Instruction{.opcode = Opcode::MOVOUT,
-  // 										.id
-  // =
-  // output_id, 										.dependent_ids =
-  // std::vector<std::string>{input_id}, 										.addrs
-  // =
-  // std::vector<addr_type>(
-  // output_set.begin(), output_set.end())});
 }
