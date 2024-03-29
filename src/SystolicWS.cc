@@ -42,6 +42,18 @@ bool SystolicWS::can_issue() {
       spdlog::debug("Core-{} tried to run too many tile... while execute not finished!", _id);
   }
 
+  if (!_compute_pipeline.empty()) {
+    int ex_result;
+    if ( _compute_pipeline.front().dest_addr >= ACCUM_SPAD_BASE) {
+      ex_result = _current_acc_spad == _compute_pipeline.front().accum_spad_id;
+    } else {
+      ex_result = _current_spad == _compute_pipeline.front().spad_id;
+    }
+    result &= ex_result;
+    if (!ex_result)
+      spdlog::debug("Core-{} tried to run too many tile... while compute_pipeline not finished!", _id);
+  }
+
   return result;
 }
 
