@@ -26,7 +26,7 @@ TEST(SystolicWSTileExecutionTest, BasicAssertions) {
   tile.instructions.push_back(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
-                  .size = 8,
+                  .compute_size = 8,
                   .src_addrs = std::vector<addr_type>{}});
 
   core.issue(tile);
@@ -66,12 +66,12 @@ TEST(SystolicWSTwoGemmExecutionTest, BasicAssertions) {
   tile.instructions.push_back(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
-                  .size = 8,
+                  .compute_size = 8,
                   .src_addrs = std::vector<addr_type>{}});
   tile.instructions.push_back(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
-                  .size = 8,
+                  .compute_size = 8,
                   .src_addrs = std::vector<addr_type>{}});
 
   core.issue(tile);

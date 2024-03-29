@@ -240,7 +240,7 @@ void SystolicWS::cycle() {
 }
 
 cycle_type SystolicWS::get_inst_compute_cycles(Instruction inst) {
-  return _config.core_height + _config.core_width - 2 + MAX(inst.size, 4);
+  return _config.core_height + _config.core_width - 2 + MAX(inst.compute_size, 4);
 }
 
 cycle_type SystolicWS::calculate_add_tree_iterations(uint32_t vector_size) {
