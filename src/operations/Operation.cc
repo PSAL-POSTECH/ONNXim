@@ -44,7 +44,7 @@ Operation::Operation(SimulationConfig config, Model* model,
   Rdim = 3;
 }
 
-Operation::Operation(SimulationConfig config, MappingTable mapping_table) {
+Operation::Operation(SimulationConfig config, MappingTable& mapping_table) {
   _id = generate_id();
   _finish = false;
   _config = config;
@@ -153,7 +153,7 @@ std:
   return _tiles;
 }
 
-void Operation::initialize_tiles(MappingTable mapping_table) {
+void Operation::initialize_tiles(MappingTable& mapping_table) {
   spdlog::trace("Parent");
 }
 

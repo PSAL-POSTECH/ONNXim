@@ -11,12 +11,12 @@ GemmWS::GemmWS(SimulationConfig config, Model* model, onnx::NodeProto& node_prot
         this->has_bias = has_bias;
 }
 
-GemmWS::GemmWS(SimulationConfig config, MappingTable mapping_table,
+GemmWS::GemmWS(SimulationConfig config, MappingTable& mapping_table,
                std::vector<uint32_t> input_shape,
                std::vector<uint32_t> weight_shape,
                std::vector<uint32_t> output_shape)
     : Gemm(config, mapping_table, input_shape, weight_shape, output_shape) {}
-void GemmWS::initialize_tiles(MappingTable mapping_table) {
+void GemmWS::initialize_tiles(MappingTable& mapping_table) {
   Mapping::LoopCounts key{.N = _output_shape[_input_shape.size()-2 + Ndim] * _batch_size,
                           .C = _weight_shape[Cdim_w],
                           .M = _weight_shape[Mdim],

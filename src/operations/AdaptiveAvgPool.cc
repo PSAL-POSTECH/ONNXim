@@ -54,7 +54,7 @@ AdaptiveAvgPool::AdaptiveAvgPool(const AdaptiveAvgPool& src) : Operation(src) {
   _skip = src._skip;
 }
 
-void AdaptiveAvgPool::initialize_tiles(MappingTable mapping_table) {
+void AdaptiveAvgPool::initialize_tiles(MappingTable& mapping_table) {
   spdlog::trace("initialize_tile {}", _name);
   std::vector<uint32_t> output_shape = get_output(0)->get_dims();
   if (_skip) {

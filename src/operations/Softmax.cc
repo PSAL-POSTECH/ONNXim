@@ -30,7 +30,7 @@ Softmax::Softmax(SimulationConfig config, Model* model,
     calculate_loops();
 }
 
-Softmax::Softmax(SimulationConfig config, MappingTable mapping_table,
+Softmax::Softmax(SimulationConfig config, MappingTable& mapping_table,
            std::vector<uint32_t> input_shape)
     : Operation(config, mapping_table) {
     _input_shape = input_shape;
@@ -42,7 +42,7 @@ Softmax::Softmax(SimulationConfig config, MappingTable mapping_table,
     calculate_loops();
 }
 
-void Softmax::initialize_tiles(MappingTable mapping_table) {
+void Softmax::initialize_tiles(MappingTable& mapping_table) {
     for (uint32_t tokens=0; tokens < _seq; tokens+=_tokens_per_tile) {
         uint32_t remain_tokens = std::min(_seq-tokens, _tokens_per_tile);
         auto tile = Tile{

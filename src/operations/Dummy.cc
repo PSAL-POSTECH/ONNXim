@@ -22,7 +22,7 @@ Dummy::Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
   }
 }
 
-void Dummy::initialize_tiles(MappingTable mapping_table) {
+void Dummy::initialize_tiles(MappingTable& mapping_table) {
   _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
                         .optype="Dummy",
                         .layer_id=_id,

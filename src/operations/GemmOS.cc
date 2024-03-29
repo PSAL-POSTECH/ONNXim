@@ -7,6 +7,6 @@ GemmOS::GemmOS(SimulationConfig config, Model* model,
     : Gemm(config, model, node_proto) {}
 
 /* TODO : Implement this */
-void GemmOS::initialize_tiles(MappingTable mapping_table) {
+void GemmOS::initialize_tiles(MappingTable& mapping_table) {
 
 }

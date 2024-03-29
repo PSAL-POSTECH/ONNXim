@@ -9,11 +9,11 @@ ConvWS::ConvWS(SimulationConfig config, Model* model,
 
 ConvWS::ConvWS(const Conv& src) : Conv(src) {}
 
-ConvWS::ConvWS(SimulationConfig config, MappingTable mapping_table, convInfo info)
+ConvWS::ConvWS(SimulationConfig config, MappingTable& mapping_table, convInfo info)
     : Conv(config, mapping_table, info) {}
 /* TODO: handle depthwise convolutoin (Important) */
 /* TODO: handle grouped convolutoin (less important) */
-void ConvWS::initialize_tiles(MappingTable mapping_table) {
+void ConvWS::initialize_tiles(MappingTable& mapping_table) {
   int tile_h_size = _config.core_height;
   int tile_w_size = _config.core_width;
   int precision = _config.precision;

@@ -59,7 +59,7 @@ Attention::Attention(SimulationConfig config, Model* model,
     calculate_loops();
 }
 
-void Attention::initialize_tiles(MappingTable mapping_table) {
+void Attention::initialize_tiles(MappingTable& mapping_table) {
     /* Check using fusion */
     if (!use_fused) {
         initialize_non_fused_tiles(mapping_table);
@@ -217,7 +217,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
     }
 }
 
-void Attention::initialize_non_fused_tiles(MappingTable mapping_table) {
+void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
     /* linear projection */
     uint32_t fused_op_id = 0;
     GemmWS linear_projection = GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);

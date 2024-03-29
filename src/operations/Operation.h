@@ -12,7 +12,7 @@ class Operation {
  public:
   Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto,
             uint32_t id);
-  Operation(SimulationConfig config, MappingTable mapping_table);
+  Operation(SimulationConfig config, MappingTable& mapping_table);
   Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
   Operation(const Operation& operation);
   virtual ~Operation() = default;
@@ -27,7 +27,7 @@ class Operation {
   virtual Tensor* get_output(int id);
   virtual std::vector<uint32_t> get_child_nodes();
   virtual std::deque<Tile> get_tiles();
-  virtual void initialize_tiles(MappingTable mapping_table) = 0;
+  virtual void initialize_tiles(MappingTable& mapping_table) = 0;
   virtual bool check_executable();
   bool check_finish() { return _finish; };
 

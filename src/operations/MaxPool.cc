@@ -67,7 +67,7 @@ MaxPool::MaxPool(const MaxPool& src) : Operation(src) {
 }
 
 /*TODO: implement this */
-void MaxPool::initialize_tiles(MappingTable mapping_table) {
+void MaxPool::initialize_tiles(MappingTable& mapping_table) {
   spdlog::trace("initialize_tile {} ", _name);
   std::vector<uint32_t> input_shape = get_input(0)->get_dims();  
 

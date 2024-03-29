@@ -209,7 +209,7 @@ void Conv::im2col_nhwc() {
   _tiles.push_back(Tile{.status = Tile::Status::BAR});
 }
 
-Conv::Conv(SimulationConfig config, MappingTable mapping_table,
+Conv::Conv(SimulationConfig config, MappingTable& mapping_table,
                convInfo info)
     : Operation(config, mapping_table){
   _kernel_shape = info.kernel_shape;

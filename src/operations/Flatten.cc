@@ -41,7 +41,7 @@ Flatten::Flatten(SimulationConfig config, Model* model,
 
 Flatten::Flatten(const Flatten& src) : Operation(src) { _axis = src._axis; }
 
-void Flatten::initialize_tiles(MappingTable mapping_table) {
+void Flatten::initialize_tiles(MappingTable& mapping_table) {
   spdlog::trace("initialize_tile {}", _name);
 
   _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,

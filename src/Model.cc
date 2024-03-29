@@ -91,7 +91,7 @@ void Model::add_tensor(std::unique_ptr<Tensor> edge) {
   _tensor_map[edge->get_id()] = std::move(edge);
 }
 int skip_count = 0;
-void Model::initialize_model(MappingTable mapping_table) {
+void Model::initialize_model(MappingTable& mapping_table) {
   std::vector<std::unique_ptr<Tensor>> input_tensors;
 
   for(auto node_proto : _model_proto.graph().node()) {

@@ -6,8 +6,8 @@ class ConvWS : public Conv {
  public:
   ConvWS(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
   ConvWS(const Conv& src);
-  ConvWS(SimulationConfig config, MappingTable mapping_table, convInfo info);
-  virtual void initialize_tiles(MappingTable mapping_table) override;
+  ConvWS(SimulationConfig config, MappingTable& mapping_table, convInfo info);
+  virtual void initialize_tiles(MappingTable& mapping_table) override;
 
  protected:
   virtual void initialize_instructions(Tile& tile, Mapping mapping);

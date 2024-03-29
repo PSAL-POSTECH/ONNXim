@@ -4,7 +4,7 @@
 class Gemm : public Operation {
  public:
   Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
-  Gemm(SimulationConfig config, MappingTable mapping_table,
+  Gemm(SimulationConfig config, MappingTable& mapping_table,
        std::vector<uint32_t> output_shape, std::vector<uint32_t> input_shape,
        std::vector<uint32_t> weight_shape);
 

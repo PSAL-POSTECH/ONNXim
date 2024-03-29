@@ -14,7 +14,7 @@ class Model {
     Tensor* get_tensor(uint32_t id);
     Tensor* find_tensor(std::string name);
     void add_tensor(std::unique_ptr<Tensor> tensor);
-    void initialize_model(MappingTable mapping_table);
+    void initialize_model(MappingTable& mapping_table);
     void set_layer_finish(uint32_t id); 
 
     std::string get_name() { return _name; }

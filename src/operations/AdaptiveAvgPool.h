@@ -8,7 +8,7 @@ class AdaptiveAvgPool : public Operation {
                   onnx::NodeProto& node_proto);
   AdaptiveAvgPool(const AdaptiveAvgPool& src);
 
-  virtual void initialize_tiles(MappingTable mapping_table) override;
+  virtual void initialize_tiles(MappingTable& mapping_table) override;
 
  protected:
   virtual void initialize_instructions(Tile& tile, Mapping mapping) override;

@@ -5,7 +5,7 @@ class GlobalAvgPool : public Operation {
   public:
     GlobalAvgPool(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
     GlobalAvgPool(const GlobalAvgPool& src);
-    virtual void initialize_tiles(MappingTable mapping_table) override;
+    virtual void initialize_tiles(MappingTable& mapping_table) override;
 
   protected:
     virtual void initialize_instructions(Tile& tile, Mapping mapping) override;

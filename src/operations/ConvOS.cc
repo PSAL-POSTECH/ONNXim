@@ -13,7 +13,7 @@ ConvOS::ConvOS(const Conv& src) : Conv(src) {}
 
 /* TODO: handle depthwise convolutoin (Important) */
 /* TODO: handle grouped convolutoin (less important) */
-void ConvOS::initialize_tiles(MappingTable mapping_table) {
+void ConvOS::initialize_tiles(MappingTable& mapping_table) {
   int tile_h_size = _config.core_height;
   int tile_w_size = _config.core_width;
   int precision = _config.precision;
