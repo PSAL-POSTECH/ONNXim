@@ -32,9 +32,13 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
       key.N, key.C, key.M, key.P, key.Q, key.S, key.R);
     std::exit(EXIT_FAILURE);
   }
+  int core_id = -1; // starts from 0
   for (uint32_t N = 0; N < mapping.tile_out_loop.N; N++) {
     for (uint32_t M = 0; M < mapping.tile_out_loop.M; M++) {
       for (uint32_t C = 0; C < mapping.tile_out_loop.C; C++) {
+        if (C == 0) {
+          core_id = (core_id + 1) % _config.num_cores;
+        }
         _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
                               .optype = "Gemm",
                               .layer_id = _id,
@@ -45,7 +49,8 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
                               .C = C,
                               .S = 1,
                               .R = 1,
-                              .accum = C != 0});
+                              .accum = C != 0,
+                              .core_id = core_id});
         initialize_instructions(_tiles.back(), mapping);
         if (!_tiles.back().instructions.size())
           _tiles.pop_back();

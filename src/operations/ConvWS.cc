@@ -64,6 +64,7 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
            mapping.tile_in_loop.Q % _pool_kernel_shape[1] == 0);
   }
   /* TODO: Spatially seperate polocy for weight stationary */
+  int core_id = -1; // starts from 0
   for (uint32_t N = 0; N < mapping.tile_out_loop.N; N++) {
     for (uint32_t P = 0; P < mapping.tile_out_loop.P; P++) {
       for (uint32_t Q = 0; Q < mapping.tile_out_loop.Q; Q++) {
@@ -71,6 +72,9 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
           for (uint32_t S = 0; S < mapping.tile_out_loop.S; S++) {
             for (uint32_t R = 0; R < mapping.tile_out_loop.R; R++) {
               for (uint32_t C = 0; C < mapping.tile_out_loop.C; C++) {
+                if (C == 0 && R == 0 && S == 0) {
+                  core_id = (core_id + 1) % _config.num_cores;
+                }
                 _tiles.push_back(
                     Tile{.status = Tile::Status::INITIALIZED,
                          .optype = "Conv",
@@ -83,7 +87,8 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
                          .S = S,
                          .R = R,
                          .accum = (C != 0 || R != 0 ||
-                                   S != 0)}); /* Accum input channel data*/
+                                   S != 0),
+                         .core_id = core_id}); /* Accum input channel data*/
                 initialize_instructions(_tiles.back(), mapping);
               }
             }

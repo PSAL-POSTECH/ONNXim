@@ -34,6 +34,7 @@ class Scheduler {
     const cycle_type* _core_cycle;
     std::deque<Request> _request_queue;
     std::deque<Tile> _executable_tile_queue;
+    std::vector<std::deque<Tile>> _core_executable_tile_queue;
     SimulationConfig _config;
     robin_hood::unordered_map<uint32_t, LayerStat> _layer_stat_map;
     robin_hood::unordered_map<uint32_t, LayerStat> _active_layers_map;
