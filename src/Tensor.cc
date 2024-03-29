@@ -67,5 +67,4 @@ void Tensor::allocate_tensor(int precision) {
   }
   _address = allocate_address(size * precision);
   _size = size * precision;
-  _produced = true;
 }

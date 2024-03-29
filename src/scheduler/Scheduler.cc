@@ -83,8 +83,10 @@ void Scheduler::refresh_status() {
     Operation* new_layer =
         _request_queue.front().model->get_executable_layers().front();
     spdlog::info("Start layer {}", new_layer->get_name().c_str());
-    for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++)
+    for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++) {
       new_layer->get_output(output_id)->allocate_tensor(_config.precision);
+      new_layer->get_output(output_id)->set_produced();
+    }
     assert(new_layer->get_tiles().size());
     _executable_tile_queue = new_layer->get_tiles();
     _active_layers_map[new_layer->get_id()] =
@@ -180,8 +182,10 @@ void TimeMultiplexScheduler::refresh_status() {
       else
         spdlog::info("Layer {} {}: Enqueue", new_layer->get_name(),
                      new_layer->get_id());
-      for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++)
+      for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++) {
         new_layer->get_output(output_id)->allocate_tensor(_config.precision);
+        new_layer->get_output(output_id)->set_produced();
+      }
       // new_layer->initialize_tiles(_config);
       assert(new_layer->get_tiles().size());
       _executable_tile_queue = new_layer->get_tiles();
@@ -290,9 +294,11 @@ void HalfSplitScheduler::refresh_status() {
             spdlog::info("Layer {} {}: Enqueue", new_layer->get_name(),
                          new_layer->get_id());
           for (int output_id = 0; output_id < new_layer->num_outputs();
-               output_id++)
+               output_id++) {
             new_layer->get_output(output_id)->allocate_tensor(
                 _config.precision);
+            new_layer->get_output(output_id)->set_produced();
+          }
           // new_layer->initialize_tiles(_config);
           assert(new_layer->get_tiles().size());
           _executable_tile_queue_table[req->request_id] =

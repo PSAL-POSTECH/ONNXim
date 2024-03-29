@@ -50,6 +50,7 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
     //initialize weights
     auto tensor = std::make_unique<Tensor>(_root_node_id, initializer, true);
     tensor->allocate_tensor(config.precision);
+    tensor->set_produced();
     uint32_t id = tensor->get_id();
     _tensor_map[id] = std::move(tensor);
   }
