@@ -16,7 +16,7 @@ EmbedLayerNorm::EmbedLayerNorm(SimulationConfig config, Model* model, onnx::Node
   Tensor* embed_output = _model->find_tensor(node_proto.output(0));
   if (embed_output == nullptr) {
     std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-        _id, node_proto.output(0), _output_shape, false);
+        _id, node_proto.output(0), _output_shape, _config.precision, false);
     _outputs.push_back(output_tensor.get()->get_id());
     _model->add_tensor(std::move(output_tensor));
   } else {
@@ -27,7 +27,7 @@ EmbedLayerNorm::EmbedLayerNorm(SimulationConfig config, Model* model, onnx::Node
   Tensor* mask_output = _model->find_tensor(node_proto.output(1));
   if (mask_output == nullptr) {
     std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-        _id, node_proto.output(1), _output_shape, false);
+        _id, node_proto.output(1), _output_shape, _config.precision, false);
     _outputs.push_back(output_tensor.get()->get_id());
     _model->add_tensor(std::move(output_tensor));
   } else {
@@ -37,7 +37,7 @@ EmbedLayerNorm::EmbedLayerNorm(SimulationConfig config, Model* model, onnx::Node
     Tensor* embed_sum = _model->find_tensor(node_proto.output(2));
     if (embed_sum == nullptr) {
       std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-          _id, node_proto.output(2), _output_shape, false);
+          _id, node_proto.output(2), _output_shape, _config.precision, false);
       _outputs.push_back(output_tensor.get()->get_id());
       _model->add_tensor(std::move(output_tensor));
     } else {

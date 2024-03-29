@@ -6,9 +6,9 @@ class Operation;
 
 class Tensor {
  public:
-  Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto, bool produced);
+  Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto, int precision, bool produced);
   Tensor(uint32_t src_node, std::string name, std::vector<uint32_t> &dims,
-         bool produced);
+         int precision, bool produced);
   Tensor(const Tensor &tensor);
 
   void redefine_tensor(uint32_t src_node, std::vector<uint32_t> &dims);

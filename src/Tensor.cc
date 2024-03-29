@@ -3,7 +3,7 @@
 #include "Model.h"
 #include "operations/Operation.h"
 
-Tensor::Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto,
+Tensor::Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto, int precision,
                bool produced = false) {
   _id = generate_id();
   _src_node = src_node;
@@ -13,10 +13,12 @@ Tensor::Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto,
   }
   spdlog::trace("Tensor: {}", _name);
   _produced = produced;
+
+  allocate_tensor(precision);
 }
 
 Tensor::Tensor(uint32_t src_node, std::string name, std::vector<uint32_t> &dims,
-               bool produced = false) {
+               int precision, bool produced = false) {
   _id = generate_id();
   _src_node = src_node;
   _name = name;
@@ -25,6 +27,8 @@ Tensor::Tensor(uint32_t src_node, std::string name, std::vector<uint32_t> &dims,
   }
   spdlog::trace("Tensor: {} {}", _name, dims);
   _produced = produced;
+
+  allocate_tensor(precision);
 }
 
 Tensor::Tensor(const Tensor &tensor) {

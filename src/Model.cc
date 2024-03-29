@@ -39,17 +39,15 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
       input_dim.push_back(channel);
     }
 
-    auto input_tensor = std::make_unique<Tensor>(_root_node_id, input_name, input_dim, true);
+    auto input_tensor = std::make_unique<Tensor>(_root_node_id, input_name, input_dim, _config.precision * 16, true);
     int id = input_tensor->get_id();
-    input_tensor->allocate_tensor(_config.precision * 16);
     input_tensor->set_produced();
     _tensor_map[id] = std::move(input_tensor);
   }
 
   for(auto initializer : _model_proto.graph().initializer()) {
     //initialize weights
-    auto tensor = std::make_unique<Tensor>(_root_node_id, initializer, true);
-    tensor->allocate_tensor(config.precision);
+    auto tensor = std::make_unique<Tensor>(_root_node_id, initializer, config.precision, true);
     tensor->set_produced();
     uint32_t id = tensor->get_id();
     _tensor_map[id] = std::move(tensor);

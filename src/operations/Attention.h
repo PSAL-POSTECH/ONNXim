@@ -27,6 +27,7 @@ class Attention : public Operation {
     uint32_t _nh;
     uint32_t _dk;
 
+    uint32_t _linear_output_id;
     /* For kv cache */
     bool has_kv_cache = false;
     bool use_fused = true;

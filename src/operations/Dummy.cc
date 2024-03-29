@@ -13,7 +13,7 @@ Dummy::Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
     Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(i));
     if (pre_defind_tensor == nullptr) {
       std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-          _id, node_proto.output(i), _output_shape, false);
+          _id, node_proto.output(i), _output_shape, _config.precision, false);
       _outputs.push_back(output_tensor.get()->get_id());
       _model->add_tensor(std::move(output_tensor));
     } else {

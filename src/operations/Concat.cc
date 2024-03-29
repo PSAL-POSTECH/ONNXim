@@ -32,7 +32,7 @@ Concat::Concat(SimulationConfig config, Model* model,
 	Tensor* predefined_tensor = _model->find_tensor(node_proto.output(0));
 	if (predefined_tensor == nullptr) {
 		std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-				_id, node_proto.output(0), output_shape, false);
+				_id, node_proto.output(0), output_shape, _config.precision, false);
 		_outputs.push_back(output_tensor.get()->get_id());
 		_model->add_tensor(std::move(output_tensor));
 	} else {
