@@ -48,17 +48,21 @@ void BiasGelu::initialize_instructions(Tile &tile, Mapping mapping, uint32_t tok
     addr_type sram_base = SPAD_BASE;
     addr_type sram_bias_base = sram_base + _batch_size * _seq * _dk * _config.precision;
 
+    addr_type first_addr, second_addr, output_addr;
+    first_addr = get_operand_addr(_INPUT_OPERAND);
+    second_addr = get_operand_addr(_INPUT_OPERAND+1);
+    output_addr = get_operand_addr(_OUTPUT_OPERAND);
     /* Load two tile (input: tokens x _dk, skip: tokens x _dk) */
     std::set<addr_type> dram_addrs;
     std::set<addr_type> dram_output_addrs;
     std::set<addr_type> dram_skip_addrs;
     for (int offset=0; offset<tokens*_dk*_config.precision; offset+=_config.dram_req_size) {
-        dram_addrs.insert(get_operand_addr(_INPUT_OPERAND) + token_offset*_dk*_config.precision + offset);
-        dram_output_addrs.insert(get_operand_addr(_OUTPUT_OPERAND) + token_offset*_dk*_config.precision + offset);
+        dram_addrs.insert(first_addr + token_offset*_dk*_config.precision + offset);
+        dram_output_addrs.insert(output_addr + token_offset*_dk*_config.precision + offset);
     }
 
     for (int offset=0;offset<_dk*_config.precision; offset+=_config.dram_req_size)
-        dram_skip_addrs.insert(get_operand_addr(_INPUT_OPERAND+1) + _seq*_dk*_config.precision+ offset);
+        dram_skip_addrs.insert(second_addr + _seq*_dk*_config.precision+ offset);
 
 
     tile.instructions.push_back(Instruction{

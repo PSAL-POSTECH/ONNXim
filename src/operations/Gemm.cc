@@ -52,7 +52,7 @@ Gemm::Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
   Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(0));
   if (pre_defind_tensor == nullptr) {
     std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-        _id, node_proto.output(0), _output_shape, false);
+        _id, node_proto.output(0), _output_shape, _config.precision, false);
     _outputs.push_back(output_tensor.get()->get_id());
     _model->add_tensor(std::move(output_tensor));
   } else {
@@ -77,8 +77,8 @@ Gemm::Gemm(SimulationConfig config, MappingTable& mapping_table,
   for (int i=0; i<_input_shape.size()-2;i++)
     _batch_size *= _input_shape.at(i);
 
-  spdlog::debug("GemmWS: input_shape: {}", _input_shape);
-  spdlog::debug("GemmWS: output_shape : {}", _output_shape);
+  spdlog::debug("[Gemm] input_shape: {}", _input_shape);
+  spdlog::debug("[Gemm] output_shape : {}", _output_shape);
 }
 
 addr_type Gemm::make_activation_address(uint32_t N, uint32_t H, uint32_t W,

@@ -20,7 +20,7 @@ Operation::Operation(SimulationConfig config, Model* model,
     Tensor* input_tensor = _model->find_tensor(input_proto);
     if (input_tensor == nullptr) {
       std::vector<uint32_t> dims;
-      auto new_tensor = std::make_unique<Tensor>(0, input_proto, dims, false);
+      auto new_tensor = std::make_unique<Tensor>(0, input_proto, dims, _config.precision, false);
       input_tensor = new_tensor.get();
       _model->add_tensor(std::move(new_tensor));
     }
@@ -80,7 +80,7 @@ Operation::Operation(SimulationConfig config, Model* model,
     Tensor* input_tensor = _model->find_tensor(input_proto);
     if (input_tensor == nullptr) {
       std::vector<uint32_t> dims;
-      auto new_tensor = std::make_unique<Tensor>(0, input_proto, dims, false);
+      auto new_tensor = std::make_unique<Tensor>(0, input_proto, dims, _config.precision, false);
       input_tensor = new_tensor.get();
       _model->add_tensor(std::move(new_tensor));
     }
@@ -123,10 +123,10 @@ std::vector<uint32_t> Operation::get_child_nodes() {
   return result;
 }
 
-Tensor* Operation::get_input(int id) { return _model->get_tensor(_inputs[id]); }
+Tensor* Operation::get_input(int id) { return _model->get_tensor(_inputs.at(id)); }
 
 Tensor* Operation::get_output(int id) {
-  return _model->get_tensor(_outputs[id]);
+  return _model->get_tensor(_outputs.at(id));
 }
 
 bool Operation::check_executable() {
@@ -161,8 +161,12 @@ addr_type Operation::get_operand_addr(uint32_t operand_id) {
   if (operand_id == _NO_OPERAND)
     return GARBEGE_ADDR;
   else if (operand_id >= _INPUT_OPERAND && operand_id < _OUTPUT_OPERAND) {
+    if ((operand_id - _INPUT_OPERAND) >= _inputs.size())
+      return (addr_type) 0;
     return get_input(operand_id - _INPUT_OPERAND)->get_address();
   } else if (operand_id >= _OUTPUT_OPERAND) {
+    if ((operand_id - _OUTPUT_OPERAND) >= _outputs.size())
+      return (addr_type) 0;
     return get_output(operand_id - _OUTPUT_OPERAND)->get_address();
   } else {
     assert(0);

@@ -23,8 +23,11 @@ class Operation {
   virtual uint32_t get_id() { return _id; }
   virtual uint32_t num_inputs() { return _inputs.size(); }
   virtual Tensor* get_input(int id);
+  virtual void add_input(int id) { _inputs.push_back(id); }
+  virtual void add_output(int id) { _outputs.push_back(id); }
   virtual uint32_t num_outputs() { return _outputs.size(); }
   virtual Tensor* get_output(int id);
+  virtual void set_model(Model* model) { _model=model; }
   virtual std::vector<uint32_t> get_child_nodes();
   virtual std::deque<Tile> get_tiles();
   virtual void initialize_tiles(MappingTable& mapping_table) = 0;

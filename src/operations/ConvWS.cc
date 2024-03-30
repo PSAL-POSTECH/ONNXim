@@ -218,6 +218,13 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
   /* MOVIN Activation data */
   std::set<addr_type> act_addr_set;
 
+  addr_type first_addr;
+  addr_type second_addr;
+  addr_type output_addr;
+
+  first_addr = get_operand_addr(_INPUT_OPERAND);
+  second_addr = get_operand_addr(_INPUT_OPERAND+1);
+  output_addr = get_operand_addr(_OUTPUT_OPERAND);
   for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
     for (int Hs = 0; Hs < input_h_size; Hs++) {
       for (int Ws = 0; Ws < input_w_size; Ws++) {
@@ -230,7 +237,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
           if (H < 0 || H >= _input_shape[Hdim] || W < 0 ||
               W >= _input_shape[Wdim])
             continue;
-          act_addr_set.insert(get_operand_addr(_INPUT_OPERAND) + make_activation_address(N, H, W, C, _input_shape));
+          act_addr_set.insert(first_addr + make_activation_address(N, H, W, C, _input_shape));
         }
       }
     }
@@ -276,7 +283,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
             for (int c_iter = 0; c_iter < c_loop; c_iter++) {
               int M = m_offset + m_iter;
               int C = c_offset + c_iter;
-              weight_set.insert( get_operand_addr(_INPUT_OPERAND+1) + \
+              weight_set.insert( second_addr + \
                   make_weight_address(s_offset, r_offset, M, C, _weight_shape));
             }
           }
@@ -397,10 +404,10 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
                   int M = tout_m_offset + Ms + M_iter;
                   if (_pool_fused)
                     out_dram_addrs.insert(
-                        get_operand_addr(_OUTPUT_OPERAND) + make_activation_address(N, Q, P, M, _pool_out_shape));
+                        output_addr + make_activation_address(N, Q, P, M, _pool_out_shape));
                   else
                     out_dram_addrs.insert(
-                        get_operand_addr(_OUTPUT_OPERAND) + make_activation_address(N, Q, P, M, _conv_out_shape));
+                        output_addr + make_activation_address(N, Q, P, M, _conv_out_shape));
                 }
               }
             }
