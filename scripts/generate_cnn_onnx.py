@@ -80,6 +80,7 @@ for size in size_list:
                 {
                     "name": f"{args.model}",
                     "batch_size": size,
+                    "request_time": 0
                  }
             ]
         }

@@ -41,7 +41,8 @@ for size in size_list:
                     "sequence_length": 1024,
                     "seq_len": 1024,
                     "past_seq_len": 0,
-                    "total_seq_len": 1024
+                    "total_seq_len": 1024,
+                    "request_time": 0
                  }
             ]
         }
@@ -58,7 +59,8 @@ for size in size_list:
                     "sequence_length": 1,
                     "seq_len": 1,
                     "past_seq_len": 1023,
-                    "total_seq_len": 1024
+                    "total_seq_len": 1024,
+                    "request_time": 0
                  }
             ]
         }
