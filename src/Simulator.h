@@ -6,6 +6,7 @@
 #include "Interconnect.h"
 #include "Model.h"
 #include "scheduler/Scheduler.h"
+#include <queue>
 
 #define CORE_MASK 0x1 << 1
 #define DRAM_MASK 0x1 << 2
@@ -15,8 +16,7 @@ class Simulator {
  public:
   Simulator(SimulationConfig config);
   void register_model(std::unique_ptr<Model> model);
-  void run_once(std::string model_name);
-  void run_models(std::vector<std::string> models);
+  void run_simulator();
   // void run_offline(std::string model_name, uint32_t sample_count);
   // void run_multistream(std::string model_name, uint32_t sample_count,
   // uint32_t ); void run_server(std::string trace_path);
@@ -24,6 +24,7 @@ class Simulator {
   void cycle();
   bool running();
   void set_cycle_mask();
+  void handle_model();
   uint32_t get_dest_node(MemoryAccess* access);
   SimulationConfig _config;
   uint32_t _n_cores;
@@ -35,14 +36,14 @@ class Simulator {
   std::unique_ptr<Dram> _dram;
   std::unique_ptr<Scheduler> _scheduler;
   
-  // period information (us)
-  double _core_period;
-  double _icnt_period;
-  double _dram_period;
+  // period information (ps)
+  uint64_t _core_period;
+  uint64_t _icnt_period;
+  uint64_t _dram_period;
   //
-  double _core_time;
-  double _icnt_time;
-  double _dram_time;
+  uint64_t _core_time;
+  uint64_t _icnt_time;
+  uint64_t _dram_time;
 
   addr_type _dram_ch_stride_size;
 
@@ -50,5 +51,11 @@ class Simulator {
 
   uint32_t _cycle_mask;
   bool _single_run;
-  std::map<std::string, std::unique_ptr<Model>> _models;
+
+  struct CompareModel {
+    bool operator()(const std::unique_ptr<Model>& a, const std::unique_ptr<Model>& b) const {
+        return a->get_request_time() > b->get_request_time();
+    }
+  };
+  std::priority_queue<std::unique_ptr<Model>, std::vector<std::unique_ptr<Model>>, CompareModel> _models;
 };
