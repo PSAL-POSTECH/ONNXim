@@ -14,7 +14,7 @@ class Core {
   Core(uint32_t id, SimulationConfig config);
   virtual ~Core() = default;
   virtual bool running();
-  virtual bool can_issue();
+  virtual bool can_issue(bool is_accum_tile=false);
   virtual void issue(Tile tile);
   virtual Tile pop_finished_tile();
 

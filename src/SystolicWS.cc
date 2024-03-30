@@ -3,7 +3,7 @@
 SystolicWS::SystolicWS(uint32_t id, SimulationConfig config)
     : Core(id, config) {}
 
-bool SystolicWS::can_issue() {
+bool SystolicWS::can_issue(bool is_accum_tile) {
   int result = true;
   result &= Core::can_issue();
   if (!_ld_inst_queue.empty()) {
@@ -11,7 +11,7 @@ bool SystolicWS::can_issue() {
     if ( _ld_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
       ld_result = _current_acc_spad == _ld_inst_queue.front().accum_spad_id;
     } else {
-      ld_result = _current_spad == _ld_inst_queue.front().spad_id;
+      ld_result = is_accum_tile || (_current_spad == _ld_inst_queue.front().spad_id);
     }
     result &= ld_result;
     if (!ld_result)
@@ -23,7 +23,7 @@ bool SystolicWS::can_issue() {
     if ( _st_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
       st_result = _current_acc_spad == _st_inst_queue.front().accum_spad_id;
     } else {
-      st_result = _current_spad == _st_inst_queue.front().spad_id;
+      st_result = is_accum_tile || (_current_spad == _st_inst_queue.front().spad_id);
     }
     result &= st_result;
     if (!st_result)
@@ -35,7 +35,7 @@ bool SystolicWS::can_issue() {
     if ( _ex_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
       ex_result = _current_acc_spad == _ex_inst_queue.front().accum_spad_id;
     } else {
-      ex_result = _current_spad == _ex_inst_queue.front().spad_id;
+      ex_result = is_accum_tile || (_current_spad == _ex_inst_queue.front().spad_id);
     }
     result &= ex_result;
     if (!ex_result)
@@ -47,7 +47,7 @@ bool SystolicWS::can_issue() {
     if ( _compute_pipeline.front().dest_addr >= ACCUM_SPAD_BASE) {
       ex_result = _current_acc_spad == _compute_pipeline.front().accum_spad_id;
     } else {
-      ex_result = _current_spad == _compute_pipeline.front().spad_id;
+      ex_result = is_accum_tile || (_current_spad == _compute_pipeline.front().spad_id);
     }
     result &= ex_result;
     if (!ex_result)

@@ -33,7 +33,7 @@ Core::Core(uint32_t id, SimulationConfig config)
   _current_acc_spad = 0;
 }
 
-bool Core::can_issue() {
+bool Core::can_issue(bool is_accum_tile) {
   return _tiles.size() < 1;  // double buffer
 }
 
