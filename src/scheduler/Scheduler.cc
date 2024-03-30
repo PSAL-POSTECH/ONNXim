@@ -1,7 +1,9 @@
 #include "Scheduler.h"
 
-Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle)
-    : _config(config), _core_cycle(core_cycle) {}
+Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time)
+    : _config(config), _core_cycle(core_cycle), _core_time(core_time) {
+  _core_executable_tile_queue.resize(_config.num_cores);
+}
 
 void Scheduler::schedule_model(std::unique_ptr<Model> model,
                                uint32_t sample_size) {
@@ -10,41 +12,85 @@ void Scheduler::schedule_model(std::unique_ptr<Model> model,
                                    .sample_size = sample_size});
   spdlog::info("MODEL {} Scheduled, Total Request: {}",
                _request_queue.back().model->get_name(), _request_queue.size());
-  _core_executable_tile_queue.resize(_config.num_cores);
   refresh_status();
+}
+
+void Scheduler::issue_tile_per_core() {
+  while(!_executable_tile_queue.empty()) {
+    Tile tile = _executable_tile_queue.front();
+    /* Barrier! */
+    if (tile.status == Tile::Status::BAR)
+      break;
+
+    if (tile.core_id == -1) { // -1 is global id
+      tile.core_id = _core_rr_id;
+      _core_rr_id = (_core_rr_id + 1) % _config.num_cores; // increase with round robin
+    } else {
+      tile.core_id = (tile.core_id + _nr_layer) % _config.num_cores;
+    }
+    _core_executable_tile_queue[tile.core_id].push_back(tile);
+    _executable_tile_queue.pop_front();
+  }
 }
 
 /*TODO: Add base address for each addr in tiles */
 Tile Scheduler::get_tile(uint32_t core_id) {
-  if (_core_executable_tile_queue[core_id].empty()) {
+  if (_core_executable_tile_queue[core_id].empty() && _executable_tile_queue.empty()) {
     Tile tile;
     tile.status = Tile::Status::EMPTY;
     return tile;
   } else {
-    Tile tile = _core_executable_tile_queue[core_id].front();
-    if (tile.status == Tile::Status::BAR) {
-      LayerStat stat = _active_layers_map[tile.layer_id];
-      if (stat.launched_tiles == stat.finished_tiles) {
-        /* POP only if all lauched tiles are finished */
-        _core_executable_tile_queue[core_id].pop_front();
-        _active_layers_map[tile.layer_id].launched_tiles++;
-        _active_layers_map[tile.layer_id].finished_tiles++;
-        _active_layers_map[tile.layer_id].remain_tiles--;
-        if (!_active_layers_map[tile.layer_id].remain_tiles) {
-          _active_layers_map[tile.layer_id].remain_tiles++;
-          finish_tile(core_id, tile);
-        }
-      }
-      Tile empty_tile{.status = Tile::Status::EMPTY};
-      return empty_tile;
-    } else {
+    if (!_core_executable_tile_queue[core_id].empty()) {
+      Tile tile = _core_executable_tile_queue[core_id].front();
       _active_layers_map[tile.layer_id].launched_tiles++;
       _core_executable_tile_queue[core_id].pop_front();
       spdlog::debug("Layer {} Core {} Get Tile at {}", tile.layer_id, core_id,
                     *_core_cycle);
       return tile;
+    } else {
+      Tile tile = _executable_tile_queue.front();
+      if (tile.status == Tile::Status::BAR) {
+        LayerStat stat = _active_layers_map[tile.layer_id];
+        if (stat.launched_tiles == stat.finished_tiles) {
+          /* POP only if all lauched tiles are finished */
+          _executable_tile_queue.pop_front();
+          _active_layers_map[tile.layer_id].launched_tiles++;
+          _active_layers_map[tile.layer_id].finished_tiles++;
+          _active_layers_map[tile.layer_id].remain_tiles--;
+          if (!_active_layers_map[tile.layer_id].remain_tiles) {
+            _active_layers_map[tile.layer_id].remain_tiles++;
+            finish_tile(core_id, tile);
+          } else {
+            /* Issue to core scheduler blocked by barrier */
+            issue_tile_per_core();
+          }
+        }
+        Tile empty_tile{.status = Tile::Status::EMPTY};
+        return empty_tile;
+      } else {
+        spdlog::error("[Scheudler] Something wrong happned...!");
+        Tile empty_tile{.status = Tile::Status::EMPTY};
+        return empty_tile;
+      }
     }
   }
+}
+
+bool Scheduler::is_accum_tile(uint32_t core_id, int index) {
+  if (_core_executable_tile_queue[core_id].size() <= index) {
+    return false;
+  } else {
+    return _core_executable_tile_queue[core_id].at(index).accum;
+  }
+}
+
+bool Scheduler::tile_queue_empty() {
+  bool all_empty = true;
+  for (int i = 0; i < _config.num_cores; i++) {
+    all_empty = all_empty && _core_executable_tile_queue[i].empty();
+  }
+  all_empty = all_empty && _executable_tile_queue.empty();
+  return all_empty;
 }
 
 void Scheduler::finish_tile(uint32_t core_id, Tile tile) {
@@ -73,27 +119,31 @@ bool Scheduler::empty() { return _request_queue.empty(); }
 void Scheduler::refresh_status() {
   if (!_request_queue.empty()) {
     if (_request_queue.front().model->check_finish()) {
-      spdlog::info("Model finish  at {}", *_core_cycle);
+      spdlog::info("Model[{}] Request: {} us, Start: {} us, finish:{} us, Current Cycle:{}",
+                    _request_queue.front().model->get_name(),
+                    _request_queue.front().model->get_request_time() / 1000000,
+                    _request_queue.front().model->get_start_time() / 1000000,
+                    (*_core_time) / 1000000, *_core_cycle);
       _request_queue.pop_front();
     }
   }
-  bool all_empty = true;
-  for (int i = 0; i < _config.num_cores; i++) {
-    all_empty = all_empty && _core_executable_tile_queue[i].empty();
-  }
-  all_empty = all_empty && _executable_tile_queue.empty();
+  bool all_empty = tile_queue_empty();
   if (!_request_queue.empty() && all_empty &&
       count_active_layers() == 0) {
     spdlog::info("executable layer count {}",
-                 _request_queue.front().model->get_executable_layers().size());
+                 _request_queue.front().model->executable_layer_size());
     Operation* new_layer =
-        _request_queue.front().model->get_executable_layers().front();
+        _request_queue.front().model->get_executable_tile();
+
     spdlog::info("Start layer {}", new_layer->get_name().c_str());
     for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++) {
       new_layer->get_output(output_id)->set_produced();
     }
+    _request_queue.front().model->update_start_time(*_core_time);
+    /* Get tiles from new layer */
     assert(new_layer->get_tiles().size());
     _executable_tile_queue = new_layer->get_tiles();
+    _nr_layer++;
     _active_layers_map[new_layer->get_id()] =
         LayerStat{.id = new_layer->get_id(),
                   .name = new_layer->get_name(),
@@ -103,16 +153,9 @@ void Scheduler::refresh_status() {
                   .remain_tiles = (uint32_t)_executable_tile_queue.size(),
                   .finished_tiles = 0,
                   .launched_tiles = 0};
-    int global_id = 0;
-    while(!_executable_tile_queue.empty()) {
-      Tile tile = _executable_tile_queue.front();
-      if (tile.core_id == -1) { // -1 is global id
-        tile.core_id = global_id;
-        global_id = (global_id + 1) % _config.num_cores; // increase with round robin
-      }
-      _core_executable_tile_queue[tile.core_id].push_back(tile);
-      _executable_tile_queue.pop_front();
-    }
+
+    /* Issue tiles to core scheduler */
+    issue_tile_per_core();
   }
 }
 
@@ -122,33 +165,15 @@ uint32_t Scheduler::count_active_layers() {
   return count;
 }
 
-TimeMultiplexScheduler::TimeMultiplexScheduler(SimulationConfig config,
-                                               const cycle_type* core_cycle)
-    : Scheduler(config, core_cycle) {
-  _request_rr = 0;
-}
-
-Tile TimeMultiplexScheduler::get_tile(uint32_t core_id) {
-  if (_executable_tile_queue.empty()) {
-    Tile tile;
-    tile.status = Tile::Status::EMPTY;
-    return tile;
-  } else {
-    Tile tile = _executable_tile_queue.front();
-    _executable_tile_queue.pop_front();
-    if (!_active_layers_map[tile.layer_id].launched) {
-      _active_layers_map[tile.layer_id].launched = true;
-      _active_layers_map[tile.layer_id].start_cycle = *_core_cycle;
-      spdlog::info("Start layer {}", _active_layers_map[tile.layer_id].name);
-    }
-    return tile;
-  }
-}
+ TimeMultiplexScheduler::TimeMultiplexScheduler(SimulationConfig config,
+                                       const cycle_type* core_cycle, const uint64_t* core_time)
+    : Scheduler(config, core_cycle, core_time) {}
 
 void TimeMultiplexScheduler::finish_tile(uint32_t core_id, Tile tile) {
   assert(_active_layers_map.find(tile.layer_id) != _active_layers_map.end());
   assert(_active_layers_map[tile.layer_id].remain_tiles > 0);
   _active_layers_map[tile.layer_id].remain_tiles--;
+  _active_layers_map[tile.layer_id].finished_tiles++;
 
   if (_active_layers_map[tile.layer_id].remain_tiles == 0) {
     _active_layers_map[tile.layer_id].finish_cycle = *_core_cycle;
@@ -178,17 +203,21 @@ void TimeMultiplexScheduler::refresh_status() {
     for (auto req = _request_queue.begin(); req != _request_queue.end();
          req++) {
       if (req->model->check_finish()) {
-        spdlog::info("Model[{}] finish  at {}", req->model->get_name(),
-                     *_core_cycle);
+        spdlog::info("Model[{}] Request: {} us, Start: {} us, finish:{} us Current Cycle:{}",
+                      req->model->get_name(),
+                      req->model->get_request_time()/1000000,
+                      req->model->get_start_time()/1000000,
+                      (*_core_time)/1000000, *_core_cycle);
         req = _request_queue.erase(req);
         --req;
       }
     }
   }
-  if (!_request_queue.empty() && _executable_tile_queue.empty()) {
-    _request_rr = _request_rr % _request_queue.size();
+  bool all_empty = tile_queue_empty();
+  if (!_request_queue.empty() && all_empty) {
+    _request_rr = (_request_rr + 1) % _request_queue.size();
     Operation* new_layer =
-        _request_queue[_request_rr].model->get_executable_layers().front();
+        _request_queue[_request_rr].model->get_executable_tile();
     if (_active_layers_map.find(new_layer->get_id()) ==
         _active_layers_map.end()) {
       if (count_active_layers() > 0)
@@ -197,29 +226,35 @@ void TimeMultiplexScheduler::refresh_status() {
       else
         spdlog::info("Layer {} {}: Enqueue", new_layer->get_name(),
                      new_layer->get_id());
+
       for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++) {
         new_layer->get_output(output_id)->set_produced();
       }
+      _request_queue[_request_rr].model->update_start_time(*_core_time);
       // new_layer->initialize_tiles(_config);
       assert(new_layer->get_tiles().size());
       _executable_tile_queue = new_layer->get_tiles();
-      _active_layers_map[new_layer->get_id()] = LayerStat{
-          .id = new_layer->get_id(),
-          .request_id = _request_queue[_request_rr].request_id,
-          .name = new_layer->get_name(),
-          .launched = false,
-          .start_cycle = *_core_cycle,
-          .remain_tiles = (uint32_t)_executable_tile_queue.size(),
-      };
-      _request_rr = (_request_rr + 1) % _request_queue.size();
-      return;
+      _nr_layer++;
+      _active_layers_map[new_layer->get_id()] =
+          LayerStat{.id = new_layer->get_id(),
+                    .request_id = _request_queue[_request_rr].request_id,
+                    .name = new_layer->get_name(),
+                    .launched = true,
+                    .start_cycle = *_core_cycle,
+                    .total_tiles = (uint32_t)_executable_tile_queue.size(),
+                    .remain_tiles = (uint32_t)_executable_tile_queue.size(),
+                    .finished_tiles = 0,
+                    .launched_tiles = 0};
+
+      /* Issue tiles to core scheduler */
+      issue_tile_per_core();
     }
   }
 }
 
 HalfSplitScheduler::HalfSplitScheduler(SimulationConfig config,
-                                       const cycle_type* core_cycle)
-    : Scheduler(config, core_cycle) {}
+                                       const cycle_type* core_cycle, const uint64_t* core_time)
+    : Scheduler(config, core_cycle, core_time) {}
 
 void HalfSplitScheduler::schedule_model(std::unique_ptr<Model> model,
                                         uint32_t sample_size) {
@@ -256,6 +291,7 @@ void HalfSplitScheduler::finish_tile(uint32_t core_id, Tile tile) {
   assert(_active_layers_map.find(tile.layer_id) != _active_layers_map.end());
   assert(_active_layers_map[tile.layer_id].remain_tiles > 0);
   _active_layers_map[tile.layer_id].remain_tiles--;
+  _active_layers_map[tile.layer_id].finished_tiles++;
 
   if (_active_layers_map[tile.layer_id].remain_tiles == 0) {
     _active_layers_map[tile.layer_id].finish_cycle = *_core_cycle;
@@ -298,7 +334,7 @@ void HalfSplitScheduler::refresh_status() {
     for (auto req = _request_queue.begin(); req != _request_queue.end();
          req++) {
       if (_executable_tile_queue_table[req->request_id].empty()) {
-        Operation* new_layer = req->model->get_executable_layers().front();
+        Operation* new_layer = req->model->get_executable_tile();
         if (_active_layers_map.find(new_layer->get_id()) ==
             _active_layers_map.end()) {
           if (count_active_layers() > 0)
@@ -315,16 +351,16 @@ void HalfSplitScheduler::refresh_status() {
           assert(new_layer->get_tiles().size());
           _executable_tile_queue_table[req->request_id] =
               new_layer->get_tiles();
-          _active_layers_map[new_layer->get_id()] = LayerStat{
-              .id = new_layer->get_id(),
-              .request_id = req->request_id,
-              .name = new_layer->get_name(),
-              .launched = false,
-              .start_cycle = *_core_cycle,
-              .remain_tiles =
-                  (uint32_t)_executable_tile_queue_table[req->request_id]
-                      .size(),
-          };
+          _active_layers_map[new_layer->get_id()] =
+              LayerStat{.id = new_layer->get_id(),
+                        .request_id = req->request_id,
+                        .name = new_layer->get_name(),
+                        .launched = false,
+                        .start_cycle = *_core_cycle,
+                        .total_tiles = (uint32_t)_executable_tile_queue_table[req->request_id].size(),
+                        .remain_tiles = (uint32_t)_executable_tile_queue_table[req->request_id].size(),
+                        .finished_tiles = 0,
+                        .launched_tiles = 0};
         }
       }
     }

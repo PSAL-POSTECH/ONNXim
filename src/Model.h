@@ -19,8 +19,14 @@ class Model {
 
     std::string get_name() { return _name; }
     std::vector<Tensor*> get_input_tensor() { return _input_tensor; }
-    std::vector<Operation*> get_executable_layers();
+    uint32_t executable_layer_size();
+    Operation* get_executable_tile();
+    uint64_t get_request_time() const { return _request_time; }
+    void set_request_time(uint64_t request_time) { _request_time=request_time; }
+    uint64_t get_start_time() const { return _start_time; }
+    void update_start_time(uint64_t start_time);
     bool check_finish();
+
   private:
     json _model_config;
     std::string _name;
@@ -34,7 +40,9 @@ class Model {
 
     /* Number of simulating attention block */
     int nr_skip = 0; // NR_SKIP == 2 * NR_ATTEN
-
+    uint64_t _request_time = 0;   // pico second
+    uint64_t _start_time = 0;   // pico second
+    bool _started = false;
     bool check_exist_in_exeutable(uint32_t id);
 };
 

@@ -11,6 +11,8 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   _root_node_id = generate_id();
   _config = config;
   _model_config = model_config;
+  _request_time = uint64_t(double(_model_config["request_time"]) * 1000 * 1000 * 1000); // Pico seconds
+
   auto input = _model_proto.graph().input();
 
   for (auto iter: input) {
@@ -57,8 +59,10 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
 Model::Model(const Model& model) {
   _name = model._name;
   _model_proto = model._model_proto;
-  _root_node_id = _root_node_id;
-  _input_tensor = _input_tensor;
+  _root_node_id = model._root_node_id;
+  _request_time = model._request_time;
+  _start_time = model._start_time;
+  _started = model._started;
   
   for(auto const& [key, val] : model._tensor_map) {
     _tensor_map[key] = std::make_unique<Tensor>(*val.get());
@@ -136,8 +140,19 @@ void Model::set_layer_finish(uint32_t id) {
 
 }
 
-std::vector<Operation*> Model::get_executable_layers() {
-  return _executable_layer;
+uint32_t Model::executable_layer_size() {
+  return _executable_layer.size();
+}
+
+Operation* Model::get_executable_tile() {
+  return _executable_layer.front();
+}
+
+void Model::update_start_time(uint64_t start_time) {
+  if (!_started) {
+    _start_time = start_time;
+    _started = true;
+  }
 }
 
 bool Model::check_finish() {

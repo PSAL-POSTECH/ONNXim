@@ -67,25 +67,17 @@ int main(int argc, char** argv) {
         fmt::format("{}/{}/{}.onnx", model_base_path, model_name, model_name);
     std::string mapping_path = fmt::format("{}/{}/{}.mapping", model_base_path,
                                            model_name, model_name);
-    auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name);
-
-    printf("Launching model\n");
     MappingTable mapping_table = MappingTable::parse_mapping_file(mapping_path, config);
 
+    auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name);
     model->initialize_model(mapping_table);
     spdlog::info("Register model: {}", model_name);
     simulator->register_model(std::move(model));
   }
-  simulator->run_once(model_name);
+  simulator->run_simulator();
 
-  // if(models.size() == 1) {
-  //   simulator->run_once(model_names[0]);
-  // }
-  // else {
-  //   simulator->run_models(model_names);
-  // }
+  /* Simulation time measurement */
   auto end = std::chrono::high_resolution_clock::now();
-
   std::chrono::duration<double> duration = end - start;
   spdlog::info("Simulation time: {:2f} seconds", duration.count());
   return 0;

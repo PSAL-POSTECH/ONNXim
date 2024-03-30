@@ -11,12 +11,12 @@ namespace fs = std::filesystem;
 Simulator::Simulator(SimulationConfig config)
     : _config(config), _core_cycles(0) {
   // Create dram object
-  _core_period = 1.0 / ((double)config.core_freq);
-  _icnt_period = 1.0 / ((double)config.icnt_freq);
-  _dram_period = 1.0 / ((double)config.dram_freq);
-  _core_time = 0.0;
-  _dram_time = 0.0;
-  _icnt_time = 0.0;
+  _core_period = 1000000 / (config.core_freq);
+  _icnt_period = 1000000 / (config.icnt_freq);
+  _dram_period = 1000000 / (config.dram_freq);
+  _core_time = 0;
+  _dram_time = 0;
+  _icnt_time = 0;
   if (config.dram_type == DramType::SIMPLE) {
     _dram = std::make_unique<SimpleDram>(config);
   } else if (config.dram_type == DramType::RAMULATOR) {
@@ -52,30 +52,28 @@ Simulator::Simulator(SimulationConfig config)
   }
   
   if (config.scheduler_type == "simple") {
-    _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles);
+    _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles, &_core_time);
   } else if (config.scheduler_type == "time_multiplex") {
     _scheduler =
-        std::make_unique<TimeMultiplexScheduler>(_config, &_core_cycles);
+        std::make_unique<TimeMultiplexScheduler>(_config, &_core_cycles, &_core_time);
   } else if (config.scheduler_type == "spatial_split") {
-    _scheduler = std::make_unique<HalfSplitScheduler>(_config, &_core_cycles);
+    _scheduler = std::make_unique<HalfSplitScheduler>(_config, &_core_cycles, &_core_time);
   }
 }
 
-void Simulator::run_once(std::string model_name) {
+void Simulator::run_simulator() {
   spdlog::info("======Start Simulation=====");
-  _scheduler->schedule_model(
-      std::make_unique<Model>(*_models[model_name].get()), 1);
-  spdlog::info("schedule model");
   cycle();
 }
 
-void Simulator::run_models(std::vector<std::string> models) {
-  spdlog::info("======Start Simulation=====");
-  for (std::string model_name : models)
-    _scheduler->schedule_model(
-        std::make_unique<Model>(*_models[model_name].get()), 1);
-  spdlog::info("schedule model");
-  cycle();
+void Simulator::handle_model() {
+  while (!_models.empty() && _models.top().get()->get_request_time() <= _core_time) {
+    Model *launch_model = _models.top().get();
+    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (1000000));
+    launch_model->set_request_time(_core_time);
+    _scheduler->schedule_model(std::make_unique<Model>(*launch_model), 1);
+    _models.pop();
+  }
 }
 
 void Simulator::cycle() {
@@ -89,6 +87,9 @@ void Simulator::cycle() {
     set_cycle_mask();
     // Core Cycle
     if (_cycle_mask & CORE_MASK) {
+      /* Handle requested model */
+      handle_model();
+
       for (int core_id = 0; core_id < _n_cores; core_id++) {
         Tile finished_tile = _cores[core_id]->pop_finished_tile();
         if (finished_tile.status == Tile::Status::FINISH) {
@@ -161,14 +162,12 @@ void Simulator::cycle() {
 }
 
 void Simulator::register_model(std::unique_ptr<Model> model) {
-  _models[model->get_name()] = std::move(model);
+  _models.push(std::move(model));
 }
 
 bool Simulator::running() {
   bool running = false;
-  for (auto model = _models.begin(); model != _models.end(); model++) {
-    // running = running | !(*model)->empty();
-  }
+  running |= !_models.empty();
   for (auto &core : _cores) {
     running = running || core->running();
   }
@@ -180,7 +179,7 @@ bool Simulator::running() {
 
 void Simulator::set_cycle_mask() {
   _cycle_mask = 0x0;
-  double minimum_time = MIN3(_core_time, _dram_time, _icnt_time);
+  uint64_t minimum_time = MIN3(_core_time, _dram_time, _icnt_time);
   if (_core_time <= minimum_time) {
     _cycle_mask |= CORE_MASK;
     _core_time += _core_period;
