@@ -25,7 +25,7 @@ SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model* model,
         Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(i));
         if (pre_defind_tensor == nullptr) {
             std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
-                _id, node_proto.output(i), _output_shape, false);
+                _id, node_proto.output(i), _output_shape, _config.precision, false);
                 _outputs.push_back(output_tensor.get()->get_id());
             _model->add_tensor(std::move(output_tensor));
         } else {
@@ -58,12 +58,15 @@ void SkipLayerNorm::initialize_instructions(Tile &tile, Mapping mapping, uint32_
 
     /* Load two tile (input: tokens x _dk, skip: tokens x _dk) */
     std::set<addr_type> dram_addrs;
+    std::set<addr_type> dram_output_addrs;
     std::set<addr_type> dram_skip_addrs;
     int offset;
-    for (offset=0; offset<tokens*_dk*_config.precision; offset+=_config.dram_req_size)
-        dram_addrs.insert(token_offset*_dk*_config.precision + offset);
+    for (offset=0; offset<tokens*_dk*_config.precision; offset+=_config.dram_req_size) {
+        dram_addrs.insert(get_operand_addr(_INPUT_OPERAND) + token_offset*_dk*_config.precision + offset);
+        dram_output_addrs.insert(get_operand_addr(_OUTPUT_OPERAND) + token_offset*_dk*_config.precision + offset);
+    }
     for (;offset<tokens*_dk*_config.precision*2; offset+=_config.dram_req_size)
-        dram_skip_addrs.insert(token_offset*_dk*_config.precision + offset);
+        dram_skip_addrs.insert(get_operand_addr(_INPUT_OPERAND+1) + token_offset*_dk*_config.precision + offset);
 
     tile.instructions.push_back(Instruction{
         .opcode = Opcode::MOVIN,

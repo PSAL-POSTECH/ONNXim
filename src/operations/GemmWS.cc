@@ -69,6 +69,13 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
                                                   mapping.tile_in_loop.C *
                                                   _config.precision;
 
+
+  addr_type first_addr, second_addr, third_addr, output_addr;
+  first_addr = get_operand_addr(_INPUT_OPERAND);
+  second_addr = get_operand_addr(_INPUT_OPERAND+1);
+  third_addr = get_operand_addr(_INPUT_OPERAND+2);
+  output_addr = get_operand_addr(_OUTPUT_OPERAND);
+
   int loop_size = _config.core_width;
   /* MOVIN BIAS */
   if (!tile.accum) {
@@ -93,10 +100,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
         for (int iter_m = 0; iter_m < m_loop; iter_m++) {
           int M = tout_m_offset + Ms + iter_m;
           if (M >= mapping.total_loop.M) continue;
-          bias_addrs.insert(make_activation_address(0, 0, 0, M, _output_shape));
-        }
-        if (bias_addrs.size() == 0) {
-          spdlog::error("weird!!");
+          bias_addrs.insert(third_addr + make_activation_address(0, 0, 0, M, _output_shape));
         }
         if (has_bias) {
           tile.instructions.push_back(Instruction{
@@ -154,7 +158,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               int N = N_offset + iter_n;
               int C = C_offset + iter_c;
               input_set.insert(
-                  make_activation_address(N, 0, 0, C, _input_shape));
+                  first_addr + make_activation_address(N, 0, 0, C, _input_shape));
             }
           }
           tile.instructions.push_back(Instruction{
@@ -181,7 +185,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               weight_shape_4d[Rdim] = 1;
               weight_shape_4d[Cdim_w] = _weight_shape[1];
               weight_set.insert(
-                  make_weight_address(0, 0, M, C, weight_shape_4d));
+                  second_addr + make_weight_address(0, 0, M, C, weight_shape_4d));
             }
           }
           tile.instructions.push_back(Instruction{
@@ -199,7 +203,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
           for (int iter_m = 0; iter_m < m_loop; iter_m++) {
             int N = N_offset + iter_n;
             int M = M_offset + iter_m;
-            output_set.insert(make_activation_address(N, 0, 0, M, _output_shape));
+            output_set.insert(output_addr + make_activation_address(N, 0, 0, M, _output_shape));
           }
         }
 

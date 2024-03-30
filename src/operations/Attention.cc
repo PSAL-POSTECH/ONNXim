@@ -73,6 +73,7 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
         _id, "", _liner_output_shape, _config.precision, true);
 
     /* Set tensor */
+    linear_projection.set_model(_model);
     linear_projection.add_input(_inputs.at(0));
     linear_projection.add_input(_inputs.at(1));
     linear_projection.add_output(linear_output.get()->get_id());
@@ -126,6 +127,8 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
     addr_type sram_value_base = sram_key_base + _dk * seq_len * num_heads * _config.precision;
     addr_type sram_logit_base = ACCUM_SPAD_BASE;  // for logits
 
+    addr_type first_addr = get_operand_addr(_linear_output_id);
+    addr_type ouput_addr = get_operand_addr(_OUTPUT_OPERAND);
     for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
         int h_idx = head_idx + h_ofs;
 
@@ -147,12 +150,12 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
                 std::vector<uint32_t> value_idx = {(uint32_t)(h_idx+_nh*2), (uint32_t)seq_idx, (uint32_t)i};
                 std::vector<uint32_t> output_idx = {(uint32_t)(h_idx+_nh*3), (uint32_t)seq_idx, (uint32_t)i};
 
-                dram_key_addrs.insert(get_operand_addr(_linear_output_id) + make_address(key_idx, _key_shape));
-                dram_value_addrs.insert(get_operand_addr(_linear_output_id) + make_address(value_idx, _value_shape));
+                dram_key_addrs.insert(first_addr + make_address(key_idx, _key_shape));
+                dram_value_addrs.insert(first_addr + make_address(value_idx, _value_shape));
 
                 if (q_len == 1 && seq_idx > 0) continue;
-                dram_query_addrs.insert(get_operand_addr(_linear_output_id) + make_address(query_idx, _query_shape));
-                dram_output_addrs.insert(get_operand_addr(_OUTPUT_OPERAND) + make_address(output_idx, _query_shape)); // Used query_shape intentionally
+                dram_query_addrs.insert(first_addr + make_address(query_idx, _query_shape));
+                dram_output_addrs.insert(ouput_addr + make_address(output_idx, _query_shape)); // Used query_shape intentionally
             }
         }
         // -- load --
@@ -237,6 +240,7 @@ void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
         _id, "", _liner_output_shape, _config.precision, true);
 
     /* Set tensor */
+    linear_projection.set_model(_model);
     linear_projection.add_input(_inputs.at(0));
     linear_projection.add_input(_inputs.at(1));
     linear_projection.add_output(linear_output.get()->get_id());
