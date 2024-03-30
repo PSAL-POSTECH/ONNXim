@@ -82,6 +82,7 @@ void Simulator::cycle() {
   OpStat op_stat;
   ModelStat model_stat;
   uint32_t tile_count;
+  bool is_accum_tile;
   while (running()) {
     int model_id = 0;
 
@@ -94,11 +95,13 @@ void Simulator::cycle() {
           _scheduler->finish_tile(core_id, finished_tile);
         }
         // Issue new tile to core
-        if (_cores[core_id]->can_issue() &&
-            !_scheduler->empty()) {
-          Tile tile = _scheduler->get_tile(core_id);
-          if (tile.status == Tile::Status::INITIALIZED) {
-            _cores[core_id]->issue(tile);
+        if (!_scheduler->empty()) {
+          is_accum_tile = _scheduler->is_accum_tile(core_id, 0);
+          if (_cores[core_id]->can_issue(is_accum_tile)) {
+            Tile tile = _scheduler->get_tile(core_id);
+            if (tile.status == Tile::Status::INITIALIZED) {
+              _cores[core_id]->issue(tile);
+            }
           }
         }
         _cores[core_id]->cycle();
