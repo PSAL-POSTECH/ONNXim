@@ -24,6 +24,13 @@ for size in size_list:
     onnx_path = Path(f"{HOME}/models/conv_{size}/conv_{size}.onnx")
     if not onnx_path.is_file():
         torch.onnx.export(m, A, onnx_path, export_params=True, input_names = ['input'], output_names=['output'])
-    config = {"models": [{"name": f"conv_{size}"}]}
+    config = {
+        "models": [
+            {
+                "name": f"conv_{size}",
+                "request_time": 0
+            }
+        ]
+    }
     with open(f"{HOME}/model_lists/conv_{size}.json", "w") as json_file:
         json.dump(config, json_file, indent=4)
