@@ -160,7 +160,7 @@ void Simulator::cycle() {
   _dram->print_stat();
 }
 
-void Simulator::launch_model(std::unique_ptr<Model> model) {
+void Simulator::register_model(std::unique_ptr<Model> model) {
   _models[model->get_name()] = std::move(model);
 }
 
