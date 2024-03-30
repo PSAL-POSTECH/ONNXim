@@ -14,7 +14,7 @@
 class Simulator {
  public:
   Simulator(SimulationConfig config);
-  void launch_model(std::unique_ptr<Model> model);
+  void register_model(std::unique_ptr<Model> model);
   void run_once(std::string model_name);
   void run_models(std::vector<std::string> models);
   // void run_offline(std::string model_name, uint32_t sample_count);

@@ -73,10 +73,10 @@ int main(int argc, char** argv) {
     MappingTable mapping_table = MappingTable::parse_mapping_file(mapping_path, config);
 
     model->initialize_model(mapping_table);
-    simulator->launch_model(std::move(model));
-    spdlog::info("Launch model: {}", model_name);
-    simulator->run_once(model_name);
+    spdlog::info("Register model: {}", model_name);
+    simulator->register_model(std::move(model));
   }
+  simulator->run_once(model_name);
 
   // if(models.size() == 1) {
   //   simulator->run_once(model_names[0]);
