@@ -57,5 +57,5 @@ class Simulator {
         return a->get_request_time() > b->get_request_time();
     }
   };
-  std::priority_queue<std::unique_ptr<Model>, std::vector<std::unique_ptr<Model>>, CompareModel> _models;
+  std::vector<std::unique_ptr<Model>>  _models;
 };

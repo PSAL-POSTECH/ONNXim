@@ -74,6 +74,9 @@ Simulator::Simulator(SimulationConfig config)
     spdlog::error("[Configuration] {} is invalid scheduler type...!", config.scheduler_type);
     exit(EXIT_FAILURE);
   }
+
+  /* Create heap */
+  std::make_heap(_models.begin(), _models.end(), CompareModel());
 }
 
 void Simulator::run_simulator() {
@@ -82,13 +85,15 @@ void Simulator::run_simulator() {
 }
 
 void Simulator::handle_model() {
-  while (!_models.empty() && _models.top().get()->get_request_time() <= _core_time) {
-    Model *launch_model = _models.top().get();
+  while (!_models.empty() && _models.front()->get_request_time() <= _core_time) {
+    std::unique_ptr<Model> launch_model = std::move(_models.front());
+    std::pop_heap(_models.begin(), _models.end(), CompareModel());
+    _models.pop_back();
+
     launch_model->initialize_model();
-    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (1000000));
     launch_model->set_request_time(_core_time);
-    _scheduler->schedule_model(std::make_unique<Model>(*launch_model), 1);
-    _models.pop();
+    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (1000000));
+    _scheduler->schedule_model(std::move(launch_model), 1);
   }
 }
 
@@ -178,7 +183,8 @@ void Simulator::cycle() {
 }
 
 void Simulator::register_model(std::unique_ptr<Model> model) {
-  _models.push(std::move(model));
+  _models.push_back(std::move(model));
+  std::push_heap(_models.begin(), _models.end(), CompareModel());
 }
 
 bool Simulator::running() {
