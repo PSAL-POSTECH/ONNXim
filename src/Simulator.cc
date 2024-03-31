@@ -30,14 +30,19 @@ Simulator::Simulator(SimulationConfig config)
     spdlog::info("Ramulator config: {}", ramulator_config);
     config.dram_config_path = ramulator_config;
     _dram = std::make_unique<DramRamulator>(config);
+  } else {
+    spdlog::error("[Configuration] Invalid DRAM type...!");
+    exit(EXIT_FAILURE);
   }
+
   // Create interconnect object
   if (config.icnt_type == IcntType::SIMPLE) {
     _icnt = std::make_unique<SimpleInterconnect>(config);
   } else if (config.icnt_type == IcntType::BOOKSIM2) {
     _icnt = std::make_unique<Booksim2Interconnect>(config);
   } else {
-    assert(0);
+    spdlog::error("[Configuration] {} Invalid interconnect type...!");
+    exit(EXIT_FAILURE);
   }
 
   // Create core objects
@@ -49,6 +54,10 @@ Simulator::Simulator(SimulationConfig config)
       _cores[core_index] = std::make_unique<SystolicOS>(core_index, _config);
     else if (config.core_type == CoreType::SYSTOLIC_WS)
       _cores[core_index] = std::make_unique<SystolicWS>(core_index, _config);
+    else {
+      spdlog::error("[Configuration] Invalid core type...!");
+      exit(EXIT_FAILURE);
+    }
   }
   
   if (config.scheduler_type == "simple") {
@@ -61,6 +70,9 @@ Simulator::Simulator(SimulationConfig config)
         std::make_unique<TimeMultiplexScheduler>(_config, &_core_cycles, &_core_time);
   } else if (config.scheduler_type == "spatial_split") {
     _scheduler = std::make_unique<HalfSplitScheduler>(_config, &_core_cycles, &_core_time);
+  } else {
+    spdlog::error("[Configuration] {} is invalid scheduler type...!", config.scheduler_type);
+    exit(EXIT_FAILURE);
   }
 }
 
