@@ -4,10 +4,8 @@
 #include "operations/OperationFactory.h"
 
 Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& mapping_table) {
-  std::ifstream model_istream(onnx_path);
-  google::protobuf::io::IstreamInputStream zero_copy_input(&model_istream);
-  _model_proto.ParseFromZeroCopyStream(&zero_copy_input) && model_istream.eof();
-  _name = name;
+  _onnx_path = onnx_path;
+ _name = name;
   _root_node_id = generate_id();
   _config = config;
   _model_config = model_config;
@@ -16,8 +14,32 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   if (_model_config.contains("partition_id")) {
     _partition_id = uint32_t(_model_config["partition_id"]);
   }
+}
 
-  auto input = _model_proto.graph().input();
+Tensor* Model::get_tensor(uint32_t id) {
+  return _tensor_map[id].get();
+}
+
+Tensor* Model::find_tensor(std::string name) {
+  for(auto const& [key, val]: _tensor_map) {
+    if(val->_name == name) {
+      return val.get();
+    }
+  }
+  return nullptr;
+}
+
+void Model::add_tensor(std::unique_ptr<Tensor> edge) {
+  _tensor_map[edge->get_id()] = std::move(edge);
+}
+
+void Model::initialize_model() {
+  onnx::ModelProto model_proto;
+  std::vector<std::unique_ptr<Tensor>> input_tensors;
+  std::ifstream model_istream(_onnx_path);
+  google::protobuf::io::IstreamInputStream zero_copy_input(&model_istream);
+  model_proto.ParseFromZeroCopyStream(&zero_copy_input) && model_istream.eof();
+  auto input = model_proto.graph().input();
 
   for (auto iter: input) {
     std::vector<uint32_t> input_dim;
@@ -51,36 +73,16 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
     _tensor_map[id] = std::move(input_tensor);
   }
 
-  for(auto initializer : _model_proto.graph().initializer()) {
+  for(auto initializer : model_proto.graph().initializer()) {
     //initialize weights
-    auto tensor = std::make_unique<Tensor>(_root_node_id, initializer, config.precision, true);
+    auto tensor = std::make_unique<Tensor>(_root_node_id, initializer, _config.precision, true);
     tensor->set_produced();
     uint32_t id = tensor->get_id();
     _tensor_map[id] = std::move(tensor);
   }
-}
 
-Tensor* Model::get_tensor(uint32_t id) {
-  return _tensor_map[id].get();
-}
 
-Tensor* Model::find_tensor(std::string name) {
-  for(auto const& [key, val]: _tensor_map) {
-    if(val->_name == name) {
-      return val.get();
-    }
-  }
-  return nullptr;
-}
-
-void Model::add_tensor(std::unique_ptr<Tensor> edge) {
-  _tensor_map[edge->get_id()] = std::move(edge);
-}
-
-void Model::initialize_model() {
-  std::vector<std::unique_ptr<Tensor>> input_tensors;
-
-  for(auto node_proto : _model_proto.graph().node()) {
+  for(auto node_proto : model_proto.graph().node()) {
     auto node = OperationFactory::create_operation(this, node_proto);
     if(node != nullptr) {
       int node_id = node->get_id();

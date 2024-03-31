@@ -30,8 +30,8 @@ class Model {
   private:
     MappingTable _mapping_table;
     json _model_config;
+    std::string _onnx_path;
     std::string _name;
-    onnx::ModelProto _model_proto;
     uint32_t _root_node_id;
     std::map<uint32_t, std::unique_ptr<Operation>> _operation_map;
     std::map<uint32_t, std::unique_ptr<Tensor>> _tensor_map;
