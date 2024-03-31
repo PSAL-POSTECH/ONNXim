@@ -60,28 +60,6 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   }
 }
 
-Model::Model(const Model& model) {
-  _name = model._name;
-  _model_proto = model._model_proto;
-  _root_node_id = model._root_node_id;
-  _request_time = model._request_time;
-  _start_time = model._start_time;
-  _started = model._started;
-  _partition_id = model._partition_id;
-  
-  for(auto const& [key, val] : model._tensor_map) {
-    _tensor_map[key] = std::make_unique<Tensor>(*val.get());
-  }
-  for(auto const& [key, val] : model._operation_map) {
-    _operation_map[key] = OperationFactory::copy_operation(val.get());
-    _operation_map[key]->_model = this;
-  }
-  for(auto layer : model._executable_layer) {
-    _executable_layer.push_back(_operation_map[layer->get_id()].get());
-    spdlog::trace("add op {0:x}", fmt::ptr(_executable_layer.front()));
-  }
-}
-
 Tensor* Model::get_tensor(uint32_t id) {
   return _tensor_map[id].get();
 }
