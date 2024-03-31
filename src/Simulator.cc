@@ -69,6 +69,7 @@ void Simulator::run_simulator() {
 void Simulator::handle_model() {
   while (!_models.empty() && _models.top().get()->get_request_time() <= _core_time) {
     Model *launch_model = _models.top().get();
+    launch_model->initialize_model();
     spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (1000000));
     launch_model->set_request_time(_core_time);
     _scheduler->schedule_model(std::make_unique<Model>(*launch_model), 1);

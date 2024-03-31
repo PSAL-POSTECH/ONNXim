@@ -67,6 +67,7 @@ struct Mapping {
 
 class MappingTable {
 public:
+  MappingTable ();
   MappingTable(SimulationConfig config);
   Mapping& operator[](const Mapping::LoopCounts &key) { return _mapping_table[key]; }
   static MappingTable parse_mapping_file(std::string mapping_path, SimulationConfig config);
