@@ -69,8 +69,7 @@ int main(int argc, char** argv) {
                                            model_name, model_name);
     MappingTable mapping_table = MappingTable::parse_mapping_file(mapping_path, config);
 
-    auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name);
-    model->initialize_model(mapping_table);
+    auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name, mapping_table);
     spdlog::info("Register model: {}", model_name);
     simulator->register_model(std::move(model));
   }

@@ -8,17 +8,16 @@
 #include "Mapping.h"
 class Model {
   public:
-    Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name);
+    Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& map);
     Model(const Model& model);
 
     Tensor* get_tensor(uint32_t id);
     Tensor* find_tensor(std::string name);
     void add_tensor(std::unique_ptr<Tensor> tensor);
-    void initialize_model(MappingTable& mapping_table);
+    void initialize_model();
     void set_layer_finish(uint32_t id); 
 
     std::string get_name() { return _name; }
-    std::vector<Tensor*> get_input_tensor() { return _input_tensor; }
     uint32_t executable_layer_size();
     Operation* get_executable_tile();
     uint64_t get_request_time() const { return _request_time; }
@@ -28,11 +27,11 @@ class Model {
     bool check_finish();
 
   private:
+    MappingTable _mapping_table;
     json _model_config;
     std::string _name;
     onnx::ModelProto _model_proto;
     uint32_t _root_node_id;
-    std::vector<Tensor*> _input_tensor;
     std::map<uint32_t, std::unique_ptr<Operation>> _operation_map;
     std::map<uint32_t, std::unique_ptr<Tensor>> _tensor_map;
     std::vector<Operation*> _executable_layer;

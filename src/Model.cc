@@ -3,7 +3,7 @@
 #include "Model.h"
 #include "operations/OperationFactory.h"
 
-Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name) {
+Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& mapping_table) {
   std::ifstream model_istream(onnx_path);
   google::protobuf::io::IstreamInputStream zero_copy_input(&model_istream);
   _model_proto.ParseFromZeroCopyStream(&zero_copy_input) && model_istream.eof();
@@ -12,6 +12,7 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   _config = config;
   _model_config = model_config;
   _request_time = uint64_t(double(_model_config["request_time"]) * 1000 * 1000 * 1000); // Pico seconds
+  _mapping_table = mapping_table;
 
   auto input = _model_proto.graph().input();
 
@@ -93,8 +94,8 @@ Tensor* Model::find_tensor(std::string name) {
 void Model::add_tensor(std::unique_ptr<Tensor> edge) {
   _tensor_map[edge->get_id()] = std::move(edge);
 }
-int skip_count = 0;
-void Model::initialize_model(MappingTable& mapping_table) {
+
+void Model::initialize_model() {
   std::vector<std::unique_ptr<Tensor>> input_tensors;
 
   for(auto node_proto : _model_proto.graph().node()) {
@@ -118,7 +119,7 @@ void Model::initialize_model(MappingTable& mapping_table) {
   }
 
   for(auto& [key, val] : _operation_map) {
-    val->initialize_tiles(mapping_table);
+    val->initialize_tiles(_mapping_table);
   }
 }
 

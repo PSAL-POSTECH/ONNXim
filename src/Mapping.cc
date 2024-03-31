@@ -5,6 +5,7 @@
 #include <string>
 // #include "Common.h"
 
+MappingTable::MappingTable () {}
 MappingTable::MappingTable (SimulationConfig config) {
   _mapping_table = _MappingTable();
   _config = config;
