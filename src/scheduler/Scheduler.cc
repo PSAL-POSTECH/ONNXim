@@ -95,8 +95,6 @@ Tile Scheduler::get_tile(uint32_t core_id) {
             }
             std::vector<uint32_t>& allowed_cpu = _partition_map.at(partition_id);
             auto it = find(allowed_cpu.begin(), allowed_cpu.end(), core_id);
-            if (it == allowed_cpu.end())
-              spdlog::error("Core launched not allowed tile...!");
             offset = it - allowed_cpu.begin();
             issue_tile_per_core(allowed_cpu, offset);
           }
