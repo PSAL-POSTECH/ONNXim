@@ -57,6 +57,7 @@ struct SimulationConfig {
   /* Other configs */
   uint32_t precision;
   std::string layout;
+  std::map<uint32_t, std::vector<uint32_t>> partiton_map;
 
   uint64_t align_address(uint64_t addr) {
     return addr - (addr % dram_req_size);

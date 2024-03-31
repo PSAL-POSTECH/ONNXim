@@ -15,6 +15,7 @@ class Scheduler {
     virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size);
     virtual Tile get_tile(uint32_t core_id);
     virtual void issue_tile_per_core();
+    virtual void issue_tile_per_core(std::vector<uint32_t>& allowed_cpu, int offset);
     virtual bool is_accum_tile(uint32_t core_id, int index);
     virtual void finish_tile(uint32_t core_id, Tile tile);
     virtual bool empty();
@@ -37,6 +38,7 @@ class Scheduler {
     int _core_rr_id = 0;
     const cycle_type* _core_cycle;
     const uint64_t* _core_time;
+    std::map<uint32_t, std::vector<uint32_t>> _partition_map;
     std::deque<Request> _request_queue;
     std::deque<Tile> _executable_tile_queue;
     std::vector<std::deque<Tile>> _core_executable_tile_queue;
@@ -53,6 +55,16 @@ class TimeMultiplexScheduler : public Scheduler {
     TimeMultiplexScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time);
     virtual void finish_tile(uint32_t core_id, Tile tile) override ;
   
+  protected:
+    virtual void refresh_status() override;
+  private:
+    uint32_t _request_rr=0;
+};
+
+class DedicatedCPUScheduler: public TimeMultiplexScheduler {
+  public:
+    DedicatedCPUScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time);
+
   protected:
     virtual void refresh_status() override;
   private:
