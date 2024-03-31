@@ -53,6 +53,9 @@ Simulator::Simulator(SimulationConfig config)
   
   if (config.scheduler_type == "simple") {
     _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles, &_core_time);
+  } else if (config.scheduler_type == "partition_cpu") {
+    _scheduler =
+        std::make_unique<DedicatedCPUScheduler>(_config, &_core_cycles, &_core_time);
   } else if (config.scheduler_type == "time_multiplex") {
     _scheduler =
         std::make_unique<TimeMultiplexScheduler>(_config, &_core_cycles, &_core_time);

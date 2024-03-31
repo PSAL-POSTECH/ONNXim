@@ -25,6 +25,7 @@ class Model {
     uint64_t get_start_time() const { return _start_time; }
     void update_start_time(uint64_t start_time);
     bool check_finish();
+    uint32_t get_partition_id() { return _partition_id; }
 
   private:
     MappingTable _mapping_table;
@@ -36,6 +37,7 @@ class Model {
     std::map<uint32_t, std::unique_ptr<Tensor>> _tensor_map;
     std::vector<Operation*> _executable_layer;
     SimulationConfig _config;
+    uint32_t _partition_id = 0;
 
     /* Number of simulating attention block */
     int nr_skip = 0; // NR_SKIP == 2 * NR_ATTEN

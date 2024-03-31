@@ -13,6 +13,9 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   _model_config = model_config;
   _request_time = uint64_t(double(_model_config["request_time"]) * 1000 * 1000 * 1000); // Pico seconds
   _mapping_table = mapping_table;
+  if (_model_config.contains("partition_id")) {
+    _partition_id = uint32_t(_model_config["partition_id"]);
+  }
 
   auto input = _model_proto.graph().input();
 
@@ -64,6 +67,7 @@ Model::Model(const Model& model) {
   _request_time = model._request_time;
   _start_time = model._start_time;
   _started = model._started;
+  _partition_id = model._partition_id;
   
   for(auto const& [key, val] : model._tensor_map) {
     _tensor_map[key] = std::make_unique<Tensor>(*val.get());

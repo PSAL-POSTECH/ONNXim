@@ -3,6 +3,7 @@
 Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time)
     : _config(config), _core_cycle(core_cycle), _core_time(core_time) {
   _core_executable_tile_queue.resize(_config.num_cores);
+  _partition_map = config.partiton_map;
 }
 
 void Scheduler::schedule_model(std::unique_ptr<Model> model,
@@ -13,6 +14,27 @@ void Scheduler::schedule_model(std::unique_ptr<Model> model,
   spdlog::info("MODEL {} Scheduled, Total Request: {}",
                _request_queue.back().model->get_name(), _request_queue.size());
   refresh_status();
+}
+
+void Scheduler::issue_tile_per_core(std::vector<uint32_t>& allowed_cpu, int offset) {
+  while(!_executable_tile_queue.empty()) {
+    Tile tile = _executable_tile_queue.front();
+    /* Barrier! */
+    if (tile.status == Tile::Status::BAR)
+      break;
+
+    uint32_t core_id = offset;
+    if (tile.core_id == -1) { // -1 is global id
+      core_id += _core_rr_id;
+      _core_rr_id = _core_rr_id + 1; // increase with round robin
+    } else {
+      core_id = core_id + _nr_layer;
+    }
+    core_id = allowed_cpu[core_id % allowed_cpu.size()];
+    tile.core_id = core_id;
+    _core_executable_tile_queue[core_id].push_back(tile);
+    _executable_tile_queue.pop_front();
+  }
 }
 
 void Scheduler::issue_tile_per_core() {
@@ -44,7 +66,7 @@ Tile Scheduler::get_tile(uint32_t core_id) {
       Tile tile = _core_executable_tile_queue[core_id].front();
       _active_layers_map[tile.layer_id].launched_tiles++;
       _core_executable_tile_queue[core_id].pop_front();
-      spdlog::debug("Layer {} Core {} Get Tile at {}", tile.layer_id, core_id,
+      spdlog::debug("Layer {} Core {} Get Tile at {}", _active_layers_map[tile.layer_id].name, core_id,
                     *_core_cycle);
       return tile;
     } else {
@@ -62,7 +84,21 @@ Tile Scheduler::get_tile(uint32_t core_id) {
             finish_tile(core_id, tile);
           } else {
             /* Issue to core scheduler blocked by barrier */
-            issue_tile_per_core();
+            uint32_t request_id = _active_layers_map[_executable_tile_queue.front().layer_id].request_id;
+            uint32_t partition_id = 0;
+            uint32_t offset = 0;
+            for (int req_index = 0; req_index < _request_queue.size(); req_index++) {
+              if (_request_queue[req_index].request_id == request_id) {
+                partition_id = _request_queue[req_index].model->get_partition_id();
+                break;
+              }
+            }
+            std::vector<uint32_t>& allowed_cpu = _partition_map.at(partition_id);
+            auto it = find(allowed_cpu.begin(), allowed_cpu.end(), core_id);
+            if (it == allowed_cpu.end())
+              spdlog::error("Core launched not allowed tile...!");
+            offset = it - allowed_cpu.begin();
+            issue_tile_per_core(allowed_cpu, offset);
           }
         }
         Tile empty_tile{.status = Tile::Status::EMPTY};
@@ -165,7 +201,87 @@ uint32_t Scheduler::count_active_layers() {
   return count;
 }
 
- TimeMultiplexScheduler::TimeMultiplexScheduler(SimulationConfig config,
+DedicatedCPUScheduler::DedicatedCPUScheduler(SimulationConfig config,
+                                       const cycle_type* core_cycle, const uint64_t* core_time)
+    : TimeMultiplexScheduler(config, core_cycle, core_time) {}
+
+void DedicatedCPUScheduler::refresh_status() {
+  if (!_request_queue.empty()) {
+    for (auto req = _request_queue.begin(); req != _request_queue.end();
+         req++) {
+      if (req->model->check_finish()) {
+        spdlog::info("Model[{}] Request: {} us, Start: {} us, finish:{} us Current Cycle:{}",
+                      req->model->get_name(),
+                      req->model->get_request_time()/1000000,
+                      req->model->get_start_time()/1000000,
+                      (*_core_time)/1000000, *_core_cycle);
+        req = _request_queue.erase(req);
+        --req;
+      }
+    }
+  }
+
+  if (!_request_queue.empty()) {
+    for (int i=0; i<_config.num_cores; i++) {
+      /* If core queue is empty, issue a new layer */
+      if (!_core_executable_tile_queue[i].empty())
+        continue;
+
+      Operation* new_layer = nullptr;
+      uint32_t partition_id = 0;
+      uint32_t offset = 0;
+      std::vector<uint32_t> allowed_cpu;
+      int req_index;
+      for (req_index=0; req_index<_request_queue.size(); req_index++) {
+        partition_id = _request_queue[req_index].model->get_partition_id();
+        allowed_cpu = _partition_map.at(partition_id);
+        auto it = find(allowed_cpu.begin(), allowed_cpu.end(), i);
+        if (it != allowed_cpu.end()) {
+          new_layer = _request_queue[req_index].model->get_executable_tile();
+          /* Set cpu offset */
+          offset = it - allowed_cpu.begin();
+          break;
+        }
+      }
+
+      /* Check layer is found */
+      if (new_layer == nullptr)
+        continue;
+
+      if (_active_layers_map.find(new_layer->get_id()) ==
+          _active_layers_map.end()) {
+        if (count_active_layers() > 0)
+          spdlog::info("Layer {} {}: launched before finish prior layer",
+                      new_layer->get_name(), new_layer->get_id());
+        else
+          spdlog::info("Layer {} {}: Enqueue", new_layer->get_name(),
+                      new_layer->get_id());
+
+        for (int output_id = 0; output_id < new_layer->num_outputs(); output_id++) {
+          new_layer->get_output(output_id)->set_produced();
+        }
+        _request_queue[req_index].model->update_start_time(*_core_time);
+        // new_layer->initialize_tiles(_config);
+        assert(new_layer->get_tiles().size());
+        _executable_tile_queue = new_layer->get_tiles();
+        _nr_layer++;
+        _active_layers_map[new_layer->get_id()] =
+            LayerStat{.id = new_layer->get_id(),
+                      .request_id = _request_queue[req_index].request_id,
+                      .name = new_layer->get_name(),
+                      .launched = true,
+                      .start_cycle = *_core_cycle,
+                      .total_tiles = (uint32_t)_executable_tile_queue.size(),
+                      .remain_tiles = (uint32_t)_executable_tile_queue.size(),
+                      .finished_tiles = 0,
+                      .launched_tiles = 0};
+        issue_tile_per_core(allowed_cpu, offset);
+      }
+    }
+  }
+}
+
+TimeMultiplexScheduler::TimeMultiplexScheduler(SimulationConfig config,
                                        const cycle_type* core_cycle, const uint64_t* core_time)
     : Scheduler(config, core_cycle, core_time) {}
 

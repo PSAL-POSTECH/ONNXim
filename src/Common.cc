@@ -89,5 +89,20 @@ SimulationConfig initialize_config(json config) {
   parsed_config.scheduler_type = config["scheduler"];
   parsed_config.precision = config["precision"];
   parsed_config.layout = config["layout"];
+
+  if (config.contains("partition")) {
+    for (int i=0; i<parsed_config.num_cores; i++) {
+      std::string core_partition = "core_" + std::to_string(i);
+      uint32_t partition_id = uint32_t(config["partition"][core_partition]);
+      parsed_config.partiton_map[partition_id].push_back(i);
+      spdlog::info("CPU {}: Partition {}", i, partition_id);
+    }
+  } else {
+    /* Default: all partition 0 */
+    for (int i=0; i<parsed_config.num_cores; i++) {
+      parsed_config.partiton_map[0].push_back(i);
+      spdlog::info("CPU {}: Partition {}", i, 0);
+    }
+  }
   return parsed_config;
 }
