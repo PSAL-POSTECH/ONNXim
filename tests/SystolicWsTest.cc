@@ -18,18 +18,19 @@ TEST(SystolicWSTileExecutionTest, BasicAssertions) {
   config.accum_spad_size = 192;
   
   SystolicWS core(0, config);
-  Tile tile{.status = Tile::Status::INITIALIZED,
+  std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+            .status = Tile::Status::INITIALIZED,
             .layer_id = 0,
             .spad_id = 0,
-            .accum_spad_id = 0};
+            .accum_spad_id = 0});
           
-  tile.instructions.push_back(
+  tile->instructions.push_back(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
                   .compute_size = 8,
                   .src_addrs = std::vector<addr_type>{}});
 
-  core.issue(tile);
+  core.issue(std::move(tile));
   cycle_type cycle = 0;
   while (core.running()) {
     core.cycle();
@@ -58,23 +59,24 @@ TEST(SystolicWSTwoGemmExecutionTest, BasicAssertions) {
   config.accum_spad_size = 192;
 
   SystolicWS core(0, config);
-  Tile tile{.status = Tile::Status::INITIALIZED,
+  std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+            .status = Tile::Status::INITIALIZED,
             .layer_id = 0,
             .spad_id = 0,
-            .accum_spad_id = 0};
-          
-  tile.instructions.push_back(
+            .accum_spad_id = 0});
+
+  tile->instructions.push_back(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
                   .compute_size = 8,
                   .src_addrs = std::vector<addr_type>{}});
-  tile.instructions.push_back(
+  tile->instructions.push_back(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
                   .compute_size = 8,
                   .src_addrs = std::vector<addr_type>{}});
 
-  core.issue(tile);
+  core.issue(std::move(tile));
   cycle_type cycle = 0;
   while (core.running()) {
     core.cycle();

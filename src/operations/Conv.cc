@@ -143,8 +143,8 @@ void Conv::im2col_nhwc() {
   int kernel_h = _kernel_shape[Rdim];
   int kernel_w = _kernel_shape[Sdim];
   int channels = input_shape[Cdim];
-  Tile tile{
-      .status = Tile::Status::INITIALIZED, .optype = "im2col", .layer_id = _id};
+  std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+      .status = Tile::Status::INITIALIZED, .optype = "im2col", .layer_id = _id});
   for (int h = 0; h < height_col; h++) {
     int h_pad = -_pads[2] + h * stride_h;
     addr_type data_col_tmp =
@@ -184,17 +184,17 @@ void Conv::im2col_nhwc() {
         }
       }
 
-      tile.instructions.push_back(Instruction{
+      tile->instructions.push_back(Instruction{
           .opcode = Opcode::MOVIN,
           .dest_addr = SPAD_BASE,
           .size = (uint32_t)dest_set.size(),
           .src_addrs = std::vector<addr_type>(src_set.begin(), src_set.end()),
           .operand_id = _INPUT_OPERAND});
-      tile.instructions.push_back(
+      tile->instructions.push_back(
           Instruction{.opcode = Opcode::IM2COL,
                       .dest_addr = SPAD_BASE,
                       .size = (uint32_t)dest_set.size()});
-      tile.instructions.push_back(Instruction{
+      tile->instructions.push_back(Instruction{
           .opcode = Opcode::MOVOUT,
           .dest_addr = SPAD_BASE,
           .size = (uint32_t)dest_set.size(),
@@ -205,8 +205,8 @@ void Conv::im2col_nhwc() {
       w_pad += _strides[1];
     }
   }
-  _tiles.push_back(tile);
-  _tiles.push_back(Tile{.status = Tile::Status::BAR});
+  _tiles.push_back(std::move(tile));
+  _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR}));
 }
 
 Conv::Conv(SimulationConfig config, MappingTable& mapping_table,

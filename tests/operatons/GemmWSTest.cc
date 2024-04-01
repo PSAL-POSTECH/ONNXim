@@ -42,15 +42,15 @@ GemmWS make_GemmWS(SimulationConfig config, std::string mapping_str, uint32_t n,
 }
 
 void do_simulation(Core& core, Operation& op) {
-  std::deque<Tile> tiles = op.get_tiles();
+  std::deque<std::unique_ptr<Tile>>& tiles = op.get_tiles();
 
   cycle_type cycle = 0;
-  Tile running_tile;
+  std::unique_ptr<Tile> running_tile;
   while (core.running() || !tiles.empty()) {
     if (core.can_issue() && !tiles.empty()) {
-      running_tile = tiles.front();
+      running_tile = std::move(tiles.front());
       tiles.pop_front();
-      core.issue(running_tile);
+      core.issue(std::move(running_tile));
     }
     if (core.has_memory_request()) {
       /* Assume Magic memory */

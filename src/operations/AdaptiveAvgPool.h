@@ -11,7 +11,7 @@ class AdaptiveAvgPool : public Operation {
   virtual void initialize_tiles(MappingTable& mapping_table) override;
 
  protected:
-  virtual void initialize_instructions(Tile& tile, Mapping mapping) override;
+  virtual void initialize_instructions(Tile* tile, Mapping mapping);
 
  private:
   std::vector<uint32_t> _kernel_shape;

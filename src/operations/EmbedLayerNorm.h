@@ -14,6 +14,6 @@ class EmbedLayerNorm: public Operation {
     std::vector<uint32_t> _ln_weight_shape;
     std::vector<uint32_t> _ln_bias_shape;
     void initialize_tiles(MappingTable& mapping_table);
-    void initialize_instructions(Tile& tile, Mapping mapping);
+    void initialize_instructions(Tile* tile, Mapping mapping);
    protected:
 };

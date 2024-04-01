@@ -39,30 +39,33 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
         if (C == 0) {
           core_id = (core_id + 1) % _config.num_cores;
         }
-        _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
-                              .optype = "Gemm",
-                              .layer_id = _id,
-                              .batch = N,
-                              .Q = 1,
-                              .P = 1,
-                              .M = M,
-                              .C = C,
-                              .S = 1,
-                              .R = 1,
-                              .accum = C != 0,
-                              .core_id = core_id});
-        initialize_instructions(_tiles.back(), mapping);
-        if (!_tiles.back().instructions.size())
+        std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+          .status = Tile::Status::INITIALIZED,
+          .optype = "Gemm",
+          .layer_id = _id,
+          .batch = N,
+          .Q = 1,
+          .P = 1,
+          .M = M,
+          .C = C,
+          .S = 1,
+          .R = 1,
+          .accum = C != 0,
+          .core_id = core_id
+        });
+        _tiles.push_back(std::move(tile));
+        initialize_instructions(_tiles.back().get(), mapping);
+        if (!_tiles.back().get()->instructions.size())
           _tiles.pop_back();
       }
     }
   }
 }
 
-void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
-  int tout_m_offset = tile.M * mapping.tile_in_loop.M;
-  int tout_c_offset = tile.C * mapping.tile_in_loop.C;
-  int tout_n_offset = tile.batch * mapping.tile_in_loop.N;
+void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
+  int tout_m_offset = tile->M * mapping.tile_in_loop.M;
+  int tout_c_offset = tile->C * mapping.tile_in_loop.C;
+  int tout_n_offset = tile->batch * mapping.tile_in_loop.N;
 
   addr_type act_sp_base_addr = SPAD_BASE;
   addr_type weight_sp_base_addr = SPAD_BASE + mapping.tile_in_loop.N *
@@ -78,7 +81,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
 
   int loop_size = _config.core_width;
   /* MOVIN BIAS */
-  if (!tile.accum) {
+  if (!tile->accum) {
     for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
       int M_offset = tout_m_offset + Ms;
       if (M_offset >= mapping.total_loop.N)
@@ -103,7 +106,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
           bias_addrs.insert(third_addr + make_activation_address(0, 0, 0, M, _output_shape));
         }
         if (has_bias) {
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = ACCUM_SPAD_BASE +
                           (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
@@ -111,7 +114,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               .src_addrs = std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
               .operand_id = _INPUT_OPERAND + 2});
         } else {
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::COMP,
               .dest_addr = ACCUM_SPAD_BASE +
                           (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
@@ -161,7 +164,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
                   first_addr + make_activation_address(N, 0, 0, C, _input_shape));
             }
           }
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = act_sp_addr,
               .size = (uint32_t)input_set.size(),
@@ -188,7 +191,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
                   second_addr + make_weight_address(0, 0, M, C, weight_shape_4d));
             }
           }
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = weight_sp_addr,
               .size = (uint32_t)weight_set.size(),
@@ -209,7 +212,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
 
         /*Compute */
         if (Ns == 0) {
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::GEMM_PRELOAD,
               .dest_addr = out_sp_addr,
               // Accumulat buffer already allocated
@@ -218,7 +221,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
               .src_addrs =
                   std::vector<addr_type>{act_sp_addr, weight_sp_addr}});
         } else {
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::GEMM,
               .dest_addr = out_sp_addr,
               // Accumulat buffer already allocated
@@ -229,7 +232,7 @@ void GemmWS::initialize_instructions(Tile& tile, Mapping mapping) {
         }
         /*MOVOUT result at the last loop*/
         if (Cs == mapping.tile_in_loop.C - 1 && Ms == mapping.tile_in_loop.M - 1){
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::MOVOUT,
               .dest_addr = out_sp_addr,
               .size = (uint32_t)output_set.size(),

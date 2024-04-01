@@ -45,21 +45,21 @@ Softmax::Softmax(SimulationConfig config, MappingTable& mapping_table,
 void Softmax::initialize_tiles(MappingTable& mapping_table) {
     for (uint32_t tokens=0; tokens < _seq; tokens+=_tokens_per_tile) {
         uint32_t remain_tokens = std::min(_seq-tokens, _tokens_per_tile);
-        auto tile = Tile{
+        std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
             .status = Tile::Status::INITIALIZED,
             .optype = get_name(),
             .layer_id = _id,
             .accum = false,
-        };
+        });
         /* dummy mapping */
         Mapping mapping;
-        initialize_instructions(tile, mapping, tokens, remain_tokens);
+        _tiles.push_back(std::move(tile));
+        initialize_instructions(_tiles.back().get(), mapping, tokens, remain_tokens);
 
-        _tiles.push_back(tile);
     }
 }
 
-void Softmax::initialize_instructions(Tile &tile, Mapping mapping, uint32_t token_offset, uint32_t tokens) {
+void Softmax::initialize_instructions(Tile* tile, Mapping mapping, uint32_t token_offset, uint32_t tokens) {
     addr_type sram_base = SPAD_BASE;
 
     /* Load two tile (input: tokens x _dk, skip: tokens x _dk) */
@@ -68,7 +68,7 @@ void Softmax::initialize_instructions(Tile &tile, Mapping mapping, uint32_t toke
     for (offset=0; offset<tokens*_dk*_config.precision; offset+=_config.dram_req_size)
         dram_addrs.insert(token_offset*_dk*_config.precision + offset);
 
-    tile.instructions.push_back(Instruction{
+    tile->instructions.push_back(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
@@ -76,7 +76,7 @@ void Softmax::initialize_instructions(Tile &tile, Mapping mapping, uint32_t toke
         .operand_id = _INPUT_OPERAND,  // query
     });
 
-    tile.instructions.push_back(Instruction{
+    tile->instructions.push_back(Instruction{
         .opcode = Opcode::SOFTMAX,
         .dest_addr = sram_base,
         .size = _dk * _config.precision,
@@ -84,7 +84,7 @@ void Softmax::initialize_instructions(Tile &tile, Mapping mapping, uint32_t toke
         .tile_m = tokens,
     });
 
-    tile.instructions.push_back(Instruction{
+    tile->instructions.push_back(Instruction{
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),

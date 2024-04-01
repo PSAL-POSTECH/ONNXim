@@ -46,20 +46,20 @@ void GlobalAvgPool::initialize_tiles(MappingTable& mapping_table) {
 
   for (uint32_t N = 0; N < output_shape[Ndim]; N++) {
     for (uint32_t C = 0; C < output_shape[Cdim]; C++) {
-      _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
+      _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
                             .optype = "GlobalAvgPool",
                             .layer_id = _id,
                             .batch = N,
                             .Q = 0,
                             .P = 0,
                             .C = C,
-                            .skip = true});
-      initialize_instructions(_tiles.back(), Mapping{});
+                            .skip = true}));
+      initialize_instructions(_tiles.back().get(), Mapping{});
     }
   }
 }
 
-void GlobalAvgPool::initialize_instructions(Tile& tile, Mapping mapping) {
+void GlobalAvgPool::initialize_instructions(Tile* tile, Mapping mapping) {
   // std::vector<uint32_t> output_shape = get_output(0)->get_dims();
   // std::vector<uint32_t> input_shape = get_input(0)->get_dims();
 
@@ -69,10 +69,10 @@ void GlobalAvgPool::initialize_instructions(Tile& tile, Mapping mapping) {
   // uint32_t compare_size_in_vector = _config.vector_process_bit /
   //                                     (_config.precision * 8);
 
-  // uint32_t N = tile.batch;
-  // uint32_t C = tile.C;
-  // uint32_t tout_q_offset = tile.Q * _strides[0];
-  // uint32_t tout_p_offset = tile.P * _strides[1];
+  // uint32_t N = tile->batch;
+  // uint32_t C = tile->C;
+  // uint32_t tout_q_offset = tile->Q * _strides[0];
+  // uint32_t tout_p_offset = tile->P * _strides[1];
 
   // uint32_t total_compare = 0;
   // uint32_t tmp = kernel_size;
@@ -95,32 +95,32 @@ void GlobalAvgPool::initialize_instructions(Tile& tile, Mapping mapping) {
   //   }
   // }
 
-  // std::string input_id = fmt::format("INPUT-{}-{}-{}-{}-{}", tile.layer_id,
+  // std::string input_id = fmt::format("INPUT-{}-{}-{}-{}-{}", tile->layer_id,
   //                                    N, tout_q_offset, tout_p_offset, C);
 
-  // tile.instructions.push_back(
+  // tile->instructions.push_back(
   //       Instruction{.opcode = Opcode::MOVIN,
   //                   .id = input_id,
   //                   .addrs = std::vector<addr_type>(
   //                            input_set.begin(), input_set.end())});
 
   // std::set<addr_type> output_set;
-  // std::string output_id = fmt::format("OUT-{}-{}-{}-{}-{}", tile.layer_id,
+  // std::string output_id = fmt::format("OUT-{}-{}-{}-{}-{}", tile->layer_id,
   //                                     N, tout_q_offset, tout_p_offset, C);
   
   // output_set.insert(make_activation_address(N, tout_q_offset, 
   //                                           tout_p_offset, C, output_shape));
 
   // for (int i=0; i<total_compare; i++)
-  //   tile.instructions.push_back(
+  //   tile->instructions.push_back(
   //         Instruction{.opcode = Opcode::COMP,
   //                     .tile_size = compare_size_in_vector,
-  //                     .id = fmt::format("COMP-{}-{}-{}-{}-{}", tile.layer_id, N,
+  //                     .id = fmt::format("COMP-{}-{}-{}-{}-{}", tile->layer_id, N,
   //                                       tout_q_offset, tout_p_offset, C),
   //                     .dependent_ids = std::vector<std::string>{input_id},
   //                     .dest_id = output_id});
 
-  // tile.instructions.push_back(
+  // tile->instructions.push_back(
   //       Instruction{.opcode = Opcode::MOVOUT,
   //                   .id = output_id,
   //                   .addrs = std::vector<addr_type>(output_set.begin(), 

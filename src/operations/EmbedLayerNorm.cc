@@ -47,11 +47,13 @@ EmbedLayerNorm::EmbedLayerNorm(SimulationConfig config, Model* model, onnx::Node
 }
 
 void EmbedLayerNorm::initialize_tiles(MappingTable& mapping_table) {
-  _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
+  std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+                        .status = Tile::Status::INITIALIZED,
                         .optype="EmbedLayerNorm",
                         .layer_id=_id,
                         .skip=true});
+  _tiles.push_back(std::move(tile));
 }
 
-void EmbedLayerNorm::initialize_instructions(Tile& tile, Mapping mapping) {
+void EmbedLayerNorm::initialize_instructions(Tile* tile, Mapping mapping) {
 }

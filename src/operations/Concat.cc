@@ -46,12 +46,14 @@ Concat::Concat(const Concat& src) : Operation(src) {
 
 void Concat::initialize_tiles(MappingTable& mapping_table) {
 	spdlog::trace("initialize_tile {} ", _name);
-		
-	_tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
-												.optype = "Concat",
-												.layer_id = _id});
+	std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+		.status = Tile::Status::INITIALIZED,
+		.optype = "Concat",
+		.layer_id = _id
+	});
+	_tiles.push_back(std::move(tile));
 }
 
-void Concat::initialize_instructions(Tile& tile, Mapping mapping) {
+void Concat::initialize_instructions(Tile* tile, Mapping mapping) {
 }
 

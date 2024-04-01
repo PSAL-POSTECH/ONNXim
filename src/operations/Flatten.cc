@@ -44,12 +44,12 @@ Flatten::Flatten(const Flatten& src) : Operation(src) { _axis = src._axis; }
 void Flatten::initialize_tiles(MappingTable& mapping_table) {
   spdlog::trace("initialize_tile {}", _name);
 
-  _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
+  _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
                         .optype = "Flatten",
                         .layer_id = _id,
-                        .skip = true});
-  initialize_instructions(_tiles.back(), Mapping{});
+                        .skip = true}));
+  initialize_instructions(_tiles.back().get(), Mapping{});
 }
 
-void Flatten::initialize_instructions(Tile& tile, Mapping mapping) {
+void Flatten::initialize_instructions(Tile* tile, Mapping mapping) {
 }

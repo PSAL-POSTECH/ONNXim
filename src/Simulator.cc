@@ -112,17 +112,17 @@ void Simulator::cycle() {
       handle_model();
 
       for (int core_id = 0; core_id < _n_cores; core_id++) {
-        Tile finished_tile = _cores[core_id]->pop_finished_tile();
-        if (finished_tile.status == Tile::Status::FINISH) {
-          _scheduler->finish_tile(core_id, finished_tile);
+        std::unique_ptr<Tile> finished_tile = _cores[core_id]->pop_finished_tile();
+        if (finished_tile->status == Tile::Status::FINISH) {
+          _scheduler->finish_tile(core_id, std::move(finished_tile));
         }
         // Issue new tile to core
         if (!_scheduler->empty()) {
           is_accum_tile = _scheduler->is_accum_tile(core_id, 0);
           if (_cores[core_id]->can_issue(is_accum_tile)) {
-            Tile tile = _scheduler->get_tile(core_id);
-            if (tile.status == Tile::Status::INITIALIZED) {
-              _cores[core_id]->issue(tile);
+            std::unique_ptr<Tile> tile = _scheduler->get_tile(core_id);
+            if (tile->status == Tile::Status::INITIALIZED) {
+              _cores[core_id]->issue(std::move(tile));
             }
           }
         }

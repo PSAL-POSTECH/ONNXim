@@ -90,16 +90,8 @@ Operation::Operation(SimulationConfig config, Model* model,
 }
 
 Operation::Operation(const Operation& operation) {
-  _id = operation._id;
-  _model = operation._model;
-  _optype = operation._optype;
-  _name = operation._name;
-  _proto = operation._proto;
-  _finish = operation._finish;
-  _attributes = operation._attributes;
-  _tiles = operation._tiles;
-  _inputs = operation._inputs;
-  _outputs = operation._outputs;
+  spdlog::error("Opertion copy is not allowed !");
+  exit(EXIT_FAILURE);
 }
 
 void Operation::set_finish() {
@@ -140,17 +132,12 @@ bool Operation::check_executable() {
   return result;
 }
 
-std::deque<Tile> Operation::get_tiles() { //TODO: fix the return _tiles to new_tile
-std:
-  // std::deque<Tile> result;
-  // for (Tile tile : _tiles) {
-  //   Tile new_tile = tile;
-  //   for (int i = 0; i < new_tile.instructions.size(); i++) {
-  //     new_tile.instructions[i].base_addr =
-  //         get_operand_addr(new_tile.instructions[i].operand_id);
-  //   }
-  // }
+std::deque<std::unique_ptr<Tile>>& Operation::get_tiles() { //TODO: fix the return _tiles to new_tile
   return _tiles;
+}
+
+void Operation::clear_tiles() { //TODO: fix the return _tiles to new_tile
+  _tiles.clear();
 }
 
 void Operation::initialize_tiles(MappingTable& mapping_table) {
