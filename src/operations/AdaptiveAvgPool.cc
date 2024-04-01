@@ -62,25 +62,13 @@ void AdaptiveAvgPool::initialize_tiles(MappingTable& mapping_table) {
     return;
   }
 
-  for (uint32_t N = 0; N < output_shape[Ndim]; N++) {
-    for (uint32_t C = 0; C < output_shape[Cdim]; C++) {
-      for (uint32_t H = 0; H < output_shape[Hdim]; H++) {
-        for (uint32_t W = 0; W < output_shape[Wdim]; W++) {
-          std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
-            .status = Tile::Status::INITIALIZED,
-            .optype = "AdaptiveAvgPool",
-            .layer_id = _id,
-            .batch = N,
-            .Q = H,
-            .P = W,
-            .C = C,
-            .skip = true});
-          _tiles.push_back(std::move(tile));
-          initialize_instructions(_tiles.back().get(), Mapping{});
-        }
-      }
-    }
-  }
+  std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+    .status = Tile::Status::INITIALIZED,
+    .optype = "AdaptiveAvgPool",
+    .layer_id = _id,
+    .skip = true});
+  _tiles.push_back(std::move(tile));
+  initialize_instructions(_tiles.back().get(), Mapping{});
 }
 
 void AdaptiveAvgPool::initialize_instructions(Tile* tile, Mapping mapping) {
