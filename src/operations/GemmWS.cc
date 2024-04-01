@@ -106,21 +106,21 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
           bias_addrs.insert(third_addr + make_activation_address(0, 0, 0, M, _output_shape));
         }
         if (has_bias) {
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = ACCUM_SPAD_BASE +
                           (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
               .size = (uint32_t)bias_addrs.size() * n_loop,
               .src_addrs = std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
-              .operand_id = _INPUT_OPERAND + 2});
+              .operand_id = _INPUT_OPERAND + 2}));
         } else {
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::COMP,
               .dest_addr = ACCUM_SPAD_BASE +
                           (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
               .size = (uint32_t)bias_addrs.size() * n_loop,
               .src_addrs = std::vector<addr_type>(),
-              .operand_id = _INPUT_OPERAND + 2});
+              .operand_id = _INPUT_OPERAND + 2}));
         }
       }
     }
@@ -164,7 +164,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                   first_addr + make_activation_address(N, 0, 0, C, _input_shape));
             }
           }
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = act_sp_addr,
               .size = (uint32_t)input_set.size(),
@@ -172,7 +172,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                   std::vector<addr_type>(input_set.begin(), input_set.end()),
               .operand_id = _INPUT_OPERAND,
               .tile_k = mapping.tile_in_loop.C,
-              .tile_n = mapping.tile_in_loop.N});
+              .tile_n = mapping.tile_in_loop.N}));
         }
         /* MOVIN Weight */
         if (Ns == 0) {
@@ -191,7 +191,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                   second_addr + make_weight_address(0, 0, M, C, weight_shape_4d));
             }
           }
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = weight_sp_addr,
               .size = (uint32_t)weight_set.size(),
@@ -199,7 +199,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                   std::vector<addr_type>(weight_set.begin(), weight_set.end()),
               .operand_id = _INPUT_OPERAND + 1,
               .tile_m = mapping.tile_in_loop.M,
-              .tile_k = mapping.tile_in_loop.C});
+              .tile_k = mapping.tile_in_loop.C}));
         }
         std::set<addr_type> output_set;
         for (int iter_n = 0; iter_n < n_loop; iter_n++) {
@@ -212,33 +212,33 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
 
         /*Compute */
         if (Ns == 0) {
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::GEMM_PRELOAD,
               .dest_addr = out_sp_addr,
               // Accumulat buffer already allocated
               .size = (uint32_t)output_set.size(),
               .compute_size = (uint32_t)n_loop,
               .src_addrs =
-                  std::vector<addr_type>{act_sp_addr, weight_sp_addr}});
+                  std::vector<addr_type>{act_sp_addr, weight_sp_addr}}));
         } else {
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::GEMM,
               .dest_addr = out_sp_addr,
               // Accumulat buffer already allocated
               .size = (uint32_t)output_set.size(),
               .compute_size = (uint32_t)n_loop,
               .src_addrs =
-                  std::vector<addr_type>{act_sp_addr, weight_sp_addr}});
+                  std::vector<addr_type>{act_sp_addr, weight_sp_addr}}));
         }
         /*MOVOUT result at the last loop*/
         if (Cs == mapping.tile_in_loop.C - 1 && Ms == mapping.tile_in_loop.M - 1){
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVOUT,
               .dest_addr = out_sp_addr,
               .size = (uint32_t)output_set.size(),
               .src_addrs =
                   std::vector<addr_type>(output_set.begin(), output_set.end()),
-              .operand_id = _OUTPUT_OPERAND});
+              .operand_id = _OUTPUT_OPERAND}));
         }
       }
     }

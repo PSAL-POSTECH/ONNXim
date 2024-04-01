@@ -67,44 +67,44 @@ void SkipLayerNorm::initialize_instructions(Tile* tile, Mapping mapping, uint32_
     for (;offset<tokens*_dk*_config.precision*2; offset+=_config.dram_req_size)
         dram_skip_addrs.insert(get_operand_addr(_INPUT_OPERAND+1) + token_offset*_dk*_config.precision + offset);
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_addrs.begin(), dram_addrs.end()),
         .operand_id = _INPUT_OPERAND,  // query
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_bias_base,
         .size = (uint32_t)dram_skip_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_skip_addrs.begin(), dram_skip_addrs.end()),
         .operand_id = _INPUT_OPERAND+1,  // query
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::LAYERNORM,
         .dest_addr = sram_base,
         .size = _dk * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base},
         .tile_m = tokens,
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::ADD,
         .dest_addr = sram_base,
         .size = tokens * _dk * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base, sram_bias_base},
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_addrs.begin(), dram_addrs.end()),
         .operand_id = _OUTPUT_OPERAND,
-    });
+    }));
 }
 
 void SkipLayerNorm::calculate_loops() {

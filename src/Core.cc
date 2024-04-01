@@ -84,12 +84,12 @@ void Core::cycle() {
   _spad.cycle();
   _acc_spad.cycle();
   for (int i = 0; i < _tiles.size(); i++) {
-    Instruction& inst = _tiles[i]->instructions.front();
-    inst.spad_id = _tiles[i]->spad_id;
-    inst.accum_spad_id = _tiles[i]->accum_spad_id;
+    std::unique_ptr<Instruction>& inst = _tiles[i]->instructions.front();
+    inst->spad_id = _tiles[i]->spad_id;
+    inst->accum_spad_id = _tiles[i]->accum_spad_id;
     Sram *buffer;
     int buffer_id;
-    if (inst.dest_addr >= ACCUM_SPAD_BASE) {
+    if (inst->dest_addr >= ACCUM_SPAD_BASE) {
       buffer = &_acc_spad;
       buffer_id = _tiles[i]->accum_spad_id;
     } else {
@@ -97,33 +97,36 @@ void Core::cycle() {
       buffer_id = _tiles[i]->spad_id;
     }
     bool issued = false;
-    if (inst.opcode == Opcode::MOVIN) {
+    if (inst->opcode == Opcode::MOVIN) {
       /*LD inst queue */
-      if (inst.size == 0) {
-        spdlog::error("[Core {}] MVIN issue addr: {:x}, size: {:x}", _id, inst.dest_addr, inst.size);
+      if (inst->size == 0) {
+        spdlog::error("[Core {}] MVIN issue addr: {:x}, size: {:x}", _id, inst->dest_addr, inst->size);
       }
-      if (!buffer->check_allocated(inst.dest_addr, buffer_id) &&
-          buffer->check_remain(inst.size, buffer_id)) {
-        _ld_inst_queue.push(inst);
+      if (!buffer->check_allocated(inst->dest_addr, buffer_id) &&
+          buffer->check_remain(inst->size, buffer_id)) {
+        _ld_inst_queue.push(std::move(inst));
         issued = true;
       } else {
         /*Invalid state */
-        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(inst.dest_addr, buffer_id), buffer->check_allocated(inst.dest_addr, buffer_id));
-        spdlog::error("[Core {}] MVIN issue panic addr: {:x}, size: {:x}", _id, inst.dest_addr, inst.size);
+        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(inst->dest_addr, buffer_id), buffer->check_allocated(inst->dest_addr, buffer_id));
+        spdlog::error("[Core {}] MVIN issue panic addr: {:x}, size: {:x}", _id, inst->dest_addr, inst->size);
         buffer->print_all(buffer_id);
         exit(EXIT_FAILURE);
       }
-    } else if (inst.opcode == Opcode::MOVOUT ||
-               inst.opcode == Opcode::MOVOUT_POOL) {
+    } else if (inst->opcode == Opcode::MOVOUT ||
+               inst->opcode == Opcode::MOVOUT_POOL) {
       /* ST inst queue */
-      if (buffer->check_hit(inst.dest_addr, buffer_id)) {
-        _st_inst_queue.push(inst);
+      if (buffer->check_hit(inst->dest_addr, buffer_id)) {
+        _st_inst_queue.push(std::move(inst));
         issued = true;
       }
     } else {
       /* Ex inst queue */
+      if (inst.get() == 0) {
+        spdlog::error("null instruction!");
+      }
       if(_ex_inst_queue.empty()){
-        _ex_inst_queue.push(inst);
+        _ex_inst_queue.push(std::move(inst));
         issued = true;
       }
     }
@@ -174,20 +177,20 @@ void Core::push_memory_response(MemoryAccess *response) {
   delete response;
 }
 
-bool Core::can_issue_compute(Instruction inst) {
+bool Core::can_issue_compute(std::unique_ptr<Instruction>& inst) {
   bool result = true;
 
-  for (addr_type addr : inst.src_addrs) {
-    if (inst.src_from_accum && addr >= ACCUM_SPAD_BASE) {
-      result = result && _acc_spad.check_hit(addr, inst.accum_spad_id);
+  for (addr_type addr : inst->src_addrs) {
+    if (inst->src_from_accum && addr >= ACCUM_SPAD_BASE) {
+      result = result && _acc_spad.check_hit(addr, inst->accum_spad_id);
     } else {
-      result = result && _spad.check_hit(addr, inst.spad_id);
+      result = result && _spad.check_hit(addr, inst->spad_id);
     }
   }
   if (!result) {
-    for (addr_type addr : inst.src_addrs) {
+    for (addr_type addr : inst->src_addrs) {
       spdlog::trace("Core[{}] Dependency fail : {} , {}", _id, addr,
-                    _spad.check_hit(addr, inst.spad_id));
+                    _spad.check_hit(addr, inst->spad_id));
     }
   }
   return result;

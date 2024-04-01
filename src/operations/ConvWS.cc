@@ -246,13 +246,13 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
     }
   }
 
-  tile->instructions.push_back(Instruction{
+  tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
       .opcode = Opcode::MOVIN,
       .dest_addr = act_sp_base_addr,
       .size = (uint32_t)act_addr_set.size(),
       .src_addrs =
           std::vector<addr_type>(act_addr_set.begin(), act_addr_set.end()),
-      .operand_id = _INPUT_OPERAND});
+      .operand_id = _INPUT_OPERAND}));
   sram_allocation += act_addr_set.size();
   act_allocation += act_addr_set.size();
   /* MOVIN Weight data */
@@ -290,13 +290,13 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
                   make_weight_address(s_offset, r_offset, M, C, _weight_shape));
             }
           }
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = weight_sp_addr,
               .size = (uint32_t)weight_set.size(),
               .src_addrs =
                   std::vector<addr_type>(weight_set.begin(), weight_set.end()),
-              .operand_id = _INPUT_OPERAND + 1});
+              .operand_id = _INPUT_OPERAND + 1}));
           sram_allocation += weight_set.size();
         }
       }
@@ -343,21 +343,21 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
                                 : p_loop;
                 int compute_size = p_loop * q_loop_size;
                 if (Ns == 0 && Qs == 0 && Ps == 0) {
-                  tile->instructions.push_back(
+                  tile->instructions.push_back(std::make_unique<Instruction>(
                       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                                   .dest_addr = out_sp_addr,
                                   .size = (uint32_t)compute_size * _config.precision / _config.dram_req_size,
                                   .compute_size = /*Todo*/ (uint32_t)compute_size,
                                   .src_addrs = std::vector<addr_type>{
-                                      act_sp_base_addr, weight_sp_addr}});
+                                      act_sp_base_addr, weight_sp_addr}}));
                 } else {
-                  tile->instructions.push_back(
+                  tile->instructions.push_back(std::make_unique<Instruction>(
                       Instruction{.opcode = Opcode::GEMM,
                                   .dest_addr = out_sp_addr,
                                   .size = (uint32_t)compute_size * _config.precision / _config.dram_req_size,
                                   .compute_size = /*Todo*/ (uint32_t)compute_size,
                                   .src_addrs = std::vector<addr_type>{
-                                      act_sp_base_addr, weight_sp_addr}});
+                                      act_sp_base_addr, weight_sp_addr}}));
                 }
               }
             }
@@ -415,21 +415,21 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
               }
             }
             if (_pool_fused) {
-              tile->instructions.push_back(
+              tile->instructions.push_back(std::make_unique<Instruction>(
                   Instruction{.opcode = Opcode::MOVOUT_POOL,
                               .dest_addr = out_sp_addr,
                               .size = (uint32_t)out_dram_addrs.size(),
                               .src_addrs = std::vector<addr_type>(
                                   out_dram_addrs.begin(), out_dram_addrs.end()),
-                              .operand_id = _OUTPUT_OPERAND});
+                              .operand_id = _OUTPUT_OPERAND}));
             } else {
-              tile->instructions.push_back(
+              tile->instructions.push_back(std::make_unique<Instruction>(
                   Instruction{.opcode = Opcode::MOVOUT,
                               .dest_addr = out_sp_addr,
                               .size = (uint32_t)out_dram_addrs.size(),
                               .src_addrs = std::vector<addr_type>(
                                   out_dram_addrs.begin(), out_dram_addrs.end()),
-                              .operand_id = _OUTPUT_OPERAND});
+                              .operand_id = _OUTPUT_OPERAND}));
             }
           }
         }
@@ -475,13 +475,13 @@ void ConvWS::initialize_matmul_instructions(Tile* tile) {
         skip_addrs.insert(
             _config.align_address((M + m_iter) * _config.precision));
       }
-      tile->instructions.push_back(Instruction{
+      tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
           .opcode = Opcode::MOVIN,
           .dest_addr = bias_sp_addr,
           .size = (uint32_t)skip_addrs.size() * n_loop,
           .src_addrs =
               std::vector<addr_type>(skip_addrs.begin(), skip_addrs.end()),
-          .operand_id = _INPUT_OPERAND + 2});
+          .operand_id = _INPUT_OPERAND + 2}));
     }
   }
 
@@ -504,13 +504,13 @@ void ConvWS::initialize_matmul_instructions(Tile* tile) {
               _config.precision));
         }
       }
-      tile->instructions.push_back(Instruction{
+      tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
           .opcode = Opcode::MOVIN,
           .dest_addr = skip_sp_addr,
           .size = (uint32_t)skip_addrs.size(),
           .src_addrs =
               std::vector<addr_type>(skip_addrs.begin(), skip_addrs.end()),
-          .operand_id = _INPUT_OPERAND + 3});
+          .operand_id = _INPUT_OPERAND + 3}));
     }
   }
 
@@ -541,13 +541,13 @@ void ConvWS::initialize_matmul_instructions(Tile* tile) {
                                         C_dim_size * _group}));
             }
           }
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = act_sp_addr,
               .size = (uint32_t)act_addr.size(),
               .src_addrs =
                   std::vector<addr_type>(act_addr.begin(), act_addr.end()),
-              .operand_id = _INPUT_OPERAND});
+              .operand_id = _INPUT_OPERAND}));
         }
 
         /* MOVIN weight */
@@ -561,13 +561,13 @@ void ConvWS::initialize_matmul_instructions(Tile* tile) {
                                         0, 0}));
             }
           }
-          tile->instructions.push_back(
+          tile->instructions.push_back(std::make_unique<Instruction>(
               Instruction{.opcode = Opcode::MOVIN,
                           .dest_addr = weight_sp_addr,
                           .size = (uint32_t)weight_addr.size(),
                           .src_addrs = std::vector<addr_type>(
                               weight_addr.begin(), weight_addr.end()),
-                          .operand_id = _INPUT_OPERAND + 1});
+                          .operand_id = _INPUT_OPERAND + 1}));
         }
 
         /*MOVOUT */
@@ -580,13 +580,13 @@ void ConvWS::initialize_matmul_instructions(Tile* tile) {
                   _config.precision));
             }
           }
-          tile->instructions.push_back(Instruction{
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVOUT,
               .dest_addr = out_sp_addr,
               .size = (uint32_t)out_addrs.size(),
               .src_addrs =
                   std::vector<addr_type>(out_addrs.begin(), out_addrs.end()),
-              .operand_id = _OUTPUT_OPERAND});
+              .operand_id = _OUTPUT_OPERAND}));
         }
       }
     }

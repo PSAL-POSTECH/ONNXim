@@ -8,50 +8,42 @@ bool SystolicWS::can_issue(bool is_accum_tile) {
   result &= Core::can_issue();
   if (!_ld_inst_queue.empty()) {
     int ld_result;
-    if ( _ld_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
-      ld_result = _current_acc_spad == _ld_inst_queue.front().accum_spad_id;
+    if ( _ld_inst_queue.front()->dest_addr >= ACCUM_SPAD_BASE) {
+      ld_result = _current_acc_spad == _ld_inst_queue.front()->accum_spad_id;
     } else {
-      ld_result = is_accum_tile || (_current_spad == _ld_inst_queue.front().spad_id);
+      ld_result = is_accum_tile || (_current_spad == _ld_inst_queue.front()->spad_id);
     }
     result &= ld_result;
-    if (!ld_result)
-      spdlog::debug("Core-{} tried to run too many tile... while load not finished!", _id);
   }
 
   if (!_st_inst_queue.empty()) {
     int st_result;
-    if ( _st_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
-      st_result = _current_acc_spad == _st_inst_queue.front().accum_spad_id;
+    if ( _st_inst_queue.front()->dest_addr >= ACCUM_SPAD_BASE) {
+      st_result = _current_acc_spad == _st_inst_queue.front()->accum_spad_id;
     } else {
-      st_result = is_accum_tile || (_current_spad == _st_inst_queue.front().spad_id);
+      st_result = is_accum_tile || (_current_spad == _st_inst_queue.front()->spad_id);
     }
     result &= st_result;
-    if (!st_result)
-      spdlog::debug("Core-{} tried to run too many tile... while store not finished!", _id);
   }
 
   if (!_ex_inst_queue.empty()) {
     int ex_result;
-    if ( _ex_inst_queue.front().dest_addr >= ACCUM_SPAD_BASE) {
-      ex_result = _current_acc_spad == _ex_inst_queue.front().accum_spad_id;
+    if ( _ex_inst_queue.front()->dest_addr >= ACCUM_SPAD_BASE) {
+      ex_result = _current_acc_spad == _ex_inst_queue.front()->accum_spad_id;
     } else {
-      ex_result = is_accum_tile || (_current_spad == _ex_inst_queue.front().spad_id);
+      ex_result = is_accum_tile || (_current_spad == _ex_inst_queue.front()->spad_id);
     }
     result &= ex_result;
-    if (!ex_result)
-      spdlog::debug("Core-{} tried to run too many tile... while execute not finished!", _id);
   }
 
   if (!_compute_pipeline.empty()) {
     int ex_result;
-    if ( _compute_pipeline.front().dest_addr >= ACCUM_SPAD_BASE) {
-      ex_result = _current_acc_spad == _compute_pipeline.front().accum_spad_id;
+    if ( _compute_pipeline.front()->dest_addr >= ACCUM_SPAD_BASE) {
+      ex_result = _current_acc_spad == _compute_pipeline.front()->accum_spad_id;
     } else {
-      ex_result = is_accum_tile || (_current_spad == _compute_pipeline.front().spad_id);
+      ex_result = is_accum_tile || (_current_spad == _compute_pipeline.front()->spad_id);
     }
     result &= ex_result;
-    if (!ex_result)
-      spdlog::debug("Core-{} tried to run too many tile... while compute_pipeline not finished!", _id);
   }
 
   return result;
@@ -62,54 +54,54 @@ void SystolicWS::cycle() {
   Compute unit
   */
   if (!_compute_pipeline.empty() &&
-      _compute_pipeline.front().finish_cycle <= _core_cycle) {
-    Instruction inst = _compute_pipeline.front();
-    if (inst.dest_addr >= ACCUM_SPAD_BASE)
-      _acc_spad.fill(inst.dest_addr, inst.accum_spad_id);
+      _compute_pipeline.front()->finish_cycle <= _core_cycle) {
+    std::unique_ptr<Instruction> inst = std::move(_compute_pipeline.front());
+    if (inst->dest_addr >= ACCUM_SPAD_BASE)
+      _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
     else
-      _spad.fill(inst.dest_addr, inst.spad_id);
+      _spad.fill(inst->dest_addr, inst->spad_id);
     _compute_pipeline.pop();
   }
 
   /* Checking Vector compute pipeline */
   if (!_vector_pipeline.empty() &&
-      _vector_pipeline.front().finish_cycle <= _core_cycle) {
-    Instruction inst = _vector_pipeline.front();
-    if (inst.dest_addr >= ACCUM_SPAD_BASE)
-      _acc_spad.fill(inst.dest_addr, inst.accum_spad_id);
+      _vector_pipeline.front()->finish_cycle <= _core_cycle) {
+    std::unique_ptr<Instruction> inst = std::move(_vector_pipeline.front());
+    if (inst->dest_addr >= ACCUM_SPAD_BASE)
+      _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
     else
-      _spad.fill(inst.dest_addr, inst.spad_id);
+      _spad.fill(inst->dest_addr, inst->spad_id);
     _vector_pipeline.pop();
   }
   /* LD in struction queue */
   if (!_ld_inst_queue.empty()) {
-    Instruction front = _ld_inst_queue.front();
-    if (front.opcode == Opcode::MOVIN) {
+    std::unique_ptr<Instruction> front = std::move(_ld_inst_queue.front());
+    if (front->opcode == Opcode::MOVIN) {
       bool prefetched = false;
       Sram *buffer;
       int buffer_id;
-      if (front.dest_addr >= ACCUM_SPAD_BASE) {
+      if (front->dest_addr >= ACCUM_SPAD_BASE) {
         buffer = &_acc_spad;
-        buffer_id = front.accum_spad_id;
+        buffer_id = front->accum_spad_id;
       } else {
         buffer = &_spad;
-        buffer_id = front.spad_id;
+        buffer_id = front->spad_id;
       }
-      if (front.size==0) {
-        spdlog::error("Destination size is 0! opcode: {}, addr: 0x{:x}", (int)front.opcode, front.dest_addr);
+      if (front->size==0) {
+        spdlog::error("Destination size is 0! opcode: {}, addr: 0x{:x}", (int)front->opcode, front->dest_addr);
       }
-      int ret = buffer->prefetch(front.dest_addr, buffer_id, front.size, front.size);
+      int ret = buffer->prefetch(front->dest_addr, buffer_id, front->size, front->size);
       if (!ret) {
-        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(front.dest_addr, buffer_id), buffer->check_allocated(front.dest_addr, buffer_id));
-        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size);
+        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(front->dest_addr, buffer_id), buffer->check_allocated(front->dest_addr, buffer_id));
+        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front->opcode, front->dest_addr, front->size);
         std::exit(EXIT_FAILURE);
       }
-      for (addr_type addr : front.src_addrs) {
-        assert(front.base_addr != GARBEGE_ADDR);
+      for (addr_type addr : front->src_addrs) {
+        assert(front->base_addr != GARBEGE_ADDR);
         MemoryAccess *access =
             new MemoryAccess({.id = generate_mem_access_id(),
-                              .dram_address = addr + front.base_addr,
-                              .spad_address = front.dest_addr,
+                              .dram_address = addr + front->base_addr,
+                              .spad_address = front->dest_addr,
                               .size = _config.dram_req_size,
                               .write = false,
                               .request = true,
@@ -125,24 +117,24 @@ void SystolicWS::cycle() {
   }
   /* ST in struction queue */
   if (!_st_inst_queue.empty()) {
-    Instruction front = _st_inst_queue.front();
-    if (front.opcode == Opcode::MOVOUT || front.opcode == Opcode::MOVOUT_POOL) {
+    std::unique_ptr<Instruction> front = std::move(_st_inst_queue.front());
+    if (front->opcode == Opcode::MOVOUT || front->opcode == Opcode::MOVOUT_POOL) {
       Sram *buffer;
       int buffer_id;
-      if (front.dest_addr >= ACCUM_SPAD_BASE) {
+      if (front->dest_addr >= ACCUM_SPAD_BASE) {
         buffer = &_acc_spad;
-        buffer_id = front.accum_spad_id;
+        buffer_id = front->accum_spad_id;
       } else {
         buffer = &_spad;
-        buffer_id = front.spad_id;
+        buffer_id = front->spad_id;
       }
-      assert(buffer->check_hit(front.dest_addr, buffer_id));
-      for (addr_type addr : front.src_addrs) {
-        assert(front.base_addr != GARBEGE_ADDR);
+      assert(buffer->check_hit(front->dest_addr, buffer_id));
+      for (addr_type addr : front->src_addrs) {
+        assert(front->base_addr != GARBEGE_ADDR);
         MemoryAccess *access =
             new MemoryAccess{.id = generate_mem_access_id(),
-                             .dram_address = addr + front.base_addr,
-                             .spad_address = front.dest_addr,
+                             .dram_address = addr + front->base_addr,
+                             .spad_address = front->dest_addr,
                              .size = _config.dram_req_size,
                              .write = true,
                              .request = true,
@@ -159,74 +151,74 @@ void SystolicWS::cycle() {
   }
   /* EX instruction queue */
   if (!_ex_inst_queue.empty() && can_issue_compute(_ex_inst_queue.front())) { // execution dependecy check
-    Instruction front = _ex_inst_queue.front();
-    if (front.opcode == Opcode::GEMM || front.opcode == Opcode::GEMM_PRELOAD) {
-      assert(can_issue_compute(front));
-      if (!_compute_pipeline.empty()) {
-        /* Preload can be hided */
-        uint32_t offset = _compute_pipeline.back().compute_size;
-        offset = MAX(offset, 4);
-        if (front.opcode == Opcode::GEMM_PRELOAD) {
-          // State mul-pre
-          offset = _config.core_height;
-          _stat_systolic_preload_issue_count++;
-        }
-        front.start_cycle = _compute_pipeline.back().start_cycle + offset;
+    std::unique_ptr<Instruction> front = std::move(_ex_inst_queue.front());
+    if (front->dest_addr >= ACCUM_SPAD_BASE) {
+      if (_acc_spad.check_allocated(front->dest_addr, front->accum_spad_id)) {
+        _acc_spad.count_up(front->dest_addr, front->accum_spad_id);
       } else {
-        front.start_cycle = _core_cycle;
-        /* Preload weight to systolic array*/
-        if (front.opcode == Opcode::GEMM_PRELOAD) {
-          /* Weight preload  from buffer latecny + WEight preload latency */
-          front.start_cycle += _config.core_height + _config.core_height - 1;
-          _stat_systolic_preload_issue_count++;
-        }
-      }
-
-      front.finish_cycle = front.start_cycle + get_inst_compute_cycles(front);
-      _compute_pipeline.push(front);
-      _stat_systolic_inst_issue_count++;
-    } else if (front.opcode == Opcode::COMP || front.opcode == Opcode::SOFTMAX ||
-               front.opcode == Opcode::IM2COL || front.opcode == Opcode::LAYERNORM ||
-               front.opcode == Opcode::ADD || front.opcode == Opcode::GELU) {  // vector unit compute
-      assert(can_issue_compute(front));           // check dependencys in SRAM
-      if (!_vector_pipeline.empty()) {
-        front.start_cycle =
-            _vector_pipeline.back().start_cycle + _vector_pipeline.back().size;
-      } else {
-        front.start_cycle = _core_cycle;
-      }
-      front.finish_cycle =
-          front.start_cycle +
-          get_vector_compute_cycles(front);  // Setting IC as 1 (Might need to modify)
-      _vector_pipeline.push(front);
-
-    }
-    _ex_inst_queue.pop();
-    if (front.dest_addr >= ACCUM_SPAD_BASE) {
-      if (_acc_spad.check_allocated(front.dest_addr, front.accum_spad_id)) {
-        _acc_spad.count_up(front.dest_addr, front.accum_spad_id);
-      } else {
-        int ret = _acc_spad.prefetch(front.dest_addr, front.accum_spad_id, front.size, front.zero_init? front.size : 1);
+        int ret = _acc_spad.prefetch(front->dest_addr, front->accum_spad_id, front->size, front->zero_init? front->size : 1);
         if (!ret) {
-          spdlog::error("Destination allocated: {} Size remain: {}", _acc_spad.check_allocated(front.dest_addr, front.accum_spad_id), _acc_spad.check_allocated(front.dest_addr, front.accum_spad_id));
-          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
-          _acc_spad.print_all(front.accum_spad_id);
+          spdlog::error("Destination allocated: {} Size remain: {}", _acc_spad.check_allocated(front->dest_addr, front->accum_spad_id), _acc_spad.check_allocated(front->dest_addr, front->accum_spad_id));
+          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front->opcode, front->dest_addr, front->size*32);
+          _acc_spad.print_all(front->accum_spad_id);
           std::exit(EXIT_FAILURE);
         }
       }
     } else {
-      if (_spad.check_allocated(front.dest_addr, front.spad_id)) {
-        _spad.count_up(front.dest_addr, front.spad_id);
+      if (_spad.check_allocated(front->dest_addr, front->spad_id)) {
+        _spad.count_up(front->dest_addr, front->spad_id);
       } else {
-        int ret = _spad.prefetch(front.dest_addr, front.spad_id, front.size, front.zero_init? front.size : 1);
+        int ret = _spad.prefetch(front->dest_addr, front->spad_id, front->size, front->zero_init? front->size : 1);
         if (!ret) {
-          spdlog::error("Destination allocated: {} Size remain: {}", _spad.check_allocated(front.dest_addr, front.spad_id), _spad.check_allocated(front.dest_addr, front.spad_id));
-          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front.opcode, front.dest_addr, front.size*32);
-          _spad.print_all(front.spad_id);
+          spdlog::error("Destination allocated: {} Size remain: {}", _spad.check_allocated(front->dest_addr, front->spad_id), _spad.check_allocated(front->dest_addr, front->spad_id));
+          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front->opcode, front->dest_addr, front->size*32);
+          _spad.print_all(front->spad_id);
           std::exit(EXIT_FAILURE);
         }
       }
     }
+    if (front->opcode == Opcode::GEMM || front->opcode == Opcode::GEMM_PRELOAD) {
+      assert(can_issue_compute(front));
+      if (!_compute_pipeline.empty()) {
+        /* Preload can be hided */
+        uint32_t offset = _compute_pipeline.back()->compute_size;
+        offset = MAX(offset, 4);
+        if (front->opcode == Opcode::GEMM_PRELOAD) {
+          // State mul-pre
+          offset = _config.core_height;
+          _stat_systolic_preload_issue_count++;
+        }
+        front->start_cycle = _compute_pipeline.back()->start_cycle + offset;
+      } else {
+        front->start_cycle = _core_cycle;
+        /* Preload weight to systolic array*/
+        if (front->opcode == Opcode::GEMM_PRELOAD) {
+          /* Weight preload  from buffer latecny + WEight preload latency */
+          front->start_cycle += _config.core_height + _config.core_height - 1;
+          _stat_systolic_preload_issue_count++;
+        }
+      }
+
+      front->finish_cycle = front->start_cycle + get_inst_compute_cycles(front);
+      _compute_pipeline.push(std::move(front));
+      _stat_systolic_inst_issue_count++;
+    } else if (front->opcode == Opcode::COMP || front->opcode == Opcode::SOFTMAX ||
+               front->opcode == Opcode::IM2COL || front->opcode == Opcode::LAYERNORM ||
+               front->opcode == Opcode::ADD || front->opcode == Opcode::GELU) {  // vector unit compute
+      assert(can_issue_compute(front));           // check dependencys in SRAM
+      if (!_vector_pipeline.empty()) {
+        front->start_cycle =
+            _vector_pipeline.back()->start_cycle + _vector_pipeline.back()->size;
+      } else {
+        front->start_cycle = _core_cycle;
+      }
+      front->finish_cycle =
+          front->start_cycle +
+          get_vector_compute_cycles(front);  // Setting IC as 1 (Might need to modify)
+      _vector_pipeline.push(std::move(front));
+
+    }
+    _ex_inst_queue.pop();
   }
 
   if (_compute_pipeline.empty() && _ex_inst_queue.empty()) {
@@ -249,7 +241,7 @@ void SystolicWS::cycle() {
       _store_memory_cycle++;
     } else {
       _load_memory_cycle++;
-      switch (_ex_inst_queue.front().opcode) {
+      switch (_ex_inst_queue.front()->opcode) {
         case Opcode::GEMM:
         case Opcode::GEMM_PRELOAD:
           _compute_memory_stall_cycle++;
@@ -271,7 +263,7 @@ void SystolicWS::cycle() {
   } else if (!_compute_pipeline.empty()) {
       _stat_matmul_cycle++;
   } else {
-    switch (_vector_pipeline.front().opcode) {
+    switch (_vector_pipeline.front()->opcode) {
       case Opcode::LAYERNORM:
         _stat_layernorm_cycle++;
         break;
@@ -293,8 +285,8 @@ void SystolicWS::cycle() {
   Core::cycle();
 }
 
-cycle_type SystolicWS::get_inst_compute_cycles(Instruction inst) {
-  return _config.core_height + _config.core_width - 2 + MAX(inst.compute_size, 4);
+cycle_type SystolicWS::get_inst_compute_cycles(std::unique_ptr<Instruction>& inst) {
+  return _config.core_height + _config.core_width - 2 + MAX(inst->compute_size, 4);
 }
 
 cycle_type SystolicWS::calculate_add_tree_iterations(uint32_t vector_size) {
@@ -319,20 +311,20 @@ cycle_type SystolicWS::calculate_vector_op_iterations(uint32_t vector_size) {
   return ret;
 }
 
-cycle_type SystolicWS::get_vector_compute_cycles(Instruction &inst) {
-  cycle_type vec_op_iter = calculate_vector_op_iterations(inst.compute_size);
-  cycle_type add_tree_iter = calculate_add_tree_iterations(inst.compute_size);
+cycle_type SystolicWS::get_vector_compute_cycles(std::unique_ptr<Instruction>& inst) {
+  cycle_type vec_op_iter = calculate_vector_op_iterations(inst->compute_size);
+  cycle_type add_tree_iter = calculate_add_tree_iterations(inst->compute_size);
   cycle_type add_tree, scalar_ops, vector_ops;
-  switch (inst.opcode) {
+  switch (inst->opcode) {
     case Opcode::LAYERNORM:
       add_tree = 2 * add_tree_iter * _config.add_tree_latency;
       scalar_ops = 2 * _config.scalar_mul_latency + _config.scalar_sqrt_latency;
       // 1 addition, 1 subtraction, 1 division, 2 multiplication.
-      vector_ops = vec_op_iter * (2 * _config.add_latency + 3 * _config.mul_latency) * inst.tile_m;
+      vector_ops = vec_op_iter * (2 * _config.add_latency + 3 * _config.mul_latency) * inst->tile_m;
       return add_tree + scalar_ops + vector_ops;
     case Opcode::SOFTMAX:
       // 1 add tree, 1 compare tree
-      add_tree = 2 * add_tree_iter * _config.add_tree_latency * inst.tile_m;
+      add_tree = 2 * add_tree_iter * _config.add_tree_latency * inst->tile_m;
       vector_ops =
         vec_op_iter * (_config.add_latency + _config.exp_latency + _config.mul_latency);
       return add_tree + vector_ops;
@@ -343,7 +335,7 @@ cycle_type SystolicWS::get_vector_compute_cycles(Instruction &inst) {
     case Opcode::COMP:
       return vec_op_iter * 1;
   }
-  spdlog::info("not configured operation. {}", inst.id);
+  spdlog::info("not configured operation. {}", inst->id);
   // assert(0);
   return 0;
 }

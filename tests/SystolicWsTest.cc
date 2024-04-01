@@ -24,11 +24,11 @@ TEST(SystolicWSTileExecutionTest, BasicAssertions) {
             .spad_id = 0,
             .accum_spad_id = 0});
           
-  tile->instructions.push_back(
+  tile->instructions.push_back(std::make_unique<Instruction>(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
                   .compute_size = 8,
-                  .src_addrs = std::vector<addr_type>{}});
+                  .src_addrs = std::vector<addr_type>{}}));
 
   core.issue(std::move(tile));
   cycle_type cycle = 0;
@@ -65,16 +65,16 @@ TEST(SystolicWSTwoGemmExecutionTest, BasicAssertions) {
             .spad_id = 0,
             .accum_spad_id = 0});
 
-  tile->instructions.push_back(
+  tile->instructions.push_back(std::make_unique<Instruction>(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
                   .compute_size = 8,
-                  .src_addrs = std::vector<addr_type>{}});
-  tile->instructions.push_back(
+                  .src_addrs = std::vector<addr_type>{}}));
+  tile->instructions.push_back(std::make_unique<Instruction>(
       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                   .dest_addr = ACCUM_SPAD_BASE,
                   .compute_size = 8,
-                  .src_addrs = std::vector<addr_type>{}});
+                  .src_addrs = std::vector<addr_type>{}}));
 
   core.issue(std::move(tile));
   cycle_type cycle = 0;

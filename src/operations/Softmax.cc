@@ -68,29 +68,29 @@ void Softmax::initialize_instructions(Tile* tile, Mapping mapping, uint32_t toke
     for (offset=0; offset<tokens*_dk*_config.precision; offset+=_config.dram_req_size)
         dram_addrs.insert(token_offset*_dk*_config.precision + offset);
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_addrs.begin(), dram_addrs.end()),
         .operand_id = _INPUT_OPERAND,  // query
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::SOFTMAX,
         .dest_addr = sram_base,
         .size = _dk * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base},
         .tile_m = tokens,
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_addrs.begin(), dram_addrs.end()),
         .operand_id = _OUTPUT_OPERAND,
-    });
+    }));
 }
 
 void Softmax::calculate_loops() {
