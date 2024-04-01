@@ -15,7 +15,7 @@ class Scheduler {
     virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size);
     virtual Tile get_tile(uint32_t core_id);
     virtual void issue_tile_per_core();
-    virtual void issue_tile_per_core(std::vector<uint32_t>& allowed_cpu, int offset);
+    virtual void issue_tile_per_core(std::vector<uint32_t>& allowed_cpu, int offset, uint32_t partition_id);
     virtual bool is_accum_tile(uint32_t core_id, int index);
     virtual void finish_tile(uint32_t core_id, Tile tile);
     virtual bool empty();
@@ -39,8 +39,9 @@ class Scheduler {
     const cycle_type* _core_cycle;
     const uint64_t* _core_time;
     std::map<uint32_t, std::vector<uint32_t>> _partition_map;
+    std::map<uint32_t, uint32_t> _cpu_to_partition;
     std::deque<Request> _request_queue;
-    std::deque<Tile> _executable_tile_queue;
+    std::vector<std::deque<Tile>> _executable_tile_queue;
     std::vector<std::deque<Tile>> _core_executable_tile_queue;
     uint32_t _nr_layer = 0; // For layer round-robin
     SimulationConfig _config;
@@ -48,6 +49,7 @@ class Scheduler {
     robin_hood::unordered_map<uint32_t, LayerStat> _active_layers_map;
     virtual void refresh_status();
     uint32_t count_active_layers();
+    uint32_t cpu_to_partition(uint32_t cpu);
 };
 
 class TimeMultiplexScheduler : public Scheduler {
