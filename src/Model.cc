@@ -110,12 +110,6 @@ void Model::initialize_model() {
 
 void Model::set_layer_finish(uint32_t id) {
   _operation_map[id]->set_finish();
-  for(auto iter = _executable_layer.begin(); iter != _executable_layer.end(); iter ++) {
-    if(id == (*iter)->get_id()) {
-      _executable_layer.erase(iter);
-      break;
-    }
-  }
   for(auto op_id : _operation_map[id]->get_child_nodes()) {
     Operation* op = _operation_map[op_id].get();
     if(op->check_executable() && !check_exist_in_exeutable(op->get_id()))  {
@@ -130,7 +124,12 @@ uint32_t Model::executable_layer_size() {
 }
 
 Operation* Model::get_executable_tile() {
-  return _executable_layer.front();
+  Operation* op = nullptr;
+  if (_executable_layer.size()){
+    op = _executable_layer.front();
+    _executable_layer.erase(_executable_layer.begin());
+  }
+  return op;
 }
 
 void Model::update_start_time(uint64_t start_time) {
