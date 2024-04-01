@@ -163,30 +163,30 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         }
         // -- load --
         // MOVIN query, key, value
-        tile->instructions.push_back(Instruction{
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::MOVIN,
             .dest_addr = sram_q_ofs,
             .size = (uint32_t)dram_query_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_query_addrs.begin(), dram_query_addrs.end()),
             .operand_id = _INPUT_OPERAND,  // query
-        });
-        tile->instructions.push_back(Instruction{
+        }));
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::MOVIN,
             .dest_addr = sram_k_ofs,
             .size = (uint32_t)dram_key_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_key_addrs.begin(), dram_key_addrs.end()),
             .operand_id = _INPUT_OPERAND + 1,  // key
-        });
-        tile->instructions.push_back(Instruction{
+        }));
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::MOVIN,
             .dest_addr = sram_v_ofs,
             .size = (uint32_t)dram_value_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_value_addrs.begin(), dram_value_addrs.end()),
             .operand_id = _INPUT_OPERAND + 2,  // value
-        });
+        }));
         // -- compute --
         // GEMM (q*k -> l)
-        tile->instructions.push_back(Instruction{
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
@@ -196,10 +196,10 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .tile_m = seq_len,
             .tile_k = _dk,
             .tile_n = q_len,
-        });
+        }));
         // Softmax (l -> l)
 
-        tile->instructions.push_back(Instruction{
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::SOFTMAX,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
@@ -207,11 +207,11 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .src_addrs = std::vector<addr_type>{sram_l_ofs},
             .tile_m = q_len,
             .src_from_accum = true,
-        });
+        }));
 
         // [ ] change output offset
         // GEMM (l*v -> acc)
-        tile->instructions.push_back(Instruction{
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
             .size = q_len * _dk * _config.precision / _config.dram_req_size,
@@ -222,16 +222,16 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .tile_k = seq_len,
             .tile_n = q_len,
             .src_from_accum = true,
-        });
+        }));
 
         // MOVOUT
-        tile->instructions.push_back(Instruction{
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::MOVOUT,
             .dest_addr = sram_l_ofs,
             .size = (uint32_t)dram_output_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_output_addrs.begin(), dram_output_addrs.end()),
             .operand_id = _OUTPUT_OPERAND,
-        });
+        }));
     }
 }
 

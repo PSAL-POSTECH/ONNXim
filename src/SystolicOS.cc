@@ -8,6 +8,6 @@ void SystolicOS::cycle() {
   assert(0);
 }
 
-cycle_type SystolicOS::get_inst_compute_cycles(Instruction inst) {
-  return _config.core_height + _config.core_width - 2 + inst.size;
+cycle_type SystolicOS::get_inst_compute_cycles(std::unique_ptr<Instruction>& inst) {
+  return _config.core_height + _config.core_width - 2 + inst->size;
 }

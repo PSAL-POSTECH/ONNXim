@@ -65,45 +65,45 @@ void BiasGelu::initialize_instructions(Tile* tile, Mapping mapping, uint32_t tok
         dram_skip_addrs.insert(second_addr + _seq*_dk*_config.precision+ offset);
 
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_addrs.begin(), dram_addrs.end()),
         .operand_id = _INPUT_OPERAND,  // query
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_bias_base,
         .size = (uint32_t)dram_skip_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_skip_addrs.begin(), dram_skip_addrs.end()),
         .operand_id = _INPUT_OPERAND+1,  // query
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::ADD,
         .dest_addr = sram_base,
         .size = _dk * tokens * _config.precision / _config.dram_req_size,
         .compute_size = _dk * tokens * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base, sram_bias_base},
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::GELU,
         .dest_addr = sram_base,
         .size = _dk * tokens * _config.precision / _config.dram_req_size,
         .compute_size = _dk * tokens * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base},
-    });
+    }));
 
-    tile->instructions.push_back(Instruction{
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,
         .size = (uint32_t)dram_output_addrs.size(),
         .src_addrs = std::vector<addr_type>(dram_output_addrs.begin(), dram_output_addrs.end()),
         .operand_id = _OUTPUT_OPERAND,
-    });
+    }));
 }
 
 void BiasGelu::calculate_loops() {

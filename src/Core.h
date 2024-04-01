@@ -28,8 +28,8 @@ class Core {
   virtual cycle_type get_compute_cycles() { return _stat_compute_cycle; }
 
  protected:
-  virtual bool can_issue_compute(Instruction inst);
-  virtual cycle_type get_inst_compute_cycles(Instruction inst) = 0;
+  virtual bool can_issue_compute(std::unique_ptr<Instruction>& inst);
+  virtual cycle_type get_inst_compute_cycles(std::unique_ptr<Instruction>& inst) = 0;
 
   const uint32_t _id;
   const SimulationConfig _config;
@@ -66,12 +66,12 @@ class Core {
   std::deque<std::unique_ptr<Tile>> _tiles;
   std::queue<std::unique_ptr<Tile>> _finished_tiles;
 
-  std::queue<Instruction> _compute_pipeline;
-  std::queue<Instruction> _vector_pipeline;
+  std::queue<std::unique_ptr<Instruction>> _compute_pipeline;
+  std::queue<std::unique_ptr<Instruction>> _vector_pipeline;
 
-  std::queue<Instruction> _ld_inst_queue;
-  std::queue<Instruction> _st_inst_queue;
-  std::queue<Instruction> _ex_inst_queue;
+  std::queue<std::unique_ptr<Instruction>> _ld_inst_queue;
+  std::queue<std::unique_ptr<Instruction>> _st_inst_queue;
+  std::queue<std::unique_ptr<Instruction>> _ex_inst_queue;
 
   std::queue<MemoryAccess*> _request_queue;
   std::queue<MemoryAccess*> _response_queue;

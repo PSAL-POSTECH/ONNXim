@@ -107,7 +107,7 @@ typedef struct {
   uint32_t R;
 
   TileStat stat;
-  std::deque<Instruction> instructions;
+  std::deque<std::unique_ptr<Instruction>> instructions;
   bool accum;
   bool skip;
   int spad_id;

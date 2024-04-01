@@ -178,12 +178,12 @@ void ConvOS::initialize_instructions(Tile* tile, Mapping mapping) {
   //         for (std::string inst : dependent_id) {
   //           tile->instructions.push_back(inst_map[inst]);
   //         }
-  //         tile->instructions.push_back(Instruction{
+  //         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
   //             .opcode = Opcode::GEMM,
   //             .tile_size = tile_size,
   //             .id = fmt::format("GEMM-{}-{}-{}-{}", tile->layer_id, c_offset,
   //                               m_offset, q_offset, p_offset),
-  //             .dependent_ids = dependent_id});
+  //             .dependent_ids = dependent_id}));
   //         tile->instructions.push_back(
   //             Instruction{.opcode = Opcode::MOVOUT,
   //                         .id = output_id,

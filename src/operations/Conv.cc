@@ -184,22 +184,22 @@ void Conv::im2col_nhwc() {
         }
       }
 
-      tile->instructions.push_back(Instruction{
+      tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
           .opcode = Opcode::MOVIN,
           .dest_addr = SPAD_BASE,
           .size = (uint32_t)dest_set.size(),
           .src_addrs = std::vector<addr_type>(src_set.begin(), src_set.end()),
-          .operand_id = _INPUT_OPERAND});
-      tile->instructions.push_back(
-          Instruction{.opcode = Opcode::IM2COL,
+          .operand_id = _INPUT_OPERAND}));
+      tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+                      .opcode = Opcode::IM2COL,
                       .dest_addr = SPAD_BASE,
-                      .size = (uint32_t)dest_set.size()});
-      tile->instructions.push_back(Instruction{
+                      .size = (uint32_t)dest_set.size()}));
+      tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
           .opcode = Opcode::MOVOUT,
           .dest_addr = SPAD_BASE,
           .size = (uint32_t)dest_set.size(),
           .src_addrs = std::vector<addr_type>(dest_set.begin(), dest_set.end()),
-          .operand_id = _INPUT_OPERAND + 4});
+          .operand_id = _INPUT_OPERAND + 4}));
 
       data_col_tmp += kernel_h * kernel_w * channels;
       w_pad += _strides[1];
