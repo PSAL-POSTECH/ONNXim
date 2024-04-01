@@ -23,12 +23,14 @@ Dummy::Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
 }
 
 void Dummy::initialize_tiles(MappingTable& mapping_table) {
-  _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
+  std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+                        .status = Tile::Status::INITIALIZED,
                         .optype="Dummy",
                         .layer_id=_id,
                         .skip = true});
-  initialize_instructions(_tiles.back(), Mapping{});
+  _tiles.push_back(std::move(tile));
+  initialize_instructions(_tiles.back().get(), Mapping{});
 }
 
-void Dummy::initialize_instructions(Tile& tile, Mapping mapping) {
+void Dummy::initialize_instructions(Tile* tile, Mapping mapping) {
 }

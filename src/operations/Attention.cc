@@ -84,39 +84,42 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
     /* Initilize tiles */
     linear_projection.has_bias = false;
     linear_projection.initialize_tiles(mapping_table);
-    std::deque<Tile> tiles = linear_projection.get_tiles();
-    for (Tile& tile : tiles) {
-        tile.layer_id = _id;
-        tile.fused_op_id = fused_op_id;
-        _tiles.push_back(tile);
+    std::deque<std::unique_ptr<Tile>>& tiles = linear_projection.get_tiles();
+    for (const auto& tile : tiles) {
+        tile->layer_id = _id;
+        tile->fused_op_id = fused_op_id;
     }
+    _tiles.insert(
+        _tiles.end(),
+        std::make_move_iterator(linear_projection.get_tiles().begin()),
+        std::make_move_iterator(linear_projection.get_tiles().end())
+    );
     fused_op_id++;
-    _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+    _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
 
     /* Fused Attention body */
     for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
         int heads_per_tile = _heads_per_tile[req_idx];
         for (int head_off=0; head_off<_nh; head_off+=heads_per_tile) {
             uint32_t remain_heads = std::min(_nh-head_off, (uint32_t)heads_per_tile);
-            auto tile = Tile{
+            std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
                 .status = Tile::Status::INITIALIZED,
                 .optype = get_name(),
                 .layer_id = _id,
                 .fused_op_id = fused_op_id++,
                 //.K = 0,
                 .accum = false,
-            };
+            });
             /* dummy mapping */
             Mapping mapping;
-            initialize_instructions(tile, mapping, head_off, heads_per_tile);
-
-            _tiles.push_back(tile);
+            _tiles.push_back(std::move(tile));
+            initialize_instructions(_tiles.back().get(), mapping, head_off, heads_per_tile);
         }
     }
 }
 
 // 일단 한 tile에는 최대 하나의 request만 있는 경우부터.
-void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_idx, int num_heads) {
+void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_idx, int num_heads) {
     // head_idx # start idx
     // num_heads
     uint32_t q_len = _q_len;
@@ -160,21 +163,21 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         }
         // -- load --
         // MOVIN query, key, value
-        tile.instructions.push_back(Instruction{
+        tile->instructions.push_back(Instruction{
             .opcode = Opcode::MOVIN,
             .dest_addr = sram_q_ofs,
             .size = (uint32_t)dram_query_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_query_addrs.begin(), dram_query_addrs.end()),
             .operand_id = _INPUT_OPERAND,  // query
         });
-        tile.instructions.push_back(Instruction{
+        tile->instructions.push_back(Instruction{
             .opcode = Opcode::MOVIN,
             .dest_addr = sram_k_ofs,
             .size = (uint32_t)dram_key_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_key_addrs.begin(), dram_key_addrs.end()),
             .operand_id = _INPUT_OPERAND + 1,  // key
         });
-        tile.instructions.push_back(Instruction{
+        tile->instructions.push_back(Instruction{
             .opcode = Opcode::MOVIN,
             .dest_addr = sram_v_ofs,
             .size = (uint32_t)dram_value_addrs.size(),
@@ -183,7 +186,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         });
         // -- compute --
         // GEMM (q*k -> l)
-        tile.instructions.push_back(Instruction{
+        tile->instructions.push_back(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
@@ -196,7 +199,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         });
         // Softmax (l -> l)
 
-        tile.instructions.push_back(Instruction{
+        tile->instructions.push_back(Instruction{
             .opcode = Opcode::SOFTMAX,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
@@ -208,7 +211,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
 
         // [ ] change output offset
         // GEMM (l*v -> acc)
-        tile.instructions.push_back(Instruction{
+        tile->instructions.push_back(Instruction{
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
             .size = q_len * _dk * _config.precision / _config.dram_req_size,
@@ -222,7 +225,7 @@ void Attention::initialize_instructions(Tile &tile, Mapping mapping, int head_id
         });
 
         // MOVOUT
-        tile.instructions.push_back(Instruction{
+        tile->instructions.push_back(Instruction{
             .opcode = Opcode::MOVOUT,
             .dest_addr = sram_l_ofs,
             .size = (uint32_t)dram_output_addrs.size(),
@@ -251,13 +254,17 @@ void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
     /* Initilize tiles */
     linear_projection.has_bias = false;
     linear_projection.initialize_tiles(mapping_table);
-    std::deque<Tile> tiles = linear_projection.get_tiles();
-    for (Tile& tile : tiles) {
-        tile.layer_id = _id;
-        tile.fused_op_id = fused_op_id;
-        _tiles.push_back(tile);
+    std::deque<std::unique_ptr<Tile>>& tiles = linear_projection.get_tiles();
+    for (const auto& tile : tiles) {
+        tile->layer_id = _id;
+        tile->fused_op_id = fused_op_id;
     }
-    _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+    _tiles.insert(
+        _tiles.end(),
+        std::make_move_iterator(linear_projection.get_tiles().begin()),
+        std::make_move_iterator(linear_projection.get_tiles().end())
+    );
+    _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
     fused_op_id++;
     std::vector<uint32_t> single_head_query_shape = std::vector<uint32_t>{_q_len, _dk};
     std::vector<uint32_t> single_head_key_shape = std::vector<uint32_t>{_dk, _seq};
@@ -273,38 +280,50 @@ void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
             /* Todo. dram addr */
             key_query.has_bias = false;
             key_query.initialize_tiles(mapping_table);
-            std::deque<Tile> key_query_tiles = key_query.get_tiles();
-            for (Tile& tile : key_query_tiles) {
-                tile.layer_id = _id;
-                tile.fused_op_id = fused_op_id;
-                _tiles.push_back(tile);
+            std::deque<std::unique_ptr<Tile>>& key_query_tiles = key_query.get_tiles();
+            for (const auto& tile : key_query_tiles) {
+                tile->layer_id = _id;
+                tile->fused_op_id = fused_op_id;
             }
-            _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+            _tiles.insert(
+                _tiles.end(),
+                std::make_move_iterator(key_query.get_tiles().begin()),
+                std::make_move_iterator(key_query.get_tiles().end())
+            );
+            _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
             fused_op_id++;
 
             /* Softmax */
             Softmax attention_score = Softmax(_config, mapping_table, query_key_shape);
             /* Todo. dram addr */
             attention_score.initialize_tiles(mapping_table);
-            std::deque<Tile> attention_score_tiles = key_query.get_tiles();
-            for (Tile& tile : attention_score_tiles) {
-                tile.layer_id = _id;
-                _tiles.push_back(tile);
+            std::deque<std::unique_ptr<Tile>>& attention_score_tiles = key_query.get_tiles();
+            for (const auto& tile : attention_score_tiles) {
+                tile->layer_id = _id;
             }
-            _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+            _tiles.insert(
+                _tiles.end(),
+                std::make_move_iterator(key_query.get_tiles().begin()),
+                std::make_move_iterator(key_query.get_tiles().end())
+            );
+            _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
 
             /* attention x value */
             GemmWS attention = GemmWS(_config, mapping_table, query_key_shape, single_head_value_shape, single_output_shape);
             /* Todo. dram addr */
             attention.has_bias = false;
             attention.initialize_tiles(mapping_table);
-            std::deque<Tile> attention_tiles = attention.get_tiles();
-            for (Tile& tile : attention_tiles) {
-                tile.layer_id = _id;
-                tile.fused_op_id = fused_op_id;
-                _tiles.push_back(tile);
+            std::deque<std::unique_ptr<Tile>>& attention_tiles = attention.get_tiles();
+            for (const auto& tile : attention_tiles) {
+                tile->layer_id = _id;
+                tile->fused_op_id = fused_op_id;
             }
-            _tiles.push_back(Tile{.status = Tile::Status::BAR, .layer_id = _id});
+            _tiles.insert(
+                _tiles.end(),
+                std::make_move_iterator(attention.get_tiles().begin()),
+                std::make_move_iterator(attention.get_tiles().end())
+            );
+            _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
             fused_op_id++;
         }
     }

@@ -42,14 +42,16 @@ void ConvOS::initialize_tiles(MappingTable& mapping_table) {
     for (uint32_t tile_q = 0; tile_q < mapping.tile_out_loop.Q; tile_q++) {
       for (uint32_t tile_p = 0; tile_p < mapping.tile_out_loop.P; tile_p++) {
         for (uint32_t tile_m = 0; tile_m < mapping.tile_out_loop.M; tile_m++) {
-          _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
+          std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+                                .status = Tile::Status::INITIALIZED,
                                 .optype = "Conv",
                                 .layer_id = _id,
                                 .batch = N,
                                 .Q = tile_q,
                                 .P = tile_p,
                                 .M = tile_m});
-          initialize_instructions(_tiles.back(), mapping);
+          _tiles.push_back(std::move(tile));
+          initialize_instructions(_tiles.back().get(), mapping);
         }
       }
     }
@@ -57,15 +59,15 @@ void ConvOS::initialize_tiles(MappingTable& mapping_table) {
   assert(_tiles.size() > 0);
 }
 
-void ConvOS::initialize_instructions(Tile& tile, Mapping mapping) {
+void ConvOS::initialize_instructions(Tile* tile, Mapping mapping) {
   // std::vector<uint32_t> output_shape = get_output(0)->get_dims();
   // std::vector<uint32_t> input_shape = get_input(0)->get_dims();
   // std::vector<uint32_t> weight_shape = get_input(1)->get_dims();
   // uint32_t tile_size =
   //     mapping.tile_in_loop.C * mapping.tile_in_loop.R * mapping.tile_in_loop.S;
-  // int tout_m_offset = tile.M * mapping.tile_in_loop.M;
-  // int tout_q_offset = tile.Q * mapping.tile_in_loop.Q;
-  // int tout_p_offset = tile.P * mapping.tile_in_loop.P;
+  // int tout_m_offset = tile->M * mapping.tile_in_loop.M;
+  // int tout_q_offset = tile->Q * mapping.tile_in_loop.Q;
+  // int tout_p_offset = tile->P * mapping.tile_in_loop.P;
 
   // robin_hood::unordered_map<std::string, Instruction> inst_map;
 
@@ -88,7 +90,7 @@ void ConvOS::initialize_instructions(Tile& tile, Mapping mapping) {
   //       }
   //     }
   //     std::string id =
-  //         fmt::format("WEIGHT-{}-{}-{}", tile.layer_id, c_offset, m_offset);
+  //         fmt::format("WEIGHT-{}-{}-{}", tile->layer_id, c_offset, m_offset);
   //     inst_map[id] = Instruction{.opcode = Opcode::MOVIN,
   //                                .id = id,
   //                                .addrs = std::vector<addr_type>(
@@ -116,7 +118,7 @@ void ConvOS::initialize_instructions(Tile& tile, Mapping mapping) {
   //                     IW >= input_shape[Wdim]) {
   //                   continue;
   //                 }
-  //                 input_set.insert(make_activation_address(tile.batch, IH, IW,
+  //                 input_set.insert(make_activation_address(tile->batch, IH, IW,
   //                                                          C, input_shape));
   //               }
   //             }
@@ -124,7 +126,7 @@ void ConvOS::initialize_instructions(Tile& tile, Mapping mapping) {
   //         }
   //       }
   //       assert(input_set.size() > 0);
-  //       std::string id = fmt::format("ACT-{}-{}-{}-{}", tile.layer_id, c_offset,
+  //       std::string id = fmt::format("ACT-{}-{}-{}-{}", tile->layer_id, c_offset,
   //                                    q_offset, p_offset);
   //       inst_map[id] = Instruction{.opcode = Opcode::MOVIN,
   //                                  .id = id,
@@ -150,19 +152,19 @@ void ConvOS::initialize_instructions(Tile& tile, Mapping mapping) {
   //               int Q = q_offset + spatial_q;
   //               int P = p_offset + spatial_p;
   //               output_set.insert(
-  //                   make_activation_address(tile.batch, Q, P, M, output_shape));
+  //                   make_activation_address(tile->batch, Q, P, M, output_shape));
   //             }
   //           }
   //         }
   //         std::string output_id = fmt::format(
-  //             "OUTPUT-{}-{}-{}-{}-{}", tile.layer_id, tout_C, Ms, Qs, Ps);
+  //             "OUTPUT-{}-{}-{}-{}-{}", tile->layer_id, tout_C, Ms, Qs, Ps);
   //         std::vector<std::string> dependent_id = std::vector<std::string>{
-  //             fmt::format("WEIGHT-{}-{}-{}", tile.layer_id, c_offset, m_offset),
-  //             fmt::format("ACT-{}-{}-{}-{}", tile.layer_id, c_offset, q_offset,
+  //             fmt::format("WEIGHT-{}-{}-{}", tile->layer_id, c_offset, m_offset),
+  //             fmt::format("ACT-{}-{}-{}-{}", tile->layer_id, c_offset, q_offset,
   //                         p_offset)};
   //         if (tout_C > 0) {
   //           std::string prev_output_id =
-  //               fmt::format("OUTPUT-{}-{}-{}-{}-{}", tile.layer_id,
+  //               fmt::format("OUTPUT-{}-{}-{}-{}-{}", tile->layer_id,
   //                           (tout_C - 1) * mapping.tile_in_loop.C, m_offset,
   //                           q_offset, p_offset);
   //           inst_map[prev_output_id] =
@@ -174,15 +176,15 @@ void ConvOS::initialize_instructions(Tile& tile, Mapping mapping) {
   //           dependent_id.push_back(prev_output_id);
   //         }
   //         for (std::string inst : dependent_id) {
-  //           tile.instructions.push_back(inst_map[inst]);
+  //           tile->instructions.push_back(inst_map[inst]);
   //         }
-  //         tile.instructions.push_back(Instruction{
+  //         tile->instructions.push_back(Instruction{
   //             .opcode = Opcode::GEMM,
   //             .tile_size = tile_size,
-  //             .id = fmt::format("GEMM-{}-{}-{}-{}", tile.layer_id, c_offset,
+  //             .id = fmt::format("GEMM-{}-{}-{}-{}", tile->layer_id, c_offset,
   //                               m_offset, q_offset, p_offset),
   //             .dependent_ids = dependent_id});
-  //         tile.instructions.push_back(
+  //         tile->instructions.push_back(
   //             Instruction{.opcode = Opcode::MOVOUT,
   //                         .id = output_id,
   //                         .addrs = std::vector<addr_type>(output_set.begin(),

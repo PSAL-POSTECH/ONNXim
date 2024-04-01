@@ -37,8 +37,8 @@ bool Core::can_issue(bool is_accum_tile) {
   return _tiles.size() < 1;  // double buffer
 }
 
-void Core::issue(Tile op) {
-  op.stat = {.start_cycle = _core_cycle,
+void Core::issue(std::unique_ptr<Tile> op) {
+  op->stat = {.start_cycle = _core_cycle,
              .cycles = 0,
              .compute_cycles = 0,
              .memory_stall = 0,
@@ -47,33 +47,33 @@ void Core::issue(Tile op) {
   /* Double buffer */
   _current_spad = (_current_spad + 1) % 2;
   _spad.flush(_current_spad);
-  op.spad_id = _current_spad;
-  if (!op.accum || !(_current_layer_id == op.layer_id && _current_fused_op_id == op.fused_op_id)) {
+  op->spad_id = _current_spad;
+  if (!op->accum || !(_current_layer_id == op->layer_id && _current_fused_op_id == op->fused_op_id)) {
     /* Accumeulate tile uses same acc spad buffer */
     _current_acc_spad = (_current_acc_spad + 1) % 2;
     _acc_spad.flush(_current_acc_spad);
   }
-  _current_layer_id = op.layer_id;
-  _current_fused_op_id = op.fused_op_id;
+  _current_layer_id = op->layer_id;
+  _current_fused_op_id = op->fused_op_id;
 
-  op.accum_spad_id = _current_acc_spad;
-  op.status = Tile::Status::RUNNING;
-  if (op.skip) {
-    op.status = Tile::Status::FINISH;
-    _finished_tiles.push(op);
+  op->accum_spad_id = _current_acc_spad;
+  op->status = Tile::Status::RUNNING;
+  if (op->skip) {
+    op->status = Tile::Status::FINISH;
+    _finished_tiles.push(std::move(op));
     return;
   }
-  if (_running_layer != op.layer_id) {
-    _running_layer = op.layer_id;
+  if (_running_layer != op->layer_id) {
+    _running_layer = op->layer_id;
   }
-  _tiles.push_back(op);
+  _tiles.push_back(std::move(op));
 }
 
-Tile Core::pop_finished_tile() {
-  Tile result;
-  result.status = Tile::Status::EMPTY;
+std::unique_ptr<Tile> Core::pop_finished_tile() {
+  std::unique_ptr<Tile> result = std::make_unique<Tile>(Tile{});
+  result->status = Tile::Status::EMPTY;
   if (_finished_tiles.size() > 0) {
-    result = _finished_tiles.front();
+    result = std::move(_finished_tiles.front());
     _finished_tiles.pop();
   }
   return result;
@@ -84,17 +84,17 @@ void Core::cycle() {
   _spad.cycle();
   _acc_spad.cycle();
   for (int i = 0; i < _tiles.size(); i++) {
-    Instruction inst = _tiles[i].instructions.front();
-    inst.spad_id = _tiles[i].spad_id;
-    inst.accum_spad_id = _tiles[i].accum_spad_id;
+    Instruction& inst = _tiles[i]->instructions.front();
+    inst.spad_id = _tiles[i]->spad_id;
+    inst.accum_spad_id = _tiles[i]->accum_spad_id;
     Sram *buffer;
     int buffer_id;
     if (inst.dest_addr >= ACCUM_SPAD_BASE) {
       buffer = &_acc_spad;
-      buffer_id = _tiles[i].accum_spad_id;
+      buffer_id = _tiles[i]->accum_spad_id;
     } else {
       buffer = &_spad;
-      buffer_id = _tiles[i].spad_id;
+      buffer_id = _tiles[i]->spad_id;
     }
     bool issued = false;
     if (inst.opcode == Opcode::MOVIN) {
@@ -128,13 +128,13 @@ void Core::cycle() {
       }
     }
     if (issued) {
-      _tiles[i].instructions.pop_front();
-      if (_tiles[i].instructions.empty()) {
-        _tiles[i].status = Tile::Status::FINISH;
-        _tiles[i].stat.cycles = _core_cycle - _tiles[i].stat.start_cycle;
-        _tiles[i].stat.memory_stall =
-            _tiles[i].stat.cycles - _tiles[i].stat.compute_cycles;
-        _finished_tiles.push(_tiles[i]);
+      _tiles[i]->instructions.pop_front();
+      if (_tiles[i]->instructions.empty()) {
+        _tiles[i]->status = Tile::Status::FINISH;
+        _tiles[i]->stat.cycles = _core_cycle - _tiles[i]->stat.start_cycle;
+        _tiles[i]->stat.memory_stall =
+            _tiles[i]->stat.cycles - _tiles[i]->stat.compute_cycles;
+        _finished_tiles.push(std::move(_tiles[i]));
         _tiles.pop_front();
       }
       break;

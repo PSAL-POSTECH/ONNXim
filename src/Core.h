@@ -15,8 +15,8 @@ class Core {
   virtual ~Core() = default;
   virtual bool running();
   virtual bool can_issue(bool is_accum_tile=false);
-  virtual void issue(Tile tile);
-  virtual Tile pop_finished_tile();
+  virtual void issue(std::unique_ptr<Tile> tile);
+  virtual std::unique_ptr<Tile> pop_finished_tile();
 
   virtual void cycle();
 
@@ -63,8 +63,8 @@ class Core {
   cycle_type _stat_softmax_cycle;
 
   int _running_layer;
-  std::deque<Tile> _tiles;
-  std::queue<Tile> _finished_tiles;
+  std::deque<std::unique_ptr<Tile>> _tiles;
+  std::queue<std::unique_ptr<Tile>> _finished_tiles;
 
   std::queue<Instruction> _compute_pipeline;
   std::queue<Instruction> _vector_pipeline;

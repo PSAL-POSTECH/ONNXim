@@ -56,7 +56,7 @@ MaxPool::MaxPool(SimulationConfig config, Model* model,
   }
 
   _tiles.push_back(
-      Tile{.status = Tile::Status::INITIALIZED, .layer_id = _id, .batch = 0, .skip = true});
+      std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED, .layer_id = _id, .batch = 0, .skip = true}));
 }
 
 MaxPool::MaxPool(const MaxPool& src) : Operation(src) {
@@ -78,20 +78,20 @@ void MaxPool::initialize_tiles(MappingTable& mapping_table) {
     for (uint32_t C = 0; C < input_shape[Cdim]; C++) {
       for (uint32_t H = 0; H < h_shift; H++) {
         for (uint32_t W = 0; W < w_shift; W++) {
-          _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
+          _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
                                 .optype = "MaxPool",
                                 .layer_id = _id,
                                 .batch = N,
                                 .Q = H,
                                 .P = W,
                                 .C = C,
-                                .skip = true});
-          initialize_instructions(_tiles.back(), Mapping{});
+                                .skip = true}));
+          initialize_instructions(_tiles.back().get(), Mapping{});
         }
       } 
     }
   }
 }
 
-void MaxPool::initialize_instructions(Tile& tile, Mapping mapping) {
+void MaxPool::initialize_instructions(Tile* tile, Mapping mapping) {
 }

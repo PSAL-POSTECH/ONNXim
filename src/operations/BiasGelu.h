@@ -17,5 +17,5 @@ public:
 
     void calculate_loops();
     void initialize_tiles(MappingTable& mapping_table) override;
-    void initialize_instructions(Tile& tile, Mapping mapping, uint32_t token_offset, uint32_t tokens);
+    void initialize_instructions(Tile* tile, Mapping mapping, uint32_t token_offset, uint32_t tokens);
 };

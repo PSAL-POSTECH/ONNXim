@@ -23,7 +23,7 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
   if (_group != 1) {
     im2col_nhwc();
     for (uint32_t group = 0; group < _group; group++) {
-      _tiles.push_back(Tile{.status = Tile::Status::INITIALIZED,
+      std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
                             .optype = "Matmul",
                             .layer_id = _id,
                             .batch = 0,
@@ -34,7 +34,8 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
                             .S = 0,
                             .R = 0,
                             .accum = false});
-      initialize_matmul_instructions(_tiles.back());
+      _tiles.push_back(std::move(tile));
+      initialize_matmul_instructions(_tiles.back().get());
       spdlog::info("Group convolution {}", _id);
     }
     return;
@@ -75,21 +76,23 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
                 if (C == 0 && R == 0 && S == 0) {
                   core_id = (core_id + 1) % _config.num_cores;
                 }
-                _tiles.push_back(
-                    Tile{.status = Tile::Status::INITIALIZED,
-                         .optype = "Conv",
-                         .layer_id = _id,
-                         .batch = N,
-                         .Q = Q,
-                         .P = P,
-                         .M = M,
-                         .C = C,
-                         .S = S,
-                         .R = R,
-                         .accum = (C != 0 || R != 0 ||
-                                   S != 0),
-                         .core_id = core_id}); /* Accum input channel data*/
-                initialize_instructions(_tiles.back(), mapping);
+                std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile {
+                  .status = Tile::Status::INITIALIZED,
+                  .optype = "Conv",
+                  .layer_id = _id,
+                  .batch = N,
+                  .Q = Q,
+                  .P = P,
+                  .M = M,
+                  .C = C,
+                  .S = S,
+                  .R = R,
+                  .accum = (C != 0 || R != 0 ||
+                            S != 0),
+                  .core_id = core_id
+                });
+                _tiles.push_back(std::move(tile)); /* Accum input channel data*/
+                initialize_instructions(_tiles.back().get(), mapping);
               }
             }
           }
@@ -100,17 +103,17 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
   assert(_tiles.size() > 0);
 }
 
-void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
+void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
   std::vector<uint32_t> output_shape = _conv_out_shape;
   int sram_allocation = 0;
   int act_allocation = 0;
-  int tout_n_offset = tile.batch * mapping.tile_in_loop.N;
-  int tout_m_offset = tile.M * mapping.tile_in_loop.M;
-  int tout_q_offset = tile.Q * mapping.tile_in_loop.Q;
-  int tout_p_offset = tile.P * mapping.tile_in_loop.P;
-  int tout_c_offset = tile.C * mapping.tile_in_loop.C;
-  int tout_s_offset = tile.S * mapping.tile_in_loop.S;
-  int tout_r_offset = tile.R * mapping.tile_in_loop.R;
+  int tout_n_offset = tile->batch * mapping.tile_in_loop.N;
+  int tout_m_offset = tile->M * mapping.tile_in_loop.M;
+  int tout_q_offset = tile->Q * mapping.tile_in_loop.Q;
+  int tout_p_offset = tile->P * mapping.tile_in_loop.P;
+  int tout_c_offset = tile->C * mapping.tile_in_loop.C;
+  int tout_s_offset = tile->S * mapping.tile_in_loop.S;
+  int tout_r_offset = tile->R * mapping.tile_in_loop.R;
   int input_h_size = (mapping.tile_in_loop.Q - 1) * _strides[0] +
                      _dilations[0] * (_kernel_shape[0] - 1) + 1;
   int input_w_size = (mapping.tile_in_loop.P - 1) * _strides[1] +
@@ -129,7 +132,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
 
   /*MOVIN Bias*/
   
-  // if (_bathnorm_fused && tile.C == 0 && tile.S == 0 && tile.R == 0) {
+  // if (_bathnorm_fused && tile->C == 0 && tile->S == 0 && tile->R == 0) {
   //   for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
   //     int N = tout_n_offset + Ns;
   //     for (int Qs = 0; Qs < mapping.tile_in_loop.Q; Qs++) {
@@ -158,7 +161,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
   //             bias_dram_addrs.insert(
   //                 make_activation_address(0, 0, 0, M, output_shape));
   //           } 
-  //           tile.instructions.push_back(
+  //           tile->instructions.push_back(
   //               Instruction{.opcode = Opcode::MOVIN,
   //                           .dest_addr = out_sp_addr,
   //                           .size = (uint32_t)bias_dram_addrs.size() * p_loop,
@@ -172,7 +175,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
   // }
 
   // /*MOVIN Skip-connection*/
-  // if (_skip_connection_fused && tile.C == 0 && tile.S == 0 && tile.R == 0) {
+  // if (_skip_connection_fused && tile->C == 0 && tile->S == 0 && tile->R == 0) {
   //   for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
   //     int N = tout_n_offset + Ns;
   //     for (int Qs = 0; Qs < mapping.tile_in_loop.Q; Qs++) {
@@ -202,7 +205,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
   //                   make_activation_address(N, Q, P, M, output_shape));
   //             }
   //           }
-  //           tile.instructions.push_back(
+  //           tile->instructions.push_back(
   //               Instruction{.opcode = Opcode::MOVIN,
   //                           .dest_addr = out_sp_addr,
   //                           .size = (uint32_t)out_dram_addrs.size(),
@@ -243,7 +246,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
     }
   }
 
-  tile.instructions.push_back(Instruction{
+  tile->instructions.push_back(Instruction{
       .opcode = Opcode::MOVIN,
       .dest_addr = act_sp_base_addr,
       .size = (uint32_t)act_addr_set.size(),
@@ -287,7 +290,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
                   make_weight_address(s_offset, r_offset, M, C, _weight_shape));
             }
           }
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = weight_sp_addr,
               .size = (uint32_t)weight_set.size(),
@@ -340,7 +343,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
                                 : p_loop;
                 int compute_size = p_loop * q_loop_size;
                 if (Ns == 0 && Qs == 0 && Ps == 0) {
-                  tile.instructions.push_back(
+                  tile->instructions.push_back(
                       Instruction{.opcode = Opcode::GEMM_PRELOAD,
                                   .dest_addr = out_sp_addr,
                                   .size = (uint32_t)compute_size * _config.precision / _config.dram_req_size,
@@ -348,7 +351,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
                                   .src_addrs = std::vector<addr_type>{
                                       act_sp_base_addr, weight_sp_addr}});
                 } else {
-                  tile.instructions.push_back(
+                  tile->instructions.push_back(
                       Instruction{.opcode = Opcode::GEMM,
                                   .dest_addr = out_sp_addr,
                                   .size = (uint32_t)compute_size * _config.precision / _config.dram_req_size,
@@ -365,9 +368,9 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
   }
 
   /* MOVOUT at last iteration */
-  if (tile.C == mapping.tile_out_loop.C - 1 &&
-      tile.R == mapping.tile_out_loop.R - 1 &&
-      tile.S == mapping.tile_out_loop.S - 1) {
+  if (tile->C == mapping.tile_out_loop.C - 1 &&
+      tile->R == mapping.tile_out_loop.R - 1 &&
+      tile->S == mapping.tile_out_loop.S - 1) {
     /* Pooling not fused */
     for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
       int N = tout_n_offset + Ns;
@@ -412,7 +415,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
               }
             }
             if (_pool_fused) {
-              tile.instructions.push_back(
+              tile->instructions.push_back(
                   Instruction{.opcode = Opcode::MOVOUT_POOL,
                               .dest_addr = out_sp_addr,
                               .size = (uint32_t)out_dram_addrs.size(),
@@ -420,7 +423,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
                                   out_dram_addrs.begin(), out_dram_addrs.end()),
                               .operand_id = _OUTPUT_OPERAND});
             } else {
-              tile.instructions.push_back(
+              tile->instructions.push_back(
                   Instruction{.opcode = Opcode::MOVOUT,
                               .dest_addr = out_sp_addr,
                               .size = (uint32_t)out_dram_addrs.size(),
@@ -440,7 +443,7 @@ void ConvWS::initialize_instructions(Tile& tile, Mapping mapping) {
   assert(act_allocation <= _config.spad_size KB / _config.dram_req_size / 2);
 }
 
-void ConvWS::initialize_matmul_instructions(Tile& tile) {
+void ConvWS::initialize_matmul_instructions(Tile* tile) {
   std::vector<uint32_t> output_shape = _conv_out_shape;
   uint32_t kernel_size = _weight_shape[Sdim] * _weight_shape[Rdim];
   uint32_t channels = _input_shape[Cdim];
@@ -449,7 +452,7 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
   uint32_t C_dim_size = kernel_size * _weight_shape[Cdim_w] / _group;
   int loop_size = _config.core_width;
   addr_type weight_offset =
-      tile.M * kernel_size * (channels / _group) * _config.precision;
+      tile->M * kernel_size * (channels / _group) * _config.precision;
 
   addr_type act_sp_base = SPAD_BASE;
   addr_type weight_sp_base =
@@ -457,10 +460,10 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
   addr_type out_sp_base = ACCUM_SPAD_BASE;
 
   /*Bias */
-  for (int M = tile.M; M < tile.M + (_weight_shape[Mdim] / _group);
+  for (int M = tile->M; M < tile->M + (_weight_shape[Mdim] / _group);
        M += loop_size) {
-    int m_loop = M + loop_size > tile.M + (_weight_shape[Mdim] / _group)
-                     ? tile.M + (_weight_shape[Mdim] / _group) - M
+    int m_loop = M + loop_size > tile->M + (_weight_shape[Mdim] / _group)
+                     ? tile->M + (_weight_shape[Mdim] / _group) - M
                      : loop_size;
     for (int N = 0; N < N_dim_size; N += loop_size) {
       int n_loop = N + loop_size > N_dim_size ? N_dim_size - N : loop_size;
@@ -472,7 +475,7 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
         skip_addrs.insert(
             _config.align_address((M + m_iter) * _config.precision));
       }
-      tile.instructions.push_back(Instruction{
+      tile->instructions.push_back(Instruction{
           .opcode = Opcode::MOVIN,
           .dest_addr = bias_sp_addr,
           .size = (uint32_t)skip_addrs.size() * n_loop,
@@ -483,10 +486,10 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
   }
 
   /*Skip */
-  for (int M = tile.M; M < tile.M + (_weight_shape[Mdim] / _group);
+  for (int M = tile->M; M < tile->M + (_weight_shape[Mdim] / _group);
        M += loop_size) {
-    int m_loop = M + loop_size > tile.M + (_weight_shape[Mdim] / _group)
-                     ? tile.M + (_weight_shape[Mdim] / _group) - M
+    int m_loop = M + loop_size > tile->M + (_weight_shape[Mdim] / _group)
+                     ? tile->M + (_weight_shape[Mdim] / _group) - M
                      : loop_size;
     for (int N = 0; N < N_dim_size; N += loop_size) {
       int n_loop = N + loop_size > N_dim_size ? N_dim_size - N : loop_size;
@@ -501,7 +504,7 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
               _config.precision));
         }
       }
-      tile.instructions.push_back(Instruction{
+      tile->instructions.push_back(Instruction{
           .opcode = Opcode::MOVIN,
           .dest_addr = skip_sp_addr,
           .size = (uint32_t)skip_addrs.size(),
@@ -511,10 +514,10 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
     }
   }
 
-  for (int M = tile.M; M < tile.M + (_weight_shape[Mdim] / _group);
+  for (int M = tile->M; M < tile->M + (_weight_shape[Mdim] / _group);
        M += loop_size) {
-    int m_loop = M + loop_size > tile.M + (_weight_shape[Mdim] / _group)
-                     ? tile.M + (_weight_shape[Mdim] / _group) - M
+    int m_loop = M + loop_size > tile->M + (_weight_shape[Mdim] / _group)
+                     ? tile->M + (_weight_shape[Mdim] / _group) - M
                      : loop_size;
     for (int C = 0; C < C_dim_size; C += loop_size) {
       int c_loop = C + loop_size > C_dim_size ? C_dim_size - C : loop_size;
@@ -528,7 +531,7 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
             out_sp_addr +
             (N * _weight_shape[Mdim] / _group + M) * _config.precision;
         /*MOVIN activation*/
-        if (M == tile.M) {
+        if (M == tile->M) {
           std::set<addr_type> act_addr;
           for (int c_iter = 0; c_iter < c_loop; c_iter++) {
             for (int n_iter = 0; n_iter < n_loop; n_iter++) {
@@ -538,7 +541,7 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
                                         C_dim_size * _group}));
             }
           }
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::MOVIN,
               .dest_addr = act_sp_addr,
               .size = (uint32_t)act_addr.size(),
@@ -558,7 +561,7 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
                                         0, 0}));
             }
           }
-          tile.instructions.push_back(
+          tile->instructions.push_back(
               Instruction{.opcode = Opcode::MOVIN,
                           .dest_addr = weight_sp_addr,
                           .size = (uint32_t)weight_addr.size(),
@@ -577,7 +580,7 @@ void ConvWS::initialize_matmul_instructions(Tile& tile) {
                   _config.precision));
             }
           }
-          tile.instructions.push_back(Instruction{
+          tile->instructions.push_back(Instruction{
               .opcode = Opcode::MOVOUT,
               .dest_addr = out_sp_addr,
               .size = (uint32_t)out_addrs.size(),

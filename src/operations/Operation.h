@@ -29,13 +29,14 @@ class Operation {
   virtual Tensor* get_output(int id);
   virtual void set_model(Model* model) { _model=model; }
   virtual std::vector<uint32_t> get_child_nodes();
-  virtual std::deque<Tile> get_tiles();
+  virtual std::deque<std::unique_ptr<Tile>>& get_tiles();
+  virtual void clear_tiles();
   virtual void initialize_tiles(MappingTable& mapping_table) = 0;
   virtual bool check_executable();
   bool check_finish() { return _finish; };
 
  protected:
-  virtual void initialize_instructions(Tile& tile, Mapping mapping) {}
+  virtual void initialize_instructions(Tile* tile, Mapping mapping) {}
   addr_type get_operand_addr(uint32_t operand_id);
   addr_type make_activation_address(uint32_t N, uint32_t H, uint32_t W,
                                     uint32_t C, std::vector<uint32_t> shape);
@@ -55,7 +56,7 @@ class Operation {
   std::vector<uint32_t> _inputs;
   std::vector<uint32_t> _outputs;
   std::map<std::string, std::string> _attributes;
-  std::deque<Tile> _tiles;
+  std::deque<std::unique_ptr<Tile>> _tiles;
   std::vector<std::vector<std::vector<addr_type>>> _weight_addrs;
   std::vector<std::vector<std::vector<std::vector<addr_type>>>> _input_addrs;
   std::vector<std::vector<std::vector<std::vector<addr_type>>>> _output_addrs;

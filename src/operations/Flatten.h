@@ -8,7 +8,7 @@ class Flatten : public Operation {
 		Flatten(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
 		Flatten(const Flatten& src);
 		virtual void initialize_tiles(MappingTable& mapping_table) override;
-    virtual void initialize_instructions(Tile& tile, Mapping mapping) override;
+    virtual void initialize_instructions(Tile* tile, Mapping mapping) override;
 	protected:
 
 	private:

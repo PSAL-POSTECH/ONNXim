@@ -11,6 +11,6 @@ class GemmWS : public Gemm {
   virtual void initialize_tiles(MappingTable& mapping_table) override;
   bool has_bias = true;
  protected:
-  virtual void initialize_instructions(Tile& tile, Mapping mapping) override;
+  virtual void initialize_instructions(Tile* tile, Mapping mapping);
  private:
 };
