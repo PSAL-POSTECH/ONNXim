@@ -74,23 +74,11 @@ void MaxPool::initialize_tiles(MappingTable& mapping_table) {
   uint32_t h_shift = (input_shape[Hdim] - _kernel_shape[0]) / _strides[0] + 1;
   uint32_t w_shift = (input_shape[Wdim] - _kernel_shape[1]) / _strides[1] + 1;
 
-  for (uint32_t N = 0; N < input_shape[Ndim]; N++) {
-    for (uint32_t C = 0; C < input_shape[Cdim]; C++) {
-      for (uint32_t H = 0; H < h_shift; H++) {
-        for (uint32_t W = 0; W < w_shift; W++) {
-          _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
-                                .optype = "MaxPool",
-                                .layer_id = _id,
-                                .batch = N,
-                                .Q = H,
-                                .P = W,
-                                .C = C,
-                                .skip = true}));
-          initialize_instructions(_tiles.back().get(), Mapping{});
-        }
-      } 
-    }
-  }
+  _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
+                        .optype = "MaxPool",
+                        .layer_id = _id,
+                        .skip = true}));
+  initialize_instructions(_tiles.back().get(), Mapping{});
 }
 
 void MaxPool::initialize_instructions(Tile* tile, Mapping mapping) {
