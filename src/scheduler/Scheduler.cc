@@ -310,6 +310,8 @@ TimeMultiplexScheduler::TimeMultiplexScheduler(SimulationConfig config,
     : Scheduler(config, core_cycle, core_time) {}
 
 void TimeMultiplexScheduler::finish_tile(uint32_t core_id, std::unique_ptr<Tile> tile) {
+  spdlog::debug("Layer {} Core {} Finish Tile at {} Remain tile {}", tile->layer_id, core_id,
+                *_core_cycle, _active_layers_map[tile->layer_id].remain_tiles);
   assert(_active_layers_map.find(tile->layer_id) != _active_layers_map.end());
   assert(_active_layers_map[tile->layer_id].remain_tiles > 0);
   _active_layers_map[tile->layer_id].remain_tiles--;
