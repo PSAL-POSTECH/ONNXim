@@ -15,7 +15,14 @@ if "gpt2" in args.model:
     onnx_path = pathlib.Path(f"{args.model}.onnx")
     if not onnx_path.is_file():
         os.system(f"python3.8 -m onnxruntime.transformers.models.gpt2.convert_to_onnx -m {args.model} --model_class GPT2LMHeadModel -t 1 -r 1 --output {args.model}.onnx -p fp32")
-    optimized_model = optimizer.optimize_model(f"{args.model}.onnx", model_type="gpt2")
+    if args.model == "gpt2":
+        optimized_model = optimizer.optimize_model(f"{args.model}.onnx", model_type="gpt2", num_heads=12, hidden_size=768)
+    elif args.model == "gpt2-medium":
+        optimized_model = optimizer.optimize_model(f"{args.model}.onnx", model_type="gpt2", num_heads=16, hidden_size=1024)
+    elif args.model == "gpt2-large":
+        optimized_model = optimizer.optimize_model(f"{args.model}.onnx", model_type="gpt2", num_heads=20, hidden_size=1280)
+    elif args.model == "gpt2-xl":
+        optimized_model = optimizer.optimize_model(f"{args.model}.onnx", model_type="gpt2", num_heads=25, hidden_size=1600)
 elif args.model == "bert":
     onnx_path = pathlib.Path(f"bert/model.onnx")
     if not onnx_path.is_file():
