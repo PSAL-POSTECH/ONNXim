@@ -71,11 +71,11 @@ bool DramRamulator::running() { return false; }
 void DramRamulator::cycle() {
   _mem->tick();
   _cycles++;
-  int interval = 10000;
+  int interval = 50000;
   if (_cycles % interval == 0) {
     for (int ch = 0; ch < _config.dram_channels; ch++) {
       float util = ((float)_processed_requests[ch]) / interval * 100;
-      //spdlog::debug("DRAM CH[{}]: BW Util {:.2f}%", ch, util);
+      spdlog::debug("DRAM CH[{}]: BW Util {:.2f}%", ch, util);
       _total_processed_requests[ch] += _processed_requests[ch];
       _processed_requests[ch] = 0;
     }
@@ -119,10 +119,10 @@ void DramRamulator::print_stat() {
   uint32_t total_reqs = 0;
   for (int ch = 0; ch < _config.dram_channels; ch++) {
     float util = ((float)_total_processed_requests[ch]) / _cycles * 100;
-    spdlog::debug("DRAM CH[{}]: AVG BW Util {:.2f}%", ch, util);
-    total_reqs = _total_processed_requests[ch];
+    spdlog::info("DRAM CH[{}]: AVG BW Util {:.2f}%", ch, util);
+    total_reqs += _total_processed_requests[ch];
   }
   float util = ((float)total_reqs / _config.dram_channels) / _cycles * 100;
-  spdlog::debug("DRAM: AVG BW Util {:.2f}%", util);
+  spdlog::info("DRAM: AVG BW Util {:.2f}%", util);
   _mem->print_stats();
 }
