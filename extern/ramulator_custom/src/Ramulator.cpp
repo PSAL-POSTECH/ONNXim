@@ -37,6 +37,7 @@ void Ramulator::tick() {
 
 bool Ramulator::isAvailable(int CtrlID, uint64_t Addr, bool IsWrite) const {
   std::vector<int> MemAddr = MemBase->decode_mem_addr(Addr);
+  MemAddr[0] = CtrlID;
   assert(CtrlID == MemAddr[0]);
   return  OutputPendingQueues[CtrlID].isAvailable(1) && !MemBase->is_full(CtrlID, IsWrite);
 }
@@ -55,6 +56,7 @@ bool Ramulator::isAvailable(uint64_t Addr, bool IsWrite) const {
 void Ramulator::push(int CtrlID, uint64_t Addr, bool IsWrite, uint32_t core_id, void* orignal_req) {
   std::vector<int> MemAddr = MemBase->decode_mem_addr(Addr);
   //Ensure CtrlID match with decoded address
+  MemAddr[0] = CtrlID;
   assert(CtrlID == MemAddr[0]); 
   if (IsWrite) {
     Request req(Request::Type::WRITE, Addr, MemAddr, Callbacks[IsWrite], orignal_req);

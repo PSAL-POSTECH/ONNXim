@@ -1,7 +1,7 @@
 #ifndef DRAM_H
 #define DRAM_H
 #include <robin_hood.h>
-
+#include <cstdint>
 #include <queue>
 #include <utility>
 
@@ -18,7 +18,7 @@ class Dram {
   virtual bool is_empty(uint32_t cid) = 0;
   virtual MemoryAccess* top(uint32_t cid) = 0;
   virtual void pop(uint32_t cid) = 0;
-  virtual uint32_t get_channel_id(MemoryAccess* request) = 0;
+  uint32_t get_channel_id(MemoryAccess* request);
   virtual void print_stat() {}
 
  protected:
@@ -37,7 +37,6 @@ class SimpleDram : public Dram {
   virtual bool is_empty(uint32_t cid) override;
   virtual MemoryAccess* top(uint32_t cid) override;
   virtual void pop(uint32_t cid) override;
-  virtual uint32_t get_channel_id(MemoryAccess* request) override;
 
  private:
   uint32_t _latency;
@@ -59,7 +58,6 @@ class DramRamulator : public Dram {
   virtual bool is_empty(uint32_t cid) override;
   virtual MemoryAccess* top(uint32_t cid) override;
   virtual void pop(uint32_t cid) override;
-  virtual uint32_t get_channel_id(MemoryAccess* request) override;
   virtual void print_stat() override;
 
  private:
