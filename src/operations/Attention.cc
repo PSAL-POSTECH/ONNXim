@@ -190,7 +190,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size = q_len * seq_len,
+            .compute_size = std::min((int(q_len/_config.core_height)), 1) * seq_len,
             .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
 
             .tile_m = seq_len,
