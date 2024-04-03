@@ -15,6 +15,12 @@ parser.add_argument('--resnet_p', default=0)
 parser.add_argument('--gpts_p', default=0)
 parser.add_argument('--gptg_p', default=0)
 parser.add_argument('--bert_p', default=0)
+parser.add_argument('--resnet_b', default=1)
+parser.add_argument('--gpts_b', default=1)
+parser.add_argument('--gptg_b', default=1)
+parser.add_argument('--bert_b', default=1)
+
+parser.add_argument('--gpt2_version', default="gpt2")
 args = parser.parse_args()
 
 resnet_ms = int(args.resnet_ms)
@@ -26,6 +32,11 @@ resnet_partition = int(args.resnet_p)
 gptg_partition = int(args.gptg_p)
 gpts_partition = int(args.gpts_p)
 bert_partition = int(args.bert_p)
+resnet_batch = int(args.resnet_b)
+gptg_batch = int(args.gptg_b)
+gpts_batch = int(args.gpts_b)
+bert_batch = int(args.bert_b)
+gpt2_version = args.gpt2_version
 
 pathlib.Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
 config = {
@@ -37,7 +48,7 @@ if resnet_ms:
   for i in range(0, total_ms, resnet_ms):
     model_config = {
       "name": "resnet50",
-      "batch_size": 1,
+      "batch_size": resnet_batch,
       "request_time": i,
       "partition_id": resnet_partition
     }
@@ -46,8 +57,8 @@ if resnet_ms:
 if gptg_ms:
   for i in range(0, total_ms, gptg_ms):
     model_config = {
-      "name": "gpt2",
-      "batch_size": 1,
+      "name": f"{gpt2_version}",
+      "batch_size": gptg_batch,
       "nr_atten": -1,
       "sequence_length": 1,
       "seq_len": 1,
@@ -61,8 +72,8 @@ if gptg_ms:
 if gpts_ms:
   for i in range(0, total_ms, gpts_ms):
     model_config = {
-      "name": "gpt2",
-      "batch_size": 1,
+      "name": f"{gpt2_version}",
+      "batch_size": gpts_batch,
       "nr_atten": -1,
       "sequence_length": 1024,
       "seq_len": 1024,
@@ -77,7 +88,7 @@ if bert_ms:
   for i in range(0, total_ms, bert_ms):
     model_config = {
       "name": "bert",
-      "batch_size": 1,
+      "batch_size": bert_batch,
       "nr_atten": -1,
       "sequence_length": 1024,
       "seq_len": 1024,
@@ -88,6 +99,8 @@ if bert_ms:
     }
     config["models"].append(model_config)
 
-with open(f"{HOME}/model_lists/multi_{resnet_ms}_{gpts_ms}_{gptg_ms}_{bert_ms}_{total_ms}_{resnet_partition}{gpts_partition}{gptg_partition}{bert_partition}.json", "w") as json_file:
+with open(f"{HOME}/model_lists/multi_{resnet_ms}_{gpts_ms}_{gptg_ms}_{bert_ms}_{total_ms}_"\
+          f"{resnet_batch}{gpts_batch}{gptg_batch}{bert_batch}_"
+          f"{resnet_partition}{gpts_partition}{gptg_partition}{bert_partition}.json", "w") as json_file:
   json.dump(config, json_file, indent=4)
 print("DONE")
