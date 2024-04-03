@@ -1,6 +1,16 @@
 #include "Dram.h"
 
 #include "helper/HelperFunctions.h"
+#include "Hashing.h"
+
+uint32_t Dram::get_channel_id(MemoryAccess* access) {
+  uint32_t channel_id;
+  if (_n_ch >= 16)
+    channel_id = ipoly_hash_function((new_addr_type)access->dram_address/_config.dram_req_size, 0, _n_ch);
+  else
+    channel_id = ipoly_hash_function((new_addr_type)access->dram_address/_config.dram_req_size, 0, 16) % _n_ch;
+  return channel_id;
+}
 
 /* FIXME: Simple DRAM has bugs */
 SimpleDram::SimpleDram(SimulationConfig config)
@@ -49,21 +59,18 @@ void SimpleDram::pop(uint32_t cid) {
   _response_queue[cid].pop();
 }
 
-uint32_t SimpleDram::get_channel_id(MemoryAccess* access) {
-  return access->dram_address / _config.dram_req_size % _config.dram_channels;
-}
-
 DramRamulator::DramRamulator(SimulationConfig config)
     : _mem(std::make_unique<ram::Ramulator>(config.dram_config_path,
                                             config.num_cores, false)) {
-  _total_processed_requests.resize(config.dram_channels);
-  _processed_requests.resize(config.dram_channels);
-  for (int ch = 0; ch < config.dram_channels; ch++) {
+  _n_ch = config.dram_channels;
+  _config = config;
+  _cycles = 0;
+  _total_processed_requests.resize(_n_ch);
+  _processed_requests.resize(_n_ch);
+  for (int ch = 0; ch < _n_ch; ch++) {
     _total_processed_requests[ch] = 0;
     _processed_requests[ch] = 0;
   }
-  _config = config;
-  _cycles = 0;
 }
 
 bool DramRamulator::running() { return false; }
@@ -71,11 +78,11 @@ bool DramRamulator::running() { return false; }
 void DramRamulator::cycle() {
   _mem->tick();
   _cycles++;
-  int interval = 50000;
+  int interval = _config.dram_print_interval? _config.dram_print_interval: INT32_MAX;
   if (_cycles % interval == 0) {
-    for (int ch = 0; ch < _config.dram_channels; ch++) {
+    for (int ch = 0; ch < _n_ch; ch++) {
       float util = ((float)_processed_requests[ch]) / interval * 100;
-      spdlog::debug("DRAM CH[{}]: BW Util {:.2f}%", ch, util);
+      spdlog::info("DRAM CH[{}]: BW Util {:.2f}%", ch, util);
       _total_processed_requests[ch] += _processed_requests[ch];
       _processed_requests[ch] = 0;
     }
@@ -83,7 +90,7 @@ void DramRamulator::cycle() {
 }
 
 bool DramRamulator::is_full(uint32_t cid, MemoryAccess* request) {
-  return !_mem->isAvailable(request->dram_address, request->write);
+  return !_mem->isAvailable(cid, request->dram_address, request->write);
 }
 
 void DramRamulator::push(uint32_t cid, MemoryAccess* request) {
@@ -95,7 +102,7 @@ void DramRamulator::push(uint32_t cid, MemoryAccess* request) {
   assert(request->size == atomic_bytes);
   int count = 0;
   request->request = false;
-  _mem->push(target_addr, request->write, request->core_id, request);
+  _mem->push(cid, target_addr, request->write, request->core_id, request);
 }
 
 bool DramRamulator::is_empty(uint32_t cid) { return _mem->isEmpty(cid); }
@@ -111,18 +118,15 @@ void DramRamulator::pop(uint32_t cid) {
   _processed_requests[cid]++;
 }
 
-uint32_t DramRamulator::get_channel_id(MemoryAccess* access) {
-  return _mem->getChannel(access->dram_address);
-}
-
 void DramRamulator::print_stat() {
   uint32_t total_reqs = 0;
-  for (int ch = 0; ch < _config.dram_channels; ch++) {
+  for (int ch = 0; ch < _n_ch; ch++) {
+    _total_processed_requests[ch] += _processed_requests[ch];
     float util = ((float)_total_processed_requests[ch]) / _cycles * 100;
     spdlog::info("DRAM CH[{}]: AVG BW Util {:.2f}%", ch, util);
     total_reqs += _total_processed_requests[ch];
   }
-  float util = ((float)total_reqs / _config.dram_channels) / _cycles * 100;
+  float util = ((float)total_reqs / _n_ch) / _cycles * 100;
   spdlog::info("DRAM: AVG BW Util {:.2f}%", util);
   _mem->print_stats();
 }
