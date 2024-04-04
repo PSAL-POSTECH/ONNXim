@@ -60,8 +60,8 @@ void Scheduler::issue_tile_per_core() {
       break;
 
     if (tile->core_id == -1) { // -1 is global id
-      tile->core_id = _core_rr_id;
-      _core_rr_id = (_core_rr_id + 1) % _config.num_cores; // increase with round robin
+      tile->core_id = _core_rr_id % _config.num_cores;
+      _core_rr_id++; // increase with round robin
     } else {
       tile->core_id = (tile->core_id + _nr_layer) % _config.num_cores;
     }
