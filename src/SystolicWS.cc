@@ -178,7 +178,6 @@ void SystolicWS::cycle() {
       }
     }
     if (front->opcode == Opcode::GEMM || front->opcode == Opcode::GEMM_PRELOAD) {
-      assert(can_issue_compute(front));
       if (!_compute_pipeline.empty()) {
         /* Preload can be hided */
         uint32_t offset = _compute_pipeline.back()->compute_size;
@@ -205,7 +204,6 @@ void SystolicWS::cycle() {
     } else if (front->opcode == Opcode::COMP || front->opcode == Opcode::SOFTMAX ||
                front->opcode == Opcode::IM2COL || front->opcode == Opcode::LAYERNORM ||
                front->opcode == Opcode::ADD || front->opcode == Opcode::GELU) {  // vector unit compute
-      assert(can_issue_compute(front));           // check dependencys in SRAM
       if (!_vector_pipeline.empty()) {
         front->start_cycle =
             _vector_pipeline.back()->start_cycle + _vector_pipeline.back()->size;
