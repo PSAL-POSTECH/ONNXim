@@ -89,20 +89,21 @@ std::unique_ptr<Tile> Scheduler::get_tile(uint32_t core_id) {
       return tile;
     } else {
       std::unique_ptr<Tile>& tile = _executable_tile_queue[partition_id].front();
+      int layer_id = tile->layer_id;
       if (tile->status == Tile::Status::BAR) {
-        LayerStat stat = _active_layers_map[tile->layer_id];
+        LayerStat stat = _active_layers_map[layer_id];
         if (stat.launched_tiles == stat.finished_tiles) {
           /* POP only if all lauched tiles are finished */
           _executable_tile_queue[partition_id].pop_front();
-          _active_layers_map[tile->layer_id].launched_tiles++;
-          _active_layers_map[tile->layer_id].finished_tiles++;
-          _active_layers_map[tile->layer_id].remain_tiles--;
-          if (!_active_layers_map[tile->layer_id].remain_tiles) {
-            _active_layers_map[tile->layer_id].remain_tiles++;
-            finish_tile(core_id, std::move(tile));
+          _active_layers_map[layer_id].launched_tiles++;
+          _active_layers_map[layer_id].finished_tiles++;
+          _active_layers_map[layer_id].remain_tiles--;
+          if (!_active_layers_map[layer_id].remain_tiles) {
+            _active_layers_map[layer_id].remain_tiles++;
+            finish_tile(core_id, layer_id);
           } else {
             /* Issue to core scheduler blocked by barrier */
-            uint32_t request_id = _active_layers_map[_executable_tile_queue[partition_id].front()->layer_id].request_id;
+            uint32_t request_id = _active_layers_map[layer_id].request_id;
             uint32_t offset = 0;
 
             std::vector<uint32_t>& allowed_cpu = _partition_map.at(partition_id);
@@ -139,23 +140,23 @@ bool Scheduler::tile_queue_empty() {
   return all_empty;
 }
 
-void Scheduler::finish_tile(uint32_t core_id, std::unique_ptr<Tile> tile) {
-  spdlog::debug("Layer {} Core {} Finish Tile at {} Remain tile {}", tile->layer_id, core_id,
-                *_core_cycle, _active_layers_map[tile->layer_id].remain_tiles);
-  assert(_active_layers_map.find(tile->layer_id) != _active_layers_map.end());
-  assert(_active_layers_map[tile->layer_id].remain_tiles > 0);
-  _active_layers_map[tile->layer_id].remain_tiles--;
-  _active_layers_map[tile->layer_id].finished_tiles++;
+void Scheduler::finish_tile(uint32_t core_id, int layer_id) {
+  spdlog::debug("Layer {} Core {} Finish Tile at {} Remain tile {}", layer_id, core_id,
+                *_core_cycle, _active_layers_map[layer_id].remain_tiles);
+  assert(_active_layers_map.find(layer_id) != _active_layers_map.end());
+  assert(_active_layers_map[layer_id].remain_tiles > 0);
+  _active_layers_map[layer_id].remain_tiles--;
+  _active_layers_map[layer_id].finished_tiles++;
 
-  if (_active_layers_map[tile->layer_id].remain_tiles == 0) {
-    _active_layers_map[tile->layer_id].finish_cycle = *_core_cycle;
+  if (_active_layers_map[layer_id].remain_tiles == 0) {
+    _active_layers_map[layer_id].finish_cycle = *_core_cycle;
     spdlog::info("Layer {} finish at {}",
-                 _active_layers_map[tile->layer_id].name, *_core_cycle);
+                 _active_layers_map[layer_id].name, *_core_cycle);
     spdlog::info("Total compute time {}",
-                 *_core_cycle - _active_layers_map[tile->layer_id].start_cycle);
-    _request_queue.front().model->set_layer_finish(tile->layer_id);
-    _layer_stat_map[tile->layer_id] = _active_layers_map[tile->layer_id];
-    _active_layers_map.erase(tile->layer_id);
+                 *_core_cycle - _active_layers_map[layer_id].start_cycle);
+    _request_queue.front().model->set_layer_finish(layer_id);
+    _layer_stat_map[layer_id] = _active_layers_map[layer_id];
+    _active_layers_map.erase(layer_id);
   }
   refresh_status();
 }
@@ -192,6 +193,8 @@ void Scheduler::refresh_status() {
         std::make_move_iterator(new_layer->get_tiles().begin()),
         std::make_move_iterator(new_layer->get_tiles().end())
     );
+    new_layer->clear_tiles();
+
     _nr_layer++;
     _active_layers_map[new_layer->get_id()] =
         LayerStat{.id = new_layer->get_id(),
@@ -309,33 +312,33 @@ TimeMultiplexScheduler::TimeMultiplexScheduler(SimulationConfig config,
                                        const cycle_type* core_cycle, const uint64_t* core_time)
     : Scheduler(config, core_cycle, core_time) {}
 
-void TimeMultiplexScheduler::finish_tile(uint32_t core_id, std::unique_ptr<Tile> tile) {
-  spdlog::debug("Layer {} Core {} Finish Tile at {} Remain tile {}", tile->layer_id, core_id,
-                *_core_cycle, _active_layers_map[tile->layer_id].remain_tiles);
-  assert(_active_layers_map.find(tile->layer_id) != _active_layers_map.end());
-  assert(_active_layers_map[tile->layer_id].remain_tiles > 0);
-  _active_layers_map[tile->layer_id].remain_tiles--;
-  _active_layers_map[tile->layer_id].finished_tiles++;
+void TimeMultiplexScheduler::finish_tile(uint32_t core_id, int layer_id) {
+  spdlog::debug("Layer {} Core {} Finish Tile at {} Remain tile {}", layer_id, core_id,
+                *_core_cycle, _active_layers_map[layer_id].remain_tiles);
+  assert(_active_layers_map.find(layer_id) != _active_layers_map.end());
+  assert(_active_layers_map[layer_id].remain_tiles > 0);
+  _active_layers_map[layer_id].remain_tiles--;
+  _active_layers_map[layer_id].finished_tiles++;
 
-  if (_active_layers_map[tile->layer_id].remain_tiles == 0) {
-    _active_layers_map[tile->layer_id].finish_cycle = *_core_cycle;
+  if (_active_layers_map[layer_id].remain_tiles == 0) {
+    _active_layers_map[layer_id].finish_cycle = *_core_cycle;
     std::string model_name;
     bool model_finish = false;
     for (int req_index = 0; req_index < _request_queue.size(); req_index++) {
       if (_request_queue[req_index].request_id ==
-          _active_layers_map[tile->layer_id].request_id) {
+          _active_layers_map[layer_id].request_id) {
         model_finish = true;
-        _request_queue[req_index].model->set_layer_finish(tile->layer_id);
+        _request_queue[req_index].model->set_layer_finish(layer_id);
         model_name = _request_queue[req_index].model->get_name();
       }
     }
     spdlog::info("Layer {} {} finish at {}", model_name,
-                 _active_layers_map[tile->layer_id].name, *_core_cycle);
+                 _active_layers_map[layer_id].name, *_core_cycle);
     spdlog::info("Total compute time {}",
-                 *_core_cycle - _active_layers_map[tile->layer_id].start_cycle);
+                 *_core_cycle - _active_layers_map[layer_id].start_cycle);
     assert(model_finish);
-    _layer_stat_map[tile->layer_id] = _active_layers_map[tile->layer_id];
-    _active_layers_map.erase(tile->layer_id);
+    _layer_stat_map[layer_id] = _active_layers_map[layer_id];
+    _active_layers_map.erase(layer_id);
   }
   refresh_status();
 }
@@ -432,33 +435,33 @@ std::unique_ptr<Tile> HalfSplitScheduler::get_tile(uint32_t core_id) {
   }
 }
 
-void HalfSplitScheduler::finish_tile(uint32_t core_id, std::unique_ptr<Tile> tile) {
-  assert(_active_layers_map.find(tile->layer_id) != _active_layers_map.end());
-  assert(_active_layers_map[tile->layer_id].remain_tiles > 0);
-  _active_layers_map[tile->layer_id].remain_tiles--;
-  _active_layers_map[tile->layer_id].finished_tiles++;
+void HalfSplitScheduler::finish_tile(uint32_t core_id, int layer_id) {
+  assert(_active_layers_map.find(layer_id) != _active_layers_map.end());
+  assert(_active_layers_map[layer_id].remain_tiles > 0);
+  _active_layers_map[layer_id].remain_tiles--;
+  _active_layers_map[layer_id].finished_tiles++;
 
-  if (_active_layers_map[tile->layer_id].remain_tiles == 0) {
-    _active_layers_map[tile->layer_id].finish_cycle = *_core_cycle;
+  if (_active_layers_map[layer_id].remain_tiles == 0) {
+    _active_layers_map[layer_id].finish_cycle = *_core_cycle;
     std::string model_name;
     bool model_finish = false;
     for (int req_index = 0; req_index < _request_queue.size(); req_index++) {
       if (_request_queue[req_index].request_id ==
-          _active_layers_map[tile->layer_id].request_id) {
+          _active_layers_map[layer_id].request_id) {
         model_finish = true;
-        _request_queue[req_index].model->set_layer_finish(tile->layer_id);
+        _request_queue[req_index].model->set_layer_finish(layer_id);
         model_name = _request_queue[req_index].model->get_name();
         _executable_tile_queue_table.erase(
             _request_queue[req_index].request_id);
       }
     }
     spdlog::info("Layer {} {} finish at {}", model_name,
-                 _active_layers_map[tile->layer_id].name, *_core_cycle);
+                 _active_layers_map[layer_id].name, *_core_cycle);
     spdlog::info("Total compute time {}",
-                 *_core_cycle - _active_layers_map[tile->layer_id].start_cycle);
+                 *_core_cycle - _active_layers_map[layer_id].start_cycle);
     assert(model_finish);
-    _layer_stat_map[tile->layer_id] = _active_layers_map[tile->layer_id];
-    _active_layers_map.erase(tile->layer_id);
+    _layer_stat_map[layer_id] = _active_layers_map[layer_id];
+    _active_layers_map.erase(layer_id);
   }
   refresh_status();
 }
