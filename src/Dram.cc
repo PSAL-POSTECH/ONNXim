@@ -79,13 +79,15 @@ void DramRamulator::cycle() {
   _mem->tick();
   _cycles++;
   int interval = _config.dram_print_interval? _config.dram_print_interval: INT32_MAX;
+  int average = 0;
   if (_cycles % interval == 0) {
     for (int ch = 0; ch < _n_ch; ch++) {
       float util = ((float)_processed_requests[ch]) / interval * 100;
-      spdlog::info("DRAM CH[{}]: BW Util {:.2f}%", ch, util);
       _total_processed_requests[ch] += _processed_requests[ch];
+      average += _processed_requests[ch];
       _processed_requests[ch] = 0;
     }
+    spdlog::info("Avg DRAM: BW Util {:.2f}%", (float)average / (interval * _n_ch) * 100);
   }
 }
 
