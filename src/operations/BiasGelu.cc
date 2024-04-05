@@ -46,7 +46,7 @@ void BiasGelu::initialize_tiles(MappingTable& mapping_table) {
 
 void BiasGelu::initialize_instructions(Tile* tile, Mapping mapping, uint32_t token_offset, uint32_t tokens) {
     addr_type sram_base = SPAD_BASE;
-    addr_type sram_bias_base = sram_base + _batch_size * _seq * _dk * _config.precision;
+    addr_type sram_bias_base = sram_base + tokens * _dk * _config.precision;
 
     addr_type first_addr, second_addr, output_addr;
     first_addr = get_operand_addr(_INPUT_OPERAND);

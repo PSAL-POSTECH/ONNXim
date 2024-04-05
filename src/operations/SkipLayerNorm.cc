@@ -53,7 +53,7 @@ void SkipLayerNorm::initialize_tiles(MappingTable& mapping_table) {
 
 void SkipLayerNorm::initialize_instructions(Tile* tile, Mapping mapping, uint32_t token_offset, uint32_t tokens) {
     addr_type sram_base = SPAD_BASE;
-    addr_type sram_bias_base = sram_base + _batch_size * _seq * _dk * _config.precision;
+    addr_type sram_bias_base = sram_base + tokens * _dk * _config.precision;
 
     /* Load two tile (input: tokens x _dk, skip: tokens x _dk) */
     std::set<addr_type> dram_addrs;
