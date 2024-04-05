@@ -9,7 +9,10 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   _root_node_id = generate_id();
   _config = config;
   _model_config = model_config;
-  _request_time = uint64_t(double(_model_config["request_time"]) * 1000 * 1000 * 1000); // Pico seconds
+  if (_model_config.contains("request_time"))
+    _request_time = uint64_t(double(_model_config["request_time"]) * 1000 * 1000 * 1000); // Pico seconds
+  else
+    _request_time = 0;
   _mapping_table = mapping_table;
   if (_model_config.contains("partition_id")) {
     _partition_id = uint32_t(_model_config["partition_id"]);
