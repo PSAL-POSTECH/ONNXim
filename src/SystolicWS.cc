@@ -115,40 +115,7 @@ void SystolicWS::cycle() {
       assert(0);
     }
   }
-  /* ST in struction queue */
-  if (!_st_inst_queue.empty()) {
-    std::unique_ptr<Instruction> front = std::move(_st_inst_queue.front());
-    if (front->opcode == Opcode::MOVOUT || front->opcode == Opcode::MOVOUT_POOL) {
-      Sram *buffer;
-      int buffer_id;
-      if (front->dest_addr >= ACCUM_SPAD_BASE) {
-        buffer = &_acc_spad;
-        buffer_id = front->accum_spad_id;
-      } else {
-        buffer = &_spad;
-        buffer_id = front->spad_id;
-      }
-      assert(buffer->check_hit(front->dest_addr, buffer_id));
-      for (addr_type addr : front->src_addrs) {
-        assert(front->base_addr != GARBEGE_ADDR);
-        MemoryAccess *access =
-            new MemoryAccess{.id = generate_mem_access_id(),
-                             .dram_address = addr + front->base_addr,
-                             .spad_address = front->dest_addr,
-                             .size = _config.dram_req_size,
-                             .write = true,
-                             .request = true,
-                             .core_id = _id,
-                             .start_cycle = _core_cycle,
-                             .buffer_id = buffer_id};
-        _waiting_write_reqs++;
-        _request_queue.push(access);
-      }
-      _st_inst_queue.pop();
-    } else {
-      assert(0);
-    }
-  }
+
   /* EX instruction queue */
   if (!_ex_inst_queue.empty() && can_issue_compute(_ex_inst_queue.front())) { // execution dependecy check
     std::unique_ptr<Instruction> front = std::move(_ex_inst_queue.front());
@@ -219,6 +186,40 @@ void SystolicWS::cycle() {
     _ex_inst_queue.pop();
   }
 
+  /* ST in struction queue */
+  if (!_st_inst_queue.empty()) {
+    std::unique_ptr<Instruction> front = std::move(_st_inst_queue.front());
+    if (front->opcode == Opcode::MOVOUT || front->opcode == Opcode::MOVOUT_POOL) {
+      Sram *buffer;
+      int buffer_id;
+      if (front->dest_addr >= ACCUM_SPAD_BASE) {
+        buffer = &_acc_spad;
+        buffer_id = front->accum_spad_id;
+      } else {
+        buffer = &_spad;
+        buffer_id = front->spad_id;
+      }
+      assert(buffer->check_hit(front->dest_addr, buffer_id));
+      for (addr_type addr : front->src_addrs) {
+        assert(front->base_addr != GARBEGE_ADDR);
+        MemoryAccess *access =
+            new MemoryAccess{.id = generate_mem_access_id(),
+                             .dram_address = addr + front->base_addr,
+                             .spad_address = front->dest_addr,
+                             .size = _config.dram_req_size,
+                             .write = true,
+                             .request = true,
+                             .core_id = _id,
+                             .start_cycle = _core_cycle,
+                             .buffer_id = buffer_id};
+        _waiting_write_reqs++;
+        _request_queue.push(access);
+      }
+      _st_inst_queue.pop();
+    } else {
+      assert(0);
+    }
+  }
   if (_compute_pipeline.empty() && _ex_inst_queue.empty()) {
     _stat_memory_cycle++;
   } else if (!_compute_pipeline.empty()) {
