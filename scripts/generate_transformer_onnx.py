@@ -9,7 +9,7 @@ HOME = os.getenv("ONNXIM_HOME", default="../")
 size_list = [1, 2, 4, 8, 16, 32]
 
 parser = argparse.ArgumentParser(prog = 'ONNX generator')
-parser.add_argument('--model')
+parser.add_argument('--model', required=True, help="support gpt2, gpt2-medium, gpt2-large, gpt2-xl, bert")
 args = parser.parse_args()
 if "gpt2" in args.model:
     onnx_path = pathlib.Path(f"{args.model}.onnx")
@@ -33,10 +33,15 @@ else:
     print("Only gpt2, bert are supported...!")
     exit(1)
 
+# Create output folder
 pathlib.Path(f'{HOME}/models/{args.model}/').mkdir(parents=True, exist_ok=True)
+pathlib.Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
+
+# Save optimized onnx file
 optimized_model.save_model_to_file(f'{HOME}/models/{args.model}/{args.model}.onnx', use_external_data_format=True)
 
-pathlib.Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
+
+# Generate model_list json file
 if "gpt2" in args.model:
     for size in size_list:
         # GPT2 summarize json
