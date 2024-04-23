@@ -8,6 +8,7 @@ dtype = torch.float16
 
 HOME = os.getenv("ONNXIM_HOME", default="../")
 
+# Test matmul model
 class size_matmul(torch.nn.Module):
     def __init__(self, size):
         super().__init__()
@@ -16,14 +17,18 @@ class size_matmul(torch.nn.Module):
     def forward(self, x):
         return self.fc(x)
 
+# Create output folder
 Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
 for size in size_list:
+    # Export PyTorch model to onnx
     Path(f"{HOME}/models/matmul_{size}").mkdir(parents=True, exist_ok=True)
     m = size_matmul(size)
     A = torch.zeros([size, size], dtype=dtype)
     onnx_path = Path(f"{HOME}/models/matmul_{size}/matmul_{size}.onnx")
     if not onnx_path.is_file():
         torch.onnx.export(m, A, onnx_path, export_params=True, input_names = ['input'], output_names=['output'])
+
+    # Generate model_list json file
     config = {
         "models": [
             {

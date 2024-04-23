@@ -8,7 +8,6 @@ Optimizer onnx graph for inference
 import onnxruntime as rt
 import torch
 import torchvision.models as models
-# import pytorch2timeloop
 import argparse
 import pathlib
 import os
@@ -18,9 +17,10 @@ size_list = [1, 2, 4, 8, 16, 32]
 
 HOME = os.getenv("ONNXIM_HOME", default="../")
 parser = argparse.ArgumentParser(prog = 'ONNX generator')
-parser.add_argument('--model')
-parser.add_argument('--weight', type=int, default=1)
+parser.add_argument('--model', required=True, help="resnet18, resnet50, alexnet, vgg16, inception")
+parser.add_argument('--weight', type=int, default=1, help="export weight, defulat=True")
 args = parser.parse_args()
+
 torchvision_models = {
   'resnet18' : models.resnet18(),
   'resnet50' : models.resnet50(),
@@ -46,12 +46,7 @@ else:
   input = torch.randn(1, 3, 299, 299, requires_grad=True)
   input_shape = (3, 299, 299)
 
-top_dir = os.path.join(HOME, "models")
-convert_fc = True
-exception_module_names = []
-
-# pytorch2timeloop.convert_model(model, input_shape, batch_size, args.model, top_dir, convert_fc, exception_module_names) 
-
+# Export PyTorch model to onnx
 torch.onnx.export(
   model,
   input,
@@ -64,17 +59,19 @@ torch.onnx.export(
     'output' : {0 : 'batch_size'}}
 )
 
-opt = rt.SessionOptions()
-# enable level 3 optimizations
-print(f"Converting ONNX FILE: {args.model}")
+# Create output folder
 pathlib.Path(f'{HOME}/models/{args.model}/').mkdir(parents=True, exist_ok=True)
+pathlib.Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
+
+# Optimzied exported onnx file
+print(f"Converting ONNX FILE: {args.model}")
+opt = rt.SessionOptions()
 opt.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
 opt.optimized_model_filepath = f'{HOME}/models/{args.model}/{args.model}.onnx'
 sess = rt.InferenceSession('tmp.onnx', sess_options=opt)
 
-pathlib.Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
+# Generate model_list json file
 for size in size_list:
-    # GPT2 summarize json
     config = {
         "models": [
                 {
