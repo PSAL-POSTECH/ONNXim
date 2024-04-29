@@ -103,7 +103,7 @@ $ docker build . -t onnxim
 Run the docker image and the simulator.
 ```
 $ docker run -it onnxim
-(docker) cd ONNXim
+(docker) cd /workspace/ONNXim
 (docker) ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./example/models_list.json
 ```
 
