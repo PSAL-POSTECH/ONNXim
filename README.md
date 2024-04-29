@@ -1,40 +1,39 @@
 # ONNXim: Fast and Detailed Multi-core NPU Simulator
 [![Docker Image CI](https://github.com/PSAL-POSTECH/ONNXim/actions/workflows/docker-image.yml/badge.svg)](https://github.com/PSAL-POSTECH/ONNXim/actions/workflows/docker-image.yml)
 
-ONNXim is a fast and detailed multi-core NPU
-simulator. 
-- ONNXim provide fastsimulation speed. 
-- ONNXim supports multi-core simulation and detailed modeling of DRAM and interconnect, enabling the modeling of contention when running multiple DNN models simultaneously.
-- ONNXim is compatible with ONNX graphs, allowing simulation of DNN models across multiple frameworks without
-requiring code modifications
+ONNXim is a fast cycle-level simulator that models multi-core NPUs for DNN inference. Its features include the following:
+- Fast simulation speed.
+- Support for modeling multi-core NPUs.
+- Support for cycle-level simulation of network-on-chip (through [Booksim2](https://github.com/booksim/booksim2)) and memory (through [Ramulator](https://github.com/CMU-SAFARI/ramulator)), which is important for memory-bound operations of DNNs.
+- Use of ONNX graphs as DNN model specifications, enabling simulation of DNNs implemented in different deep learning frameworks (e.g., PyTorch and TensorFlow).
 
 ## Requirements
 ### OS Distribution
-* Centos8 (Recommended)
+* CentOS 8 (Recommended)
 
-*Other OS distributions are not tested!*
-### Python(>=3.8) packages
+*We have not tested ONNXim on other Linux distributions.*
+### Python(>=3.8) Packages
 * torch >= 1.10.1
 * conan == 1.57.0
 * onnxruntime >= 1.10.0
-* torchvision >= 0.17.2 (Optional: for onnx graph generation)
-* optimum >= 1.19.0 (Optional: for onnx graph generation)
+* torchvision >= 0.17.2 (Optional: for ONNX graph generation)
+* optimum >= 1.19.0 (Optional: for ONNX graph generation)
 
-### Package
-* cmake >= 3.22.1 (You may need to build manually)
+### Other Dependencies
+* cmake >= 3.22.1
 * gcc >= 8.3
 
 
-## ONNX graph
-ONNXim require ONNX graph file (.onnx) to simulate DNN model. We provide fused ResNet18 in `models` directory already. If you want to export new DNN model to ONNX grpah, you can use `scripts/generate_*_onnx.py`.
+## ONNX Graph
+ONNXim requires ONNX graph files (.onnx) to simulate DNN models. We provide a fused ResNet-18 in `models` directory as an example. If you want to export a new DNN model to an ONNX Graph, you can use the `scripts/generate_*_onnx.py` script as shown below.
 
-If you want ResNet50 model, follow the example below
+For ResNet-50:
 ```
 $ cd ONNXim
 $ python3 ./srcripts/generate_cnn_onnx.py --model resnet50
 ```
 
-In case of GPT2 or BERT,
+For GPT and BERT:
 ```
 $ cd ONNXim
 $ python3 ./scripts/generate_transformer_onnx.py --model gpt2
@@ -88,7 +87,7 @@ $ python3 ./scripts/generate_transformer_onnx.py --model bert
 
 # Getting Started
 This section describes how to build and run ONNXim. There are two methods to run ONNXim: Container-based method and Manual build method.
-## 1. Docker image method (Recommended)
+## 1. Docker Image Method (Recommended)
 ```
 $ git clone https://github.com/PSAL-POSTECH/ONNXim.git 
 $ cd ONNXim
@@ -101,10 +100,10 @@ $ docker run -it onnxim
 (docker) cd ONNXim
 (docker) ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./models_list.json
 ```
-Run docker image and simulate resnet18 example
+Run docker image and simulate ResNet-18 example
 
 
-## 2. Manual method
+## 2. Manual Method
 ### Installation
 ```
 $ git clone https://github.com/PSAL-POSTECH/ONNXim.git
@@ -121,7 +120,7 @@ $ make -j
 ### Run Simulator
 ```
 $ cd ..
-$ ./build/bin/Simulator --config ./configs/systolic_ws_8x8_c1_simple_noc.json --model ./models_list.json
+$ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./models_list.json
 ```
 
 ------------
@@ -130,22 +129,32 @@ $ ./build/bin/Simulator --config ./configs/systolic_ws_8x8_c1_simple_noc.json --
 ![Demo](/img/ONNXim_demo.png)
 
 ------------
-## Mapping (Optional)
-ONNXim uses a hierarchical tiling method that can handle large tensor. 
-If the mapping method is not specified, the tiling method of Gemmini is used by default.
+## Mapping
+ONNXim uses a hierarchical tiling method that can handle large tensors. 
+If the mapping method is not specified, the tiling method from [Gemmini](https://github.com/ucb-bar/gemmini) [DAC'21] is used by default.
 
-### Manual Mapping file 
-You can specify the mapping method by putting `*.mapping` file in the same folder of `*.onnx` file.
+### Manual Mapping file (Optional)
+You can specify the mapping by putting `*.mapping` file in the same folder as a `*.onnx` file.
 
-Mapping file is composed to 3 parts.
+The mapping file is composed of 3 parts.
 
 1. Total Loop: `[T] N1 C3 M64 P112 Q112 S7 R7`
 2. Outer Loop: `[O] N1 C1 M4 P5 Q6 S1 R1`
 3. Inner Loop: `[I] N1 C3 M16 P23 Q22 S7 R7`
 
-N: Batch size, C: Input channel, M: Output Channel, P: Output Rows, Q: Output Cols, S: Kernel Row, R: Kernel Cols
+`N`: Batch Size, `C`: Input Channel, `M`: Output Channel, `P`: Output Rows, `Q`: Output Cols, `S`: Kernel Row, `R`: Kernel Cols
 
-This mapping is an example of first convolution layer in ResNet18. Inner Loop is the tensor size that can be holded in scratch pad and accumulator.
+The `Total Loop` stores the loop information for the corresponding layer. In the above, `Total Loop` represent the Convolution operation of and input of NCHW (1,3,112,112) with a kernel of output channels 64 and a size of 7x7.
+
+The `Outer Loop` stores information on how many times the `Total Loop` needs to be iterated at the inner loop level. In the example above, the P of the `Total Loop` is 112, and the P of the `Inner Loop` is 23. Therefore, the `Outer Loop` should be set to 5 (e.g., ceiling(112/23)).
+
+The `Inner Loop` represents the tile size that is loaded to the scratchpad memory. In the example above, input tiles of NCHW (1,3,23,22) and output tiles with 16 channels and a 7x7 kernel are configured to be used.
+This example assumed that each element of the tensor is 4 Bytes.
+Therefore, the size of the input tensor tile is 6,072 Bytes (=3x23x22), and the size of the weight tile is 12,544 Bytes (=4x16x7x7). The input and weight tiles are stored in the scratchpad memory, using 18616 Bytes. The size of the output tile is 17,408 Bytes (=16x17x16), and it is allocated in the accumulator.
+
+**Note**: The size of the scratchpad memory and accumulator required by `Inner Loop` should not exceed half of the configured size for double-buffering.
+
+This mapping is an example of the ResNet-18.
 
 ```
 [T] N1 C3 M64 P112 Q112 S7 R7 - [O] N1 C1 M4 P5 Q6 S1 R1 - [I] N1 C3 M16 P23 Q22 S7 R7
@@ -163,8 +172,12 @@ This mapping is an example of first convolution layer in ResNet18. Inner Loop is
 [T] N1 C512 M512 P7 Q7 S3 R3 - [O] N1 C5 M5 P1 Q1 S1 R1 - [I] N1 C120 M112 P7 Q7 S3 R3
 [T] N1 C512 M1000 - [O] N1 C1 M5 - [I] N1 C512 M248
 ```
-Activation and Weight are stored in scratch pad, and output is stored in accumulator. This simulator consider the size of scratch pad as 256KB and accumulator size as 16KB (default, you can modify). Furthermore, it uses double buffering so that it could fill the scratch pad with half size. Mapping is calculated before implement simulator.
 
 ------------
-## Future Works
-This version only supports GEMM, Conv, Attention, GeLU, LayerNorm Operation. We're developing the simulator to support other operations such as pooling.
+## Future Work
+This current version only supports GEMM, Conv, Attention, GeLU, LayerNorm operations. Other operations will be supported in later versions.
+
+## Citation
+If you use ONNXim for your research, please cite the following paper.
+
+TBA
