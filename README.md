@@ -1,13 +1,17 @@
-# ONNXim: Fast and Detailed Multi-core NPU Simulator
+# ONNXim: A Fast, Cycle-level Multi-core NPU Simulator
 [![Docker Image CI](https://github.com/PSAL-POSTECH/ONNXim/actions/workflows/docker-image.yml/badge.svg)](https://github.com/PSAL-POSTECH/ONNXim/actions/workflows/docker-image.yml)
 
-ONNXim is a fast cycle-level simulator that models multi-core NPUs for DNN inference. Its features include the following:
-- Fast simulation speed. The simulation speed comparison below shows the result that ONNXim is 30 to 40 times faster than Accel-Sim.
+ONNXim is a fast cycle-level simulator that can model multi-core NPUs for DNN inference. Its features include the following:
+- Faster simulation speed in comparison to other _detailed_ NPU simulation frameworks (see the figure below).
 - Support for modeling multi-core NPUs.
-- Support for cycle-level simulation of network-on-chip (through [Booksim2](https://github.com/booksim/booksim2)) and memory (through [Ramulator](https://github.com/CMU-SAFARI/ramulator)), which is important for memory-bound operations of DNNs.
+- Support for cycle-level simulation of memory (through [Ramulator](https://github.com/CMU-SAFARI/ramulator)) and network-on-chip (through [Booksim2](https://github.com/booksim/booksim2)), which is important for properly modeling memory-bound operations in deep learning.
 - Use of ONNX graphs as DNN model specifications, enabling simulation of DNNs implemented in different deep learning frameworks (e.g., PyTorch and TensorFlow).
 
+For more details, please refer to our paper (TBA).
+
 ![Speedup](/img/speedup.png)
+**Figure description**: we compare the simulation speed of different simulators relative to Accel-sim (we only consider simulators that can model multi-core NPUs and detailed DRAM operations). ONNXim-SN refers to a variation of ONNXim that uses a simplified NoC model and Ramulator for DRAM.
+
 ## Requirements
 ### OS Distribution
 * CentOS 8 (Recommended)
@@ -26,7 +30,7 @@ ONNXim is a fast cycle-level simulator that models multi-core NPUs for DNN infer
 
 
 ## ONNX Graph
-ONNXim requires ONNX graph files (.onnx) to simulate DNN models. We provide a fused ResNet-18 in `models` directory as an example. If you want to export a new DNN model to an ONNX Graph, you can use the `scripts/generate_*_onnx.py` script as shown below.
+ONNXim requires ONNX graph files (.onnx) to simulate DNN models. We provide an example input file for fused ResNet-18 in the `models` directory. If you want to export a new DNN model as an ONNX Graph, you can use the `scripts/generate_*_onnx.py` scripts as shown below.
 
 For ResNet-50:
 ```
@@ -44,7 +48,7 @@ $ python3 ./scripts/generate_transformer_onnx.py --model bert
 ------------
 
 ## Hardware Configuration
-`configs` directory contains several JSON files that store information about hardware configurations.
+`configs` directory contains example NPU configration files in the JSON format.
 
 ```
   "num_cores" : 4,              // Number of NPU cores
@@ -87,20 +91,20 @@ $ python3 ./scripts/generate_transformer_onnx.py --model bert
 ------------
 
 # Getting Started
-This section describes how to build and run ONNXim. There are two methods to run ONNXim: Container-based method and Manual build method.
-## 1. Docker Image Method (Recommended)
-Build a container image using the provided Dockerfile.
+This section describes how to build and run ONNXim with a container-based method and a manual build method.
+## 1. Container-based Method using Docker (Recommended)
+Build a Docker image using the provided Dockerfile.
 ```
 $ git clone https://github.com/PSAL-POSTECH/ONNXim.git 
 $ cd ONNXim
 $ docker build . -t onnxim
 ```
 
-Run docker image and simulate ResNet-18 example
+Run the docker image and the simulator.
 ```
 $ docker run -it onnxim
 (docker) cd ONNXim
-(docker) ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./models_list.json
+(docker) ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./example/models_list.json
 ```
 
 
@@ -121,7 +125,7 @@ $ make -j
 ### Run Simulator
 ```
 $ cd ..
-$ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./models_list.json
+$ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./example/models_list.json
 ```
 
 ------------
@@ -134,28 +138,28 @@ $ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.jso
 ONNXim uses a hierarchical tiling method that can handle large tensors. 
 If the mapping method is not specified, the tiling method from [Gemmini](https://github.com/ucb-bar/gemmini) [DAC'21] is used by default.
 
-### Manual Mapping file (Optional)
-You can specify the mapping by putting `*.mapping` file in the same folder as a `*.onnx` file.
+### Manual Mapping File (Optional)
+You can specify the mapping by placing a `*.mapping` file in the same folder as the `*.onnx` file.
 
-The mapping file is composed of 3 parts.
+The mapping file is composed of three parts:
 
-1. Total Loop: `[T] N1 C3 M64 P112 Q112 S7 R7`
-2. Outer Loop: `[O] N1 C1 M4 P5 Q6 S1 R1`
-3. Inner Loop: `[I] N1 C3 M16 P23 Q22 S7 R7`
+1. Total Loop (e.g., `[T] N1 C3 M64 P112 Q112 S7 R7`)
+2. Outer Loop (e.g., `[O] N1 C1 M4 P5 Q6 S1 R1`)
+3. Inner Loop (e.g., `[I] N1 C3 M16 P23 Q22 S7 R7`)
 
-`N`: Batch Size, `C`: Input Channel, `M`: Output Channel, `P`: Output Rows, `Q`: Output Cols, `S`: Kernel Row, `R`: Kernel Cols
+where `N` stands for Batch Size, `C` for Input Channel, `M` for Output Channel, `P` for Output Rows, `Q` for Output Columns, `S` for Kernel Rows, `R` for Kernel Columns.
 
-The `Total Loop` stores the loop information for the corresponding layer. In the above, `Total Loop` represent the Convolution operation of and input of NCHW (1,3,112,112) with a kernel of output channels 64 and a size of 7x7.
+The `Total Loop` provides the overall loop information for the given layer. In the example above, `Total Loop` corresponds to a convolution operation with an the input dimension of (N:1, C:3, H:112, W:112) and a kernel dimension of (S:7, R:8, M:64).
 
-The `Outer Loop` stores information on how many times the `Total Loop` needs to be iterated at the inner loop level. In the example above, the P of the `Total Loop` is 112, and the P of the `Inner Loop` is 23. Therefore, the `Outer Loop` should be set to 5 (e.g., ceiling(112/23)).
+The `Outer Loop` specifies how many times the `Inner Loop` needs to be iterated at the inner loop level. In this example, the `Total Loop` has `P`=112 and the `Inner Loop` has `P`=23. Therefore, the `Outer Loop` should have `P`=ceiling(112/23)=5.
 
-The `Inner Loop` represents the tile size that is loaded to the scratchpad memory. In the example above, input tiles of NCHW (1,3,23,22) and output tiles with 16 channels and a 7x7 kernel are configured to be used.
-This example assumed that each element of the tensor is 4 Bytes.
-Therefore, the size of the input tensor tile is 6,072 Bytes (=3x23x22), and the size of the weight tile is 12,544 Bytes (=4x16x7x7). The input and weight tiles are stored in the scratchpad memory, using 18616 Bytes. The size of the output tile is 17,408 Bytes (=16x17x16), and it is allocated in the accumulator.
+The `Inner Loop` determines the sizes of the input and weight tiles loaded to the scratchpad memory and the size of the output tile mapped to the accumulator.
 
-**Note**: The size of the scratchpad memory and accumulator required by `Inner Loop` should not exceed half of the configured size for double-buffering.
+In this example, assuming a 4-byte (i.e., FP32) data format, the size of the output tile will be 4x16x23x22=32384 bytes. The weight tile size will be 4x16x3x7x7=9408 bytes and the size of the (padded) input tile will be 4x1x3x29x28=9744 bytes. 
 
-This mapping is an example of the ResNet-18.
+**Note**: The size of the input and weight tiles should not exceed half the size of the scratchpad memory for double buffering. Similarly, the size of the output tile should not exceed half the size of the accumulator. 
+
+Below is an example mapping for ResNet-18.
 
 ```
 [T] N1 C3 M64 P112 Q112 S7 R7 - [O] N1 C1 M4 P5 Q6 S1 R1 - [I] N1 C3 M16 P23 Q22 S7 R7
