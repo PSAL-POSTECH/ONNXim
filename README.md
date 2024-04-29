@@ -10,7 +10,7 @@ ONNXim is a fast cycle-level simulator that can model multi-core NPUs for DNN in
 For more details, please refer to our paper (TBA).
 
 ![Speedup](/img/speedup.png)
-**Figure description**: we compare the simulation speed of different simulators relative to Accel-sim (we only consider simulators that can model multi-core NPUs and detailed DRAM operations). ONNXim-SN refers to a variation of ONNXim that uses a simplified NoC model and Ramulator for DRAM.
+**Figure description**: we compare the simulation speed of ONNXim to that of [Accel-sim](https://accel-sim.github.io/) (a GPU simulator with Tensor Core model) as GPUs are widely used for deep learning and such a GPU simulator can be used to study systems for deep learning. We also include [SMAUG](https://github.com/harvard-acc/smaug) in the comparison. On the x-axis, we vary the size of each dimension for an NxNxN GEMM operation.
 
 ## Requirements
 ### OS Distribution
