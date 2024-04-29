@@ -5,12 +5,15 @@ import json
 
 HOME = os.getenv("ONNXIM_HOME", default="../")
 parser = argparse.ArgumentParser(prog = 'ONNX generator')
+# Interval of DNN inference request
 parser.add_argument('--resnet_ms', default=0)
 parser.add_argument('--gpts_ms', default=0)
 parser.add_argument('--gptg_ms', default=0)
 parser.add_argument('--bert_ms', default=0)
 parser.add_argument('--total_ms')
 
+# Partition id of DNN model
+# Note: Use this option, when you want to allocate a specific DNN model to a specific core group (partition)
 parser.add_argument('--resnet_p', default=0)
 parser.add_argument('--gpts_p', default=0)
 parser.add_argument('--gptg_p', default=0)
@@ -59,7 +62,7 @@ if gptg_ms:
     model_config = {
       "name": f"{gpt2_version}",
       "batch_size": gptg_batch,
-      "nr_atten": -1,
+      "nr_atten": -1,   # Number of attention block to simulate. -1 means all layers
       "sequence_length": 1,
       "seq_len": 1,
       "past_seq_len": 1023,
@@ -74,7 +77,7 @@ if gpts_ms:
     model_config = {
       "name": f"{gpt2_version}",
       "batch_size": gpts_batch,
-      "nr_atten": -1,
+      "nr_atten": -1,   # Number of attention block to simulate. -1 means all layers
       "sequence_length": 1024,
       "seq_len": 1024,
       "past_seq_len": 0,
@@ -89,7 +92,7 @@ if bert_ms:
     model_config = {
       "name": "bert",
       "batch_size": bert_batch,
-      "nr_atten": -1,
+      "nr_atten": -1,   # Number of attention block to simulate. -1 means all layers
       "sequence_length": 1024,
       "seq_len": 1024,
       "past_seq_len": 0,
