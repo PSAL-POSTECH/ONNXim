@@ -58,6 +58,13 @@ struct SimulationConfig {
   /* Other configs */
   uint32_t precision;
   std::string layout;
+
+  /*
+   * This map stores the partition information: <partition_id, core_id>
+   *
+   * Note: Each core belongs to one partition. Through these partition IDs,
+   * it is possible to assign a specific DNN model to a particular group of cores.
+   */
   std::map<uint32_t, std::vector<uint32_t>> partiton_map;
 
   uint64_t align_address(uint64_t addr) {
