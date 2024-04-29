@@ -76,7 +76,6 @@ public:
     long cap = 16; //Change this line to change cap
 
     Scheduler(Controller<T>* ctrl) : ctrl(ctrl) {
-        std::cout << "DRAM Contorller scheduler : " << ctrl->configs["scheduler"] << std::endl;
         if(ctrl->configs["scheduler"] == "FCFS") {
             type = Type::FCFS;
         }
