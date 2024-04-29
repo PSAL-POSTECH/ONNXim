@@ -2,11 +2,12 @@
 [![Docker Image CI](https://github.com/PSAL-POSTECH/ONNXim/actions/workflows/docker-image.yml/badge.svg)](https://github.com/PSAL-POSTECH/ONNXim/actions/workflows/docker-image.yml)
 
 ONNXim is a fast cycle-level simulator that models multi-core NPUs for DNN inference. Its features include the following:
-- Fast simulation speed.
+- Fast simulation speed. The simulation speed comparison below shows the result that ONNXim is 30 to 40 times faster than Accel-Sim.
 - Support for modeling multi-core NPUs.
 - Support for cycle-level simulation of network-on-chip (through [Booksim2](https://github.com/booksim/booksim2)) and memory (through [Ramulator](https://github.com/CMU-SAFARI/ramulator)), which is important for memory-bound operations of DNNs.
 - Use of ONNX graphs as DNN model specifications, enabling simulation of DNNs implemented in different deep learning frameworks (e.g., PyTorch and TensorFlow).
 
+![Speedup](/img/speedup.png)
 ## Requirements
 ### OS Distribution
 * CentOS 8 (Recommended)
