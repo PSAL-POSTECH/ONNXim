@@ -35,7 +35,7 @@ ONNXim requires ONNX graph files (.onnx) to simulate DNN models. We provide an e
 For ResNet-50:
 ```
 $ cd ONNXim
-$ python3 ./srcripts/generate_cnn_onnx.py --model resnet50
+$ python3 ./scripts/generate_cnn_onnx.py --model resnet50
 ```
 
 For GPT and BERT:
@@ -104,7 +104,7 @@ Run the docker image and the simulator.
 ```
 $ docker run -it onnxim
 (docker) cd /workspace/ONNXim
-(docker) ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./example/models_list.json
+(docker) ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc_tpuv4.json --model ./example/models_list.json
 ```
 
 
@@ -125,7 +125,7 @@ $ make -j
 ### Run Simulator
 ```
 $ cd ..
-$ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./example/models_list.json
+$ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc_tpuv4.json --model ./example/models_list.json
 ```
 
 ------------
@@ -149,9 +149,9 @@ The mapping file is composed of three parts:
 
 where `N` stands for Batch Size, `C` for Input Channel, `M` for Output Channel, `P` for Output Rows, `Q` for Output Columns, `S` for Kernel Rows, `R` for Kernel Columns.
 
-The `Total Loop` provides the overall loop information for the given layer. In the example above, `Total Loop` corresponds to a convolution operation with an the input dimension of (N:1, C:3, H:112, W:112) and a kernel dimension of (S:7, R:8, M:64).
+The `Total Loop` provides the overall loop information for the given layer. In the example above, `Total Loop` corresponds to a convolution operation with an output dimension of (N:1, M:64, P:112, Q:112) and a kernel dimension of (C:3, S:7, R:7, M:64).
 
-The `Outer Loop` specifies how many times the `Inner Loop` needs to be iterated at the inner loop level. In this example, the `Total Loop` has `P`=112 and the `Inner Loop` has `P`=23. Therefore, the `Outer Loop` should have `P`=ceiling(112/23)=5.
+The `Outer Loop` specifies how many times the `Inner Loop` needs to be iterated. In this example, the `Total Loop` has `P`=112 and the `Inner Loop` has `P`=23. Therefore, the `Outer Loop` should have `P`=ceiling(112/23)=5.
 
 The `Inner Loop` determines the sizes of the input and weight tiles loaded to the scratchpad memory and the size of the output tile mapped to the accumulator.
 
