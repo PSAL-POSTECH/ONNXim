@@ -89,19 +89,19 @@ $ python3 ./scripts/generate_transformer_onnx.py --model bert
 # Getting Started
 This section describes how to build and run ONNXim. There are two methods to run ONNXim: Container-based method and Manual build method.
 ## 1. Docker Image Method (Recommended)
+Build a container image using the provided Dockerfile.
 ```
 $ git clone https://github.com/PSAL-POSTECH/ONNXim.git 
 $ cd ONNXim
 $ docker build . -t onnxim
 ```
-Build a container image using the provided Dockerfile.
 
+Run docker image and simulate ResNet-18 example
 ```
 $ docker run -it onnxim
 (docker) cd ONNXim
 (docker) ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc.json --model ./models_list.json
 ```
-Run docker image and simulate ResNet-18 example
 
 
 ## 2. Manual Method
