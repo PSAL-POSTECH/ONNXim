@@ -1,8 +1,0 @@
-{
- "models": [
-    {
-        "name": "vgg16",
-        "batch_size" : 1
-    }
- ]
-}
