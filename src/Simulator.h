@@ -59,6 +59,10 @@ class Simulator {
         return a->get_request_time() > b->get_request_time();
     }
   };
+  robin_hood::unordered_map<std::string, 
+    std::vector<std::unique_ptr<Tensor>>> _weight_table;
   std::vector<std::unique_ptr<Model>>  _models;
   std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> _tile_timestamp;
+
+  bool check_defined_model(std::string model_name);
 };
