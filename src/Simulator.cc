@@ -90,7 +90,7 @@ void Simulator::handle_model() {
     std::pop_heap(_models.begin(), _models.end(), CompareModel());
     _models.pop_back();
 
-    launch_model->initialize_model();
+    launch_model->initialize_model(_weight_table[launch_model->get_name()]);
     launch_model->set_request_time(_core_time);
     spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (1000000));
     _scheduler->schedule_model(std::move(launch_model), 1);
@@ -183,6 +183,9 @@ void Simulator::cycle() {
 }
 
 void Simulator::register_model(std::unique_ptr<Model> model) {
+  if(_weight_table.find(model->get_name()) == _weight_table.end()) {
+    model->initialize_weight(_weight_table[model->get_name()]);
+  } 
   _models.push_back(std::move(model));
   std::push_heap(_models.begin(), _models.end(), CompareModel());
 }
