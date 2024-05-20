@@ -9,12 +9,10 @@
 class Model {
   public:
     Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& map);
-    Model(const Model& model);
 
     Tensor* get_tensor(uint32_t id);
     Tensor* find_tensor(std::string name);
     void add_tensor(std::unique_ptr<Tensor> tensor);
-    void initialize_model();
     void set_layer_finish(uint32_t id); 
 
     std::string get_name() { return _name; }
@@ -27,6 +25,8 @@ class Model {
     bool check_finish();
     uint32_t get_partition_id() { return _partition_id; }
 
+    void initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table);
+    void initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table);
   private:
     MappingTable _mapping_table;
     json _model_config;
