@@ -36,8 +36,9 @@ void Model::add_tensor(std::unique_ptr<Tensor> edge) {
   _tensor_map[edge->get_id()] = std::move(edge);
 }
 
-void Model::initialize_model() {
+void Model::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table) {
   auto start = std::chrono::high_resolution_clock::now();
+
   onnx::ModelProto model_proto;
   std::vector<std::unique_ptr<Tensor>> input_tensors;
   std::ifstream model_istream(_onnx_path);
@@ -83,9 +84,9 @@ void Model::initialize_model() {
     _tensor_map[id] = std::move(input_tensor);
   }
 
-  for(auto initializer : model_proto.graph().initializer()) {
+  for(auto it = weight_table.begin(); it != weight_table.end(); it++) {
     //initialize weights
-    auto tensor = std::make_unique<Tensor>(_root_node_id, initializer, _config.precision, true);
+    auto tensor = std::make_unique<Tensor>(*it->get());
     tensor->set_produced();
     uint32_t id = tensor->get_id();
     _tensor_map[id] = std::move(tensor);
@@ -119,6 +120,23 @@ void Model::initialize_model() {
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
   spdlog::info("{} Model initialization time: {:2f} seconds", _onnx_path, duration.count());
+}
+
+void Model::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table) {
+  spdlog::info("Model Name");
+
+  weight_table.clear();
+  onnx::ModelProto model_proto;
+  std::ifstream model_istream(_onnx_path);
+  google::protobuf::io::IstreamInputStream zero_copy_input(&model_istream);
+  model_proto.ParseFromZeroCopyStream(&zero_copy_input) && model_istream.eof();
+ for(auto initializer : model_proto.graph().initializer()) {
+    //initialize weights
+    auto tensor = std::make_unique<Tensor>(_root_node_id, initializer, _config.precision, true);
+    tensor->set_produced();
+    weight_table.push_back(std::move(tensor));
+
+  }
 }
 
 
