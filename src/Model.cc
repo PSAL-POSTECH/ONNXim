@@ -5,7 +5,7 @@
 
 Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& mapping_table) {
   _onnx_path = onnx_path;
- _name = name;
+  _name = name;
   _root_node_id = generate_id();
   _config = config;
   _model_config = model_config;
@@ -37,6 +37,7 @@ void Model::add_tensor(std::unique_ptr<Tensor> edge) {
 }
 
 void Model::initialize_model() {
+  auto start = std::chrono::high_resolution_clock::now();
   onnx::ModelProto model_proto;
   std::vector<std::unique_ptr<Tensor>> input_tensors;
   std::ifstream model_istream(_onnx_path);
@@ -56,8 +57,14 @@ void Model::initialize_model() {
       std::string dim_param = input_shape.dim(dim_idx).dim_param();
       spdlog::debug("input name: {} val: {} param: {}", input_name, dim_value, dim_param);
       if (dim_value==0 && dim_param!="") {
-        /* Dynamic axis */
-        input_dim.push_back(_model_config[dim_param]);
+        /* Check local axis map */
+        if (_axis_map.find(dim_param) != _axis_map.end())
+          input_dim.push_back(_axis_map[dim_param]);
+        else {
+          /* Fallback to config file and read dynamic axis */
+          input_dim.push_back(_model_config[dim_param]);
+          _axis_map[dim_param] = _model_config[dim_param];
+        }
       } else {
         input_dim.push_back(dim_value);
       }
@@ -90,7 +97,7 @@ void Model::initialize_model() {
     if(node != nullptr) {
       int node_id = node->get_id();
       _operation_map[node->get_id()] = std::move(node);
-      if (node_proto.op_type() == "SkipLayerNormalization")
+      if (node_proto.op_type() == "SkipLayerNormalization" && _model_config.contains("nr_atten"))
         if (_model_config["nr_atten"] != -1 && ++nr_skip >= int(_model_config["nr_atten"])*2) {
           _operation_map[node_id].get()->_outputs.clear();
           break;
@@ -108,6 +115,10 @@ void Model::initialize_model() {
   for(auto& [key, val] : _operation_map) {
     val->initialize_tiles(_mapping_table);
   }
+  /* Model initialization time measurement */
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end - start;
+  spdlog::info("{} Model initialization time: {:2f} seconds", _onnx_path, duration.count());
 }
 
 
@@ -157,4 +168,32 @@ bool Model::check_exist_in_exeutable(uint32_t op_id) {
     }
   }
   return false;
+}
+
+bool Model::check_regressive() {
+  if (_axis_map.find("total_seq_len") == _axis_map.end())
+    return false;
+  if ((_axis_map["total_seq_len"]+1) == _model_config["output_seq_len"])
+    return false;
+  return true;
+}
+
+void Model::prepare_regressive() {
+  /* This method should be called when check_regressive() is true */
+  if (_axis_map["past_seq_len"] == 0) {
+    _axis_map["past_seq_len"] = _axis_map["seq_len"];
+    _axis_map["seq_len"] = 1;
+    _axis_map["total_seq_len"]++;
+  } else {
+    _axis_map["past_seq_len"]++;
+    _axis_map["seq_len"] = 1;
+    _axis_map["total_seq_len"]++;
+  }
+
+  _operation_map.clear();
+  _tensor_map.clear();
+  _executable_layer.clear();
+  nr_skip = 0;
+  _start_time = 0;
+  _started = false;
 }

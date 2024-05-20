@@ -11,7 +11,7 @@ typedef struct {
 
 class Scheduler {
   public:
-    Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time);
+    Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator);
     virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size);
     virtual std::unique_ptr<Tile> get_tile(uint32_t core_id);
     virtual void issue_tile_per_core();
@@ -45,6 +45,7 @@ class Scheduler {
     std::map<uint32_t, std::deque<std::unique_ptr<Tile>>> _core_executable_tile_queue;
     uint32_t _nr_layer = 0; // For layer round-robin
     SimulationConfig _config;
+    void* _simulator;
     robin_hood::unordered_map<uint32_t, LayerStat> _layer_stat_map;
     robin_hood::unordered_map<uint32_t, LayerStat> _active_layers_map;
     virtual void refresh_status();
@@ -54,7 +55,7 @@ class Scheduler {
 
 class TimeMultiplexScheduler : public Scheduler {
   public:
-    TimeMultiplexScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time);
+    TimeMultiplexScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator);
     virtual void finish_tile(uint32_t core_id, int layer_id) override ;
   
   protected:
@@ -65,7 +66,7 @@ class TimeMultiplexScheduler : public Scheduler {
 
 class DedicatedCPUScheduler: public TimeMultiplexScheduler {
   public:
-    DedicatedCPUScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time);
+    DedicatedCPUScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator);
 
   protected:
     virtual void refresh_status() override;
@@ -75,7 +76,7 @@ class DedicatedCPUScheduler: public TimeMultiplexScheduler {
 
 class HalfSplitScheduler : public Scheduler {
   public:
-    HalfSplitScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time);
+    HalfSplitScheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator);
     virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size) override;
     virtual std::unique_ptr<Tile> get_tile(uint32_t core_id) override;
     virtual void finish_tile(uint32_t core_id, int layer_id) override ;

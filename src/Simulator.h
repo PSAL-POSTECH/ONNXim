@@ -17,6 +17,8 @@ class Simulator {
   Simulator(SimulationConfig config);
   void register_model(std::unique_ptr<Model> model);
   void run_simulator();
+  const double get_tile_ops();
+  const size_t get_number_tile() { return _tile_timestamp.size(); }
   // void run_offline(std::string model_name, uint32_t sample_count);
   // void run_multistream(std::string model_name, uint32_t sample_count,
   // uint32_t ); void run_server(std::string trace_path);
@@ -58,4 +60,5 @@ class Simulator {
     }
   };
   std::vector<std::unique_ptr<Model>>  _models;
+  std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> _tile_timestamp;
 };

@@ -1,9 +1,11 @@
 #include "Scheduler.h"
+#include "../Simulator.h"
 
-Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time)
+Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator)
     : _config(config), _core_cycle(core_cycle), _core_time(core_time) {
   //_core_executable_tile_queue.resize(_config.num_cores);
   _partition_map = config.partiton_map;
+  _simulator = simulator;
   //_executable_tile_queue.resize(_partition_map.size());
   for (const auto& pair: _partition_map) {
     uint32_t partition_id = pair.first;
@@ -171,7 +173,12 @@ void Scheduler::refresh_status() {
                     _request_queue.front().model->get_request_time() / 1000000,
                     _request_queue.front().model->get_start_time() / 1000000,
                     (*_core_time) / 1000000, *_core_cycle);
+      std::unique_ptr<Model> finished_model = std::move(_request_queue.front().model);
       _request_queue.pop_front();
+      if (finished_model->check_regressive()) {
+        finished_model->prepare_regressive();
+        static_cast<Simulator*>(_simulator)->register_model(std::move(finished_model));
+      }
     }
   }
   bool all_empty = tile_queue_empty();
@@ -218,8 +225,8 @@ uint32_t Scheduler::count_active_layers() {
 }
 
 DedicatedCPUScheduler::DedicatedCPUScheduler(SimulationConfig config,
-                                       const cycle_type* core_cycle, const uint64_t* core_time)
-    : TimeMultiplexScheduler(config, core_cycle, core_time) {}
+                                       const cycle_type* core_cycle, const uint64_t* core_time, void* simulator)
+    : TimeMultiplexScheduler(config, core_cycle, core_time, simulator) {}
 
 void DedicatedCPUScheduler::refresh_status() {
   if (!_request_queue.empty()) {
@@ -309,8 +316,8 @@ void DedicatedCPUScheduler::refresh_status() {
 }
 
 TimeMultiplexScheduler::TimeMultiplexScheduler(SimulationConfig config,
-                                       const cycle_type* core_cycle, const uint64_t* core_time)
-    : Scheduler(config, core_cycle, core_time) {}
+                                       const cycle_type* core_cycle, const uint64_t* core_time, void* simulator)
+    : Scheduler(config, core_cycle, core_time, simulator) {}
 
 void TimeMultiplexScheduler::finish_tile(uint32_t core_id, int layer_id) {
   spdlog::debug("Layer {} Core {} Finish Tile at {} Remain tile {}", layer_id, core_id,
@@ -401,8 +408,8 @@ void TimeMultiplexScheduler::refresh_status() {
 }
 
 HalfSplitScheduler::HalfSplitScheduler(SimulationConfig config,
-                                       const cycle_type* core_cycle, const uint64_t* core_time)
-    : Scheduler(config, core_cycle, core_time) {}
+                                       const cycle_type* core_cycle, const uint64_t* core_time, void* simulator)
+    : Scheduler(config, core_cycle, core_time, simulator) {}
 
 void HalfSplitScheduler::schedule_model(std::unique_ptr<Model> model,
                                         uint32_t sample_size) {
