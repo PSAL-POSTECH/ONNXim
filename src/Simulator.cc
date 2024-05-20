@@ -61,15 +61,15 @@ Simulator::Simulator(SimulationConfig config)
   }
   
   if (config.scheduler_type == "simple") {
-    _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles, &_core_time);
+    _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles, &_core_time, this);
   } else if (config.scheduler_type == "partition_cpu") {
     _scheduler =
-        std::make_unique<DedicatedCPUScheduler>(_config, &_core_cycles, &_core_time);
+        std::make_unique<DedicatedCPUScheduler>(_config, &_core_cycles, &_core_time, this);
   } else if (config.scheduler_type == "time_multiplex") {
     _scheduler =
-        std::make_unique<TimeMultiplexScheduler>(_config, &_core_cycles, &_core_time);
+        std::make_unique<TimeMultiplexScheduler>(_config, &_core_cycles, &_core_time, this);
   } else if (config.scheduler_type == "spatial_split") {
-    _scheduler = std::make_unique<HalfSplitScheduler>(_config, &_core_cycles, &_core_time);
+    _scheduler = std::make_unique<HalfSplitScheduler>(_config, &_core_cycles, &_core_time, this);
   } else {
     spdlog::error("[Configuration] {} is invalid scheduler type...!", config.scheduler_type);
     exit(EXIT_FAILURE);
@@ -123,6 +123,7 @@ void Simulator::cycle() {
             std::unique_ptr<Tile> tile = _scheduler->get_tile(core_id);
             if (tile->status == Tile::Status::INITIALIZED) {
               _cores[core_id]->issue(std::move(tile));
+              _tile_timestamp.push_back(std::chrono::high_resolution_clock::now());
             }
           }
         }
@@ -222,4 +223,12 @@ uint32_t Simulator::get_dest_node(MemoryAccess *access) {
   } else {
     return access->core_id;
   }
+}
+
+const double Simulator::get_tile_ops() {
+  std::chrono::duration<double> duration = _tile_timestamp.back() - _tile_timestamp.front();
+  if (_tile_timestamp.empty())
+    return 0.0;
+  else
+    return _tile_timestamp.size() / duration.count();
 }

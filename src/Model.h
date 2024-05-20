@@ -26,6 +26,8 @@ class Model {
     void update_start_time(uint64_t start_time);
     bool check_finish();
     uint32_t get_partition_id() { return _partition_id; }
+    bool check_regressive();
+    void prepare_regressive();
 
   private:
     MappingTable _mapping_table;
@@ -35,6 +37,7 @@ class Model {
     uint32_t _root_node_id;
     std::map<uint32_t, std::unique_ptr<Operation>> _operation_map;
     std::map<uint32_t, std::unique_ptr<Tensor>> _tensor_map;
+    std::map<std::string, uint32_t> _axis_map;
     std::vector<Operation*> _executable_layer;
     SimulationConfig _config;
     uint32_t _partition_id = 0;
