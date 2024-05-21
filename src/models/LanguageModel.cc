@@ -34,11 +34,31 @@ std::string Bias = "bias";
 LanguageModel::LanguageModel(json llm_config, SimulationConfig config, std::string name) : Model(llm_config, config, name) {
   //Constructor for weight initialization
   //Not used for actual simulation
-  _llm_config = llm_config;
   _num_batch = 0;
-  _num_token = 0;
-  _target_token = 0;
-  _is_decode = false;
+}
+
+std::unique_ptr<LanguageModel> LanguageModel::generate_model(std::vector<LanguageRequest>& reqs) {
+  std::unique_ptr<LanguageModel> model = std::make_unique<LanguageModel>(_model_config, _config, _name);
+  model->_reqs = reqs;
+  model->_num_batch = reqs.size();
+  //Load KV Cache
+  model->_key_cache_tensor_ids.resize(reqs.size());
+  model->_value_cache_tensor_ids.resize(reqs.size());
+  for(int b = 0; b < reqs.size(); b++) {
+    model->_key_cache_tensor_ids[b].resize(_num_layers);
+    model->_value_cache_tensor_ids[b].resize(_num_layers);
+    for(int l = 0; l < _num_layers; l++) {
+      auto key_cache = std::make_unique<Tensor>(*reqs[b].key_cache[l]);
+      key_cache->set_produced();
+      model->_key_cache_tensor_ids[b][l] = key_cache->get_id();
+      model->_tensor_map[key_cache->get_id()] = std::move(key_cache);
+
+      auto value_cache = std::make_unique<Tensor>(*reqs[b].value_cache[l]);
+      value_cache->set_produced();
+      model->_value_cache_tensor_ids[b][l] = value_cache->get_id();
+      model->_tensor_map[value_cache->get_id()] = std::move(value_cache);
+    }
+  }
 }
 
 
@@ -56,10 +76,12 @@ std::unique_ptr<Tensor> LanguageModel::create_weight(std::string name, std::vect
   return std::move(tensor);
 }
 
-uint32_t LanguageModel::load_cache(uint32_t layer, uint32_t batch) {
-  std::string cache_name = name_gen(LAYER(layer), BlockType::Attention, OperationType::KVCacheConcat);
-  // return _wgt_map[cache_name];
-  return 0;
+uint32_t LanguageModel::load_key_cache(uint32_t layer, uint32_t batch) {
+  return _key_cache_tensor_ids[batch][layer];
+}
+
+uint32_t LanguageModel::load_value_cache(uint32_t layer, uint32_t batch) {
+  return _value_cache_tensor_ids[batch][layer];
 }
 
 void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table) {
@@ -100,8 +122,17 @@ void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weig
 }
 
 void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table) {
-  //TODO: make it modulear
+  auto start = std::chrono::high_resolution_clock::now();
   _input_tensor = create_tensor("input", {1, _model_config["max_seq_length"], _model_config["hidden_size"]});//TODO:: fix this
+  
+  for(auto it = weight_table.begin(); it != weight_table.end(); it++) {
+    //initialize weights
+    auto tensor = std::make_unique<Tensor>(*it->get());
+    tensor->set_produced();
+    uint32_t id = tensor->get_id();
+    _tensor_map[id] = std::move(tensor);
+  }
+  
   int input_id = _input_tensor->get_id();
   std::map<std::string, std::string> empty_attr;
   for(int l = 0; l < _num_layers; l++) {
@@ -121,8 +152,10 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
       _config, (Model*) this, name_gen(LAYER(l), BlockType::Attention, OperationType::KVCacheConcat), empty_attr);
     kv_cache_op->add_input(qkv_output_id);
     for(int b = 0; b < _num_batch; b++) {
-      uint32_t kv_cache_id = load_cache(l, b);
-      kv_cache_op->add_input(kv_cache_id);
+      uint32_t key_cache_id = load_key_cache(l, b);
+      uint32_t value_cache_id = load_value_cache(l, b);
+      kv_cache_op->add_input(key_cache_id);
+      kv_cache_op->add_input(value_cache_id);
     }
     kv_cache_op->initialize_tiles(_mapping_table);
     std::vector<uint32_t> queries;
@@ -231,5 +264,18 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
   lm_head_op->initialize_tiles(_mapping_table);
   uint32_t lm_head_output_id = lm_head_op->get_output(0)->get_id();
   register_operation(std::move(lm_head_op));
+
+
+
+  for (auto& [key, val]: _operation_map) {
+    if(val->check_executable()) {
+      spdlog::debug("runnable op, {}", val->get_optype());
+      _executable_layer.push_back(val.get());
+    } 
+  }
+  /* Model initialization time measurement */
+  auto end = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> duration = end - start;
+  spdlog::info("{} Model initialization time: {:2f} seconds", _onnx_path, duration.count());
 }
 
