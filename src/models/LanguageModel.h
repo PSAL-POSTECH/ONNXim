@@ -28,14 +28,22 @@ namespace ParameterType {
 extern std::string Weight;
 extern std::string Bias;
 }  // namespace ParameterType
-class BatchedRequest;
+
+
+struct LanguageRequest {
+  uint32_t seq_length;
+  uint32_t context_length;
+  std::vector<Tensor*> key_cache;
+  std::vector<Tensor*> value_cache;
+};
 
 class LanguageModel : public Model {
   public:
   LanguageModel(json llm_config, SimulationConfig config, std::string name);
-  std::unique_ptr<LanguageModel> generate_model(BatchedRequest req);
+  std::unique_ptr<LanguageModel> generate_model(std::vector<LanguageRequest> &reqs);
   
-  uint32_t load_cache(uint32_t layer, uint32_t batch);
+  uint32_t load_key_cache(uint32_t layer, uint32_t batch);
+  uint32_t load_value_cache(uint32_t layer, uint32_t batch);
   
   void log_model();
   uint64_t get_weight_size() { return _wgt_size; }
@@ -45,11 +53,9 @@ class LanguageModel : public Model {
   virtual void initialize_weight(
       std::vector<std::unique_ptr<Tensor>>& weight_table);
   protected:
-    json _llm_config;
+    std::vector<LanguageRequest> _reqs;
     uint32_t _num_batch;
-    uint32_t _num_token;
-    uint32_t _target_token;
-    bool _is_decode;
+    bool _generation_phase;
 
     uint32_t _num_heads;
     uint32_t _num_kv_heads;
@@ -62,6 +68,8 @@ class LanguageModel : public Model {
     std::unique_ptr<Tensor> _input_tensor;
 
     robin_hood::unordered_map<std::string, uint32_t> _wgt_map;
+    std::vector<std::vector<uint32_t>> _key_cache_tensor_ids;
+    std::vector<std::vector<uint32_t>> _value_cache_tensor_ids;
    
     void register_operation(std::unique_ptr<Operation>);
     std::unique_ptr<Tensor> create_tensor(std::string name,
