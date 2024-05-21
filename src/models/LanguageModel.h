@@ -17,28 +17,11 @@ extern std::string QKVGen;
 extern std::string Projection;
 extern std::string FullyConnected1;
 extern std::string FullyConnected2;
-extern std::string QKVSplit;
-extern std::string QKMatMul;
-extern std::string SoftMax;
-extern std::string LsVMatMul;
-extern std::string AReshape;
-extern std::string Residual;
-extern std::string Gelu;
-extern std::string BatchSplit;
-extern std::string BatchConcat;
-
-extern std::string KCacheConcat;
-extern std::string VCacheConcat;
-extern std::string VConcat;
-
-extern std::string PIMGEMVSoftmax;
-extern std::string PIMGEMVAdd;
-extern std::string Microbench;
-extern std::string NeuPIMSLogitSoftmax;
+extern std::string LmHead;
+extern std::string Act;
+extern std::string KVCacheConcat;
+extern std::string AttentionConcat;
 extern std::string Attention;
-extern std::string NeuPIMSAttend;
-extern std::string FusedMHA;
-extern std::string PIMGEMV;
 }  // namespace OperationType
 
 namespace ParameterType {
@@ -58,9 +41,9 @@ class LanguageModel : public Model {
   uint64_t get_weight_size() { return _wgt_size; }
 
   virtual void initialize_model(
-      std::vector<std::unique_ptr<Tensor>>& weight_table) = 0;
+      std::vector<std::unique_ptr<Tensor>>& weight_table);
   virtual void initialize_weight(
-      std::vector<std::unique_ptr<Tensor>>& weight_table) = 0;
+      std::vector<std::unique_ptr<Tensor>>& weight_table);
   protected:
     json _llm_config;
     uint32_t _num_batch;
@@ -86,21 +69,5 @@ class LanguageModel : public Model {
     std::unique_ptr<Tensor> create_weight(std::string name,
                                         std::vector<uint32_t> dims);
 };
-
-class OPTModel : public LanguageModel {
-  public:
-    OPTModel(json llm_config, SimulationConfig config, std::string name);
-    OPTModel(BatchedRequest &request);
-    virtual void initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table) override;
-    virtual void initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table) override;
-  protected:
-
-};
-
-// class Llama2Model : public LanguageModel {
-  //TODO:
-//  public:
-  // Llama2Model(json llm_config, SimulationConfig config, std::string name);
-// };
 
 #endif

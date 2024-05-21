@@ -3,7 +3,7 @@
 #include "../operations/Attention.h"
 #include "../operations/Concat.h"
 #include "../operations/GemmWS.h"
-#include "../operations/BiasGelu.h"
+#include "../operations/BiasAct.h"
 #include "../operations/KVCacheConcat.h"
 #include "../operations/SkipLayerNorm.h"
 
@@ -19,29 +19,10 @@ std::string Projection = "proj";
 std::string FullyConnected1 = "fc1";
 std::string FullyConnected2 = "fc2";
 std::string LmHead = "lmhead";
-
-std::string QKVSplit = "QKVsplit";
-std::string QKMatMul = "QKmm";
-std::string SoftMax = "softmax";
-std::string LsVMatMul = "LsVmm";
-std::string AReshape = "Areshape";
-std::string Residual = "res";
-std::string Gelu = "gelu";
-std::string BatchSplit = "BSplit";
-std::string BatchConcat = "BConcat";
+std::string Act = "act";
 std::string KVCacheConcat = "KVccat";
 std::string AttentionConcat = "Atccat";
-std::string KCacheConcat = "Kccat";
-std::string VCacheConcat = "Vccat";
-std::string VConcat = "Vcat";
-std::string PIMGEMVSoftmax = "PIMGEMVSoftmax";
-std::string PIMGEMVAdd = "PIMGEMVAdd";
-std::string NeuPIMSLogitSoftmax = "NeuPIMSLogitSoftmax";
 std::string Attention = "Attention";
-std::string Microbench = "Microbench";
-std::string NeuPIMSAttend = "NeuPIMSAttend";
-std::string FusedMHA = "FusedMHA";
-std::string PIMGEMV = "PIMGEMV";
 }  // namespace OperationType
 
 namespace ParameterType {
@@ -81,9 +62,11 @@ uint32_t LanguageModel::load_cache(uint32_t layer, uint32_t batch) {
   return 0;
 }
 
-void OPTModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table) {
+void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table) {
   int layers = _model_config["num_hidden_layers"];
   int emb_dim = _model_config["hidden_size"];
+  int ffn_dim = _model_config["intermediate_size"];
+  bool llama_mlp = _model_config["ffn_type"] == "llama";
   for(int l = 0; l < layers; l++) {
     auto attn = name_gen(LAYER(l), BlockType::Attention);
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::LayerNorm, ParameterType::Weight), {emb_dim})));
@@ -96,9 +79,13 @@ void OPTModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_ta
     auto ffn = name_gen(LAYER(l), BlockType::FeedForward);
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::LayerNorm, ParameterType::Weight), {emb_dim})));
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::LayerNorm, ParameterType::Bias), {emb_dim})));
-    weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Weight), {emb_dim, 4*emb_dim})));
-    weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Bias), {4*emb_dim})));
-    weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Weight), {4*emb_dim, emb_dim})));
+    int ffn1_out_dim = ffn_dim;
+    if(llama_mlp) {
+      ffn1_out_dim *= 2;
+    }
+    weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Weight), {emb_dim, ffn1_out_dim})));
+    weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected1, ParameterType::Bias), {ffn1_out_dim})));
+    weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Weight), {ffn_dim, emb_dim})));
     weight_table.push_back(std::move(create_weight(name_gen(ffn, OperationType::FullyConnected2, ParameterType::Bias), {emb_dim})));
   }
 
@@ -112,7 +99,7 @@ void OPTModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_ta
   spdlog::info("Weight size: {}", _wgt_size);
 }
 
-void OPTModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table) {
+void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table) {
   //TODO: make it modulear
   _input_tensor = create_tensor("input", {1, _model_config["max_seq_length"], _model_config["hidden_size"]});//TODO:: fix this
   int input_id = _input_tensor->get_id();
@@ -204,19 +191,19 @@ void OPTModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_tab
     uint32_t ffn1_output_id = ffn1_op->get_output(0)->get_id();
     register_operation(std::move(ffn1_op));
     //Gelu
-    std::string gelu_name = name_gen(LAYER(l), BlockType::FeedForward, OperationType::Gelu);
-    auto gelu_op = std::make_unique<BiasGelu>(_config, (Model*) this, gelu_name, empty_attr);
-    gelu_op->add_input(ffn1_output_id);
-    ffn1_op->add_input(ffn1_bias_id);
-    gelu_op->initialize_tiles(_mapping_table);
-    uint32_t gelu_output_id = gelu_op->get_output(0)->get_id();
-    register_operation(std::move(gelu_op));
+    std::string act_name = name_gen(LAYER(l), BlockType::FeedForward, OperationType::Act);
+    auto act_op = std::make_unique<BiasAct>(_config, (Model*) this, act_name, empty_attr);
+    act_op->add_input(ffn1_output_id);
+    act_op->add_input(ffn1_bias_id);
+    act_op->initialize_tiles(_mapping_table);
+    uint32_t act_output_id = act_op->get_output(0)->get_id();
+    register_operation(std::move(act_op));
     //FullyConnected2
     uint32_t ffn2_weight_id = _wgt_map[name_gen(ffn_name, OperationType::FullyConnected2, ParameterType::Weight)];
     uint32_t ffn2_bias_id = _wgt_map[name_gen(ffn_name, OperationType::FullyConnected2, ParameterType::Bias)];
     auto ffn2_op = std::make_unique<GemmWS>(
       _config, (Model*) this, name_gen(ffn_name, OperationType::FullyConnected2), empty_attr);
-    ffn2_op->add_input(gelu_output_id);
+    ffn2_op->add_input(act_output_id);
     ffn2_op->add_input(ffn2_weight_id);
     ffn2_op->add_input(ffn2_bias_id);
     ffn2_op->initialize_tiles(_mapping_table);
