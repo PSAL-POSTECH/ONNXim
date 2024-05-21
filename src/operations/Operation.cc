@@ -121,6 +121,15 @@ Tensor* Operation::get_output(int id) {
   return _model->get_tensor(_outputs.at(id));
 }
 
+void Operation::add_input(int id) { 
+  _inputs.push_back(id);
+  _model->get_tensor(id)->add_child_node(this);
+}
+
+void Operation::add_output(int id) { 
+  _outputs.push_back(id);
+}
+
 bool Operation::check_executable() {
   bool result = true;
   for (auto id : _inputs) {

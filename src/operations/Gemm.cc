@@ -81,6 +81,12 @@ Gemm::Gemm(SimulationConfig config, MappingTable& mapping_table,
   spdlog::debug("[Gemm] output_shape : {}", _output_shape);
 }
 
+Gemm::Gemm(SimulationConfig config, Model* model, std::string name,
+            std::map<std::string, std::string> &attributes) 
+    :Operation(config, model, name, attributes) {
+  
+}
+
 addr_type Gemm::make_activation_address(uint32_t N, uint32_t H, uint32_t W,
                                              uint32_t C,
                                              std::vector<uint32_t> shape) {

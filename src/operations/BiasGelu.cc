@@ -27,6 +27,12 @@ BiasGelu::BiasGelu(SimulationConfig config, Model* model,
     calculate_loops();
 }
 
+BiasGelu::BiasGelu(SimulationConfig config, Model* model,
+               std::string name, std::map<std::string, std::string> &attributes)
+    : Operation(config, model, name, attributes) {
+//TODO:implement this
+}
+
 void BiasGelu::initialize_tiles(MappingTable& mapping_table) {
     for (uint32_t tokens= 0; tokens<_seq*_batch_size; tokens+=_tokens_per_tile) {
         uint32_t remain_tokens = std::min(_seq*_batch_size-tokens, _tokens_per_tile);

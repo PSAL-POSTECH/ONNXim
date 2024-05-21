@@ -59,6 +59,12 @@ Attention::Attention(SimulationConfig config, Model* model,
     calculate_loops();
 }
 
+Attention::Attention(SimulationConfig config, Model* model, 
+        std::string name, std::map<std::string, std::string>& attributes)
+    :Operation(config, model, name, attributes) {
+    //TODO: implement this
+}
+
 void Attention::initialize_tiles(MappingTable& mapping_table) {
     /* Check using fusion */
     if (!use_fused) {

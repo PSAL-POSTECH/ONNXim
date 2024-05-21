@@ -44,6 +44,12 @@ Concat::Concat(const Concat& src) : Operation(src) {
 	_axis = src._axis;
 }
 
+Concat::Concat(SimulationConfig config, Model* model,
+							 std::string name, std::map<std::string, std::string> &attributes)
+		: Operation(config, model, name, attributes) {
+			//TODO:implement this
+}
+
 void Concat::initialize_tiles(MappingTable& mapping_table) {
 	spdlog::trace("initialize_tile {} ", _name);
 	std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
