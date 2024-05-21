@@ -1,6 +1,7 @@
 #pragma once
 //#include "../tensor/NPUTensor.h"
 #include "Operation.h"
+#include "GemmWS.h"
 
 class Attention : public Operation {
    public:
@@ -21,14 +22,18 @@ class Attention : public Operation {
     std::vector<uint32_t> _input_shape;
     std::vector<uint32_t> _output_shape;
     std::vector<uint32_t> _liner_output_shape;
+    std::vector<uint32_t> _projection_output_shape;
 
+    GemmWS* _projection_node;
     uint32_t _seq;
     uint32_t _q_len;
     uint32_t _dmodel;
     uint32_t _nh;
     uint32_t _dk;
 
-    uint32_t _linear_output_id;
+    uint32_t _key_projection_id;
+    uint32_t _query_projection_id;
+    uint32_t _value_projection_id;
     /* For kv cache */
     bool has_kv_cache = false;
     bool use_fused = true;

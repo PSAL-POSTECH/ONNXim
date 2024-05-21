@@ -41,6 +41,7 @@ Attention::Attention(SimulationConfig config, Model* model,
 
     _output_shape = std::vector<uint32_t>{_batch_size, _q_len, _dmodel};
     _liner_output_shape = std::vector<uint32_t>{_batch_size, _q_len, _weight_shape[1]};
+    _projection_output_shape = std::vector<uint32_t>{_batch_size, _q_len, _weight_shape[1]/3};
     spdlog::debug("Fused attention: input shape: [{}, {}, {}]", _input_shape.at(0), _input_shape.at(1), _input_shape.at(2));
     spdlog::debug("Fused attention: output shape: [{}, {}, {}]", _output_shape.at(0), _output_shape.at(1), _output_shape.at(2));
     spdlog::debug("Fused attention: query shape: [{}, {}, {}]", _query_shape.at(0), _query_shape.at(1), _query_shape.at(2));
@@ -72,36 +73,41 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
         return;
     }
 
-    /* linear projection */
+    /* Create linear node and tensors */
     uint32_t fused_op_id = 0;
-    GemmWS linear_projection = GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
-    std::unique_ptr<Tensor> linear_output = std::make_unique<Tensor>(
-        _id, "", _liner_output_shape, _config.precision, true);
+    _projection_node = new GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
+    std::unique_ptr<Tensor> key_projection = std::make_unique<Tensor>(
+        _id, "", _projection_output_shape, _config.precision, false);
+    std::unique_ptr<Tensor> query_projection = std::make_unique<Tensor>(
+        _id, "", _projection_output_shape, _config.precision, false);
+    std::unique_ptr<Tensor> value_projection = std::make_unique<Tensor>(
+       _id, "", _projection_output_shape, _config.precision, false);
 
-    /* Set tensor */
-    linear_projection.set_model(_model);
-    linear_projection.add_input(_inputs.at(0));
-    linear_projection.add_input(_inputs.at(1));
-    linear_projection.add_output(linear_output.get()->get_id());
-    _linear_output_id = _INPUT_OPERAND + _inputs.size();
-    _inputs.push_back(linear_output.get()->get_id());
-    _model->add_tensor(std::move(linear_output));
+    /* Link tensors to linear node */
+    _projection_node->set_model(_model);
+    _projection_node->add_input(_inputs.at(0));
+    _projection_node->add_input(_inputs.at(1));
+    _projection_node->add_input(_inputs.at(2));
+    _projection_node->add_output(key_projection.get()->get_id());
+    _projection_node->add_output(query_projection.get()->get_id());
+    _projection_node->add_output(value_projection.get()->get_id());
+    get_input(0)->add_child_node(_projection_node);
+    key_projection->add_child_node(this);
+    query_projection->add_child_node(this);
+    value_projection->add_child_node(this);
 
-    /* Initilize tiles */
-    linear_projection.has_bias = false;
-    linear_projection.initialize_tiles(mapping_table);
-    std::deque<std::unique_ptr<Tile>>& tiles = linear_projection.get_tiles();
-    for (const auto& tile : tiles) {
-        tile->layer_id = _id;
-        tile->fused_op_id = fused_op_id;
-    }
-    _tiles.insert(
-        _tiles.end(),
-        std::make_move_iterator(linear_projection.get_tiles().begin()),
-        std::make_move_iterator(linear_projection.get_tiles().end())
-    );
-    fused_op_id++;
-    _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
+    /* Link key query value to attention node */
+    _key_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(key_projection.get()->get_id());
+    _query_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(query_projection.get()->get_id());
+    _value_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(value_projection.get()->get_id());
+
+    /* Register tensor */
+    _model->add_tensor(std::move(key_projection));
+    _model->add_tensor(std::move(query_projection));
+    _model->add_tensor(std::move(value_projection));
 
     /* Fused Attention body */
     for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
@@ -136,7 +142,9 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
     addr_type sram_value_base = sram_key_base + _dk * seq_len * num_heads * _config.precision;
     addr_type sram_logit_base = ACCUM_SPAD_BASE;  // for logits
 
-    addr_type first_addr = get_operand_addr(_linear_output_id);
+    addr_type key_addr = get_operand_addr(_key_projection_id);
+    addr_type query_addr = get_operand_addr(_query_projection_id);
+    addr_type value_addr = get_operand_addr(_value_projection_id);
     addr_type ouput_addr = get_operand_addr(_OUTPUT_OPERAND);
     for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
         int h_idx = head_idx + h_ofs;
@@ -155,15 +163,15 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             for (int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
                 // key:  h, d_k, seq_len
                 std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
-                std::vector<uint32_t> key_idx =   {(uint32_t)(h_idx+_nh), (uint32_t)i, (uint32_t)seq_idx};
-                std::vector<uint32_t> value_idx = {(uint32_t)(h_idx+_nh*2), (uint32_t)seq_idx, (uint32_t)i};
-                std::vector<uint32_t> output_idx = {(uint32_t)(h_idx+_nh*3), (uint32_t)seq_idx, (uint32_t)i};
+                std::vector<uint32_t> key_idx =   {(uint32_t)(h_idx), (uint32_t)i, (uint32_t)seq_idx};
+                std::vector<uint32_t> value_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
+                std::vector<uint32_t> output_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
 
-                dram_key_addrs.insert(first_addr + make_address(key_idx, _key_shape));
-                dram_value_addrs.insert(first_addr + make_address(value_idx, _value_shape));
+                dram_key_addrs.insert(key_addr + make_address(key_idx, _key_shape));
+                dram_value_addrs.insert(value_addr + make_address(value_idx, _value_shape));
 
                 if (q_len == 1 && seq_idx > 0) continue;
-                dram_query_addrs.insert(first_addr + make_address(query_idx, _query_shape));
+                dram_query_addrs.insert(query_addr + make_address(query_idx, _query_shape));
                 dram_output_addrs.insert(ouput_addr + make_address(output_idx, _query_shape)); // Used query_shape intentionally
             }
         }
@@ -242,33 +250,47 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
 }
 
 void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
-    /* linear projection */
+    /* Create linear node and tensors */
     uint32_t fused_op_id = 0;
-    GemmWS linear_projection = GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
-    std::unique_ptr<Tensor> linear_output = std::make_unique<Tensor>(
-        _id, "", _liner_output_shape, _config.precision, true);
+    _projection_node = new GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
+    std::unique_ptr<Tensor> key_projection = std::make_unique<Tensor>(
+        _id, "", _projection_output_shape, _config.precision, true);
+    std::unique_ptr<Tensor> query_projection = std::make_unique<Tensor>(
+        _id, "", _projection_output_shape, _config.precision, true);
+    std::unique_ptr<Tensor> value_projection = std::make_unique<Tensor>(
+       _id, "", _projection_output_shape, _config.precision, true);
+    _model->add_tensor(std::move(key_projection));
+    _model->add_tensor(std::move(query_projection));
+    _model->add_tensor(std::move(value_projection));
 
-    /* Set tensor */
-    linear_projection.set_model(_model);
-    linear_projection.add_input(_inputs.at(0));
-    linear_projection.add_input(_inputs.at(1));
-    linear_projection.add_output(linear_output.get()->get_id());
-    _linear_output_id = _INPUT_OPERAND + _inputs.size();
-    _inputs.push_back(linear_output.get()->get_id());
-    _model->add_tensor(std::move(linear_output));
+    /* Link tensors to linear node */
+    _projection_node->set_model(_model);
+    _projection_node->add_input(_inputs.at(0));
+    _projection_node->add_input(_inputs.at(1));
+    _projection_node->add_output(key_projection.get()->get_id());
+    _projection_node->add_output(query_projection.get()->get_id());
+    _projection_node->add_output(value_projection.get()->get_id());
+
+    /* Link key query value to attention node */
+    _key_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(key_projection.get()->get_id());
+    _query_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(query_projection.get()->get_id());
+    _value_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(value_projection.get()->get_id());
 
     /* Initilize tiles */
-    linear_projection.has_bias = false;
-    linear_projection.initialize_tiles(mapping_table);
-    std::deque<std::unique_ptr<Tile>>& tiles = linear_projection.get_tiles();
+    _projection_node->has_bias = false;
+    _projection_node->initialize_tiles(mapping_table);
+    std::deque<std::unique_ptr<Tile>>& tiles = _projection_node->get_tiles();
     for (const auto& tile : tiles) {
         tile->layer_id = _id;
         tile->fused_op_id = fused_op_id;
     }
     _tiles.insert(
         _tiles.end(),
-        std::make_move_iterator(linear_projection.get_tiles().begin()),
-        std::make_move_iterator(linear_projection.get_tiles().end())
+        std::make_move_iterator(_projection_node->get_tiles().begin()),
+        std::make_move_iterator(_projection_node->get_tiles().end())
     );
     _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
     fused_op_id++;
