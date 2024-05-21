@@ -2,6 +2,7 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include "Model.h"
 #include "operations/OperationFactory.h"
+#include "operations/Attention.h"
 
 Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& mapping_table) {
   _onnx_path = onnx_path;
@@ -98,11 +99,23 @@ void Model::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table)
     if(node != nullptr) {
       int node_id = node->get_id();
       _operation_map[node->get_id()] = std::move(node);
+      /* For skipping attention block */
       if (node_proto.op_type() == "SkipLayerNormalization" && _model_config.contains("nr_atten"))
         if (_model_config["nr_atten"] != -1 && ++nr_skip >= int(_model_config["nr_atten"])*2) {
           _operation_map[node_id].get()->_outputs.clear();
           break;
         }
+    }
+  }
+
+  for(auto& [key, val] : _operation_map) {
+    val->initialize_tiles(_mapping_table);
+    /* Register projection node */
+    if (val->get_optype() == "Attention") {
+      Attention* attention_node = static_cast<Attention*>(val.get());
+      int projection_id = attention_node->_projection_node->get_id();
+      _operation_map[projection_id] = std::move(std::unique_ptr<GemmWS>(attention_node->_projection_node));
+      _operation_map[projection_id]->initialize_tiles(_mapping_table);
     }
   }
 
@@ -113,9 +126,6 @@ void Model::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table)
     } 
   }
 
-  for(auto& [key, val] : _operation_map) {
-    val->initialize_tiles(_mapping_table);
-  }
   /* Model initialization time measurement */
   auto end = std::chrono::high_resolution_clock::now();
   std::chrono::duration<double> duration = end - start;
