@@ -4,6 +4,7 @@
 class SkipLayerNorm : public Operation {
 public:
     SkipLayerNorm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+    SkipLayerNorm(SimulationConfig config, Model* model, std::string name, std::map<std::string, std::string>& attributes);
 
     std::vector<uint32_t> _weight_shape;
     std::vector<uint32_t> _bias_shape;

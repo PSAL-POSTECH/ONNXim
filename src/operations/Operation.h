@@ -15,6 +15,9 @@ class Operation {
   Operation(SimulationConfig config, MappingTable& mapping_table);
   Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
   Operation(const Operation& operation);
+  Operation(SimulationConfig config, Model* model,
+            std::string name,  std::map<std::string, std::string>&attribute) 
+    : _config(config), _model(model) ,_name(name), _attributes(attribute) {}
   virtual ~Operation() = default;
   virtual void set_finish();
 
@@ -23,8 +26,8 @@ class Operation {
   virtual uint32_t get_id() { return _id; }
   virtual uint32_t num_inputs() { return _inputs.size(); }
   virtual Tensor* get_input(int id);
-  virtual void add_input(int id) { _inputs.push_back(id); }
-  virtual void add_output(int id) { _outputs.push_back(id); }
+  virtual void add_input(int id);
+  virtual void add_output(int id);
   virtual uint32_t num_outputs() { return _outputs.size(); }
   virtual Tensor* get_output(int id);
   virtual void set_model(Model* model) { _model=model; }

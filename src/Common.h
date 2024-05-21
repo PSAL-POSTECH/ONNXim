@@ -119,3 +119,14 @@ uint32_t generate_id();
 uint32_t generate_mem_access_id();
 addr_type allocate_address(uint32_t size);
 SimulationConfig initialize_config(json config);
+template <typename... Args>
+std::string name_gen(Args... args) {
+    std::vector<std::string> strs = {args...};
+    assert(!strs.empty());
+    std::string ret = "";
+    for (auto &str : strs) {
+        ret += str + ".";
+    }
+    ret.resize(ret.size() - 1);
+    return ret;
+}

@@ -5,6 +5,7 @@
 class Attention : public Operation {
    public:
     Attention(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+    Attention(SimulationConfig config, Model* model, std::string name, std::map<std::string, std::string>& attributes);
     //std::vector<Ptr<BTensor>> get_outputs(std::vector<Ptr<BTensor>> inputs) override;
 
     uint32_t _batch_size;
