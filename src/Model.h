@@ -10,7 +10,8 @@ class Model {
   public:
     Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& map);
     Model(json model_config, SimulationConfig config, std::string name)
-      :_model_config(model_config), _config(config), _name(name) {}
+      :_model_config(model_config), _config(config), _name(name) { _id = generate_id(); }
+    uint32_t get_id() { return _id; }
     Tensor* get_tensor(uint32_t id);
     Tensor* find_tensor(std::string name);
     void add_tensor(std::unique_ptr<Tensor> tensor);
@@ -26,6 +27,7 @@ class Model {
     bool check_finish();
     uint32_t get_partition_id() { return _partition_id; }
     
+    virtual bool check_language_model() { return false; }
     virtual bool check_regressive();
     virtual void prepare_regressive();
 
@@ -33,6 +35,8 @@ class Model {
     virtual void initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table);
   
   protected:
+
+    uint32_t _id;
     MappingTable _mapping_table;
     json _model_config;
     std::string _onnx_path;

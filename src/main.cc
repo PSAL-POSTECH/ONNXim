@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
   cmd_parser.add_command_line_option<std::string>(
       "log_level", "Set for log level [trace, debug, info], default = info");
   cmd_parser.add_command_line_option<std::string>(
-      "mode", "choose one_model or two_model");
+      "mode", "choose default or language mode, default = default");
 
   try {
     cmd_parser.parse(argc, argv);
@@ -54,24 +54,49 @@ int main(int argc, char** argv) {
   SimulationConfig config = initialize_config(config_json);
   OperationFactory::initialize(config);
 
+  std::string mode = "default";
+  bool language_mode = false;
+  cmd_parser.set_if_defined("mode", &mode);
+  if (mode == "default") {
+    spdlog::info("Running in default mode");
+  } else if (mode == "language") {
+    spdlog::info("Running in language mode");
+    language_mode = true;
+  } else {
+    spdlog::error("Invalid mode: {}", mode);
+    return 1;
+  }
+
+
   std::string models_list_path;
   cmd_parser.set_if_defined("models_list", &models_list_path);
   std::ifstream models_list_file(models_list_path);
   json models_list;
   models_list_file >> models_list;
   models_list_file.close();
-  auto simulator = std::make_unique<Simulator>(config);
+  auto simulator = std::make_unique<Simulator>(config, language_mode);
   for (json model_config : models_list["models"]) {
-    std::string model_name = model_config["name"];
-    std::string onnx_path =
-        fmt::format("{}/{}/{}.onnx", model_base_path, model_name, model_name);
-    std::string mapping_path = fmt::format("{}/{}/{}.mapping", model_base_path,
-                                           model_name, model_name);
-    MappingTable mapping_table = MappingTable::parse_mapping_file(mapping_path, config);
+    if(language_mode) {
+      std::string model_name = model_config["name"];
+      std::string model_path =
+        fmt::format("{}/{}/{}.json", model_base_path, "language_models", model_name);
+      json model_json = json::parse(std::ifstream(model_path));
+      auto model = std::make_unique<LanguageModel>(model_json, config, model_name);
+      spdlog::info("Register Language Model: {}", model_name);
+      simulator->register_language_model(model_name, std::move(model));
+    }
+    else {
+      std::string model_name = model_config["name"];
+      std::string onnx_path =
+          fmt::format("{}/{}/{}.onnx", model_base_path, model_name, model_name);
+      std::string mapping_path = fmt::format("{}/{}/{}.mapping", model_base_path,
+                                            model_name, model_name);
+      MappingTable mapping_table = MappingTable::parse_mapping_file(mapping_path, config);
 
-    auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name, mapping_table);
-    spdlog::info("Register model: {}", model_name);
-    simulator->register_model(std::move(model));
+      auto model = std::make_unique<Model>(onnx_path, model_config, config, model_name, mapping_table);
+      spdlog::info("Register model: {}", model_name);
+      simulator->register_model(std::move(model));
+    }
   }
   simulator->run_simulator();
 
