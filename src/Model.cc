@@ -6,6 +6,7 @@
 
 Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& mapping_table) {
   _onnx_path = onnx_path;
+  _id = generate_id();
   _name = name;
   _root_node_id = generate_id();
   _config = config;

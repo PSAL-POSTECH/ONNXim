@@ -37,7 +37,7 @@ LanguageModel::LanguageModel(json llm_config, SimulationConfig config, std::stri
   _num_batch = 0;
 }
 
-std::unique_ptr<LanguageModel> LanguageModel::generate_model(std::vector<LanguageRequest>& reqs) {
+std::unique_ptr<LanguageModel> LanguageModel::generate_model(std::vector<LangInput>& reqs) {
   std::unique_ptr<LanguageModel> model = std::make_unique<LanguageModel>(_model_config, _config, _name);
   model->_reqs = reqs;
   model->_num_batch = reqs.size();

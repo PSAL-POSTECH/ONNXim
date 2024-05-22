@@ -30,7 +30,8 @@ extern std::string Bias;
 }  // namespace ParameterType
 
 
-struct LanguageRequest {
+struct LangInput {
+  uint32_t request_id;
   uint32_t seq_length;
   uint32_t context_length;
   std::vector<Tensor*> key_cache;
@@ -40,20 +41,23 @@ struct LanguageRequest {
 class LanguageModel : public Model {
   public:
   LanguageModel(json llm_config, SimulationConfig config, std::string name);
-  std::unique_ptr<LanguageModel> generate_model(std::vector<LanguageRequest> &reqs);
+  std::unique_ptr<LanguageModel> generate_model(std::vector<LangInput> &reqs);
   
+
   uint32_t load_key_cache(uint32_t layer, uint32_t batch);
   uint32_t load_value_cache(uint32_t layer, uint32_t batch);
   
   void log_model();
   uint64_t get_weight_size() { return _wgt_size; }
 
+  virtual bool check_language_model() override { return true; }
   virtual void initialize_model(
       std::vector<std::unique_ptr<Tensor>>& weight_table);
   virtual void initialize_weight(
       std::vector<std::unique_ptr<Tensor>>& weight_table);
+
   protected:
-    std::vector<LanguageRequest> _reqs;
+    std::vector<LangInput> _reqs;
     uint32_t _num_batch;
     bool _generation_phase;
 

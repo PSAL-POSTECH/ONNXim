@@ -175,10 +175,14 @@ void Scheduler::refresh_status() {
                     (*_core_time) / 1000000, *_core_cycle);
       std::unique_ptr<Model> finished_model = std::move(_request_queue.front().model);
       _request_queue.pop_front();
+      if(finished_model->check_language_model()) {
+        static_cast<Simulator*>(_simulator)->finish_language_model(finished_model->get_id());
+      }
       if (finished_model->check_regressive()) {
         finished_model->prepare_regressive();
         static_cast<Simulator*>(_simulator)->register_model(std::move(finished_model));
       }
+      
     }
   }
   bool all_empty = tile_queue_empty();
