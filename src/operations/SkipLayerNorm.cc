@@ -32,7 +32,7 @@ SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model* model,
             pre_defind_tensor->redefine_tensor(_id, _output_shape);
         }
     }
-    calculate_loops();
+
 }
 
 SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model *model,
@@ -48,12 +48,11 @@ void SkipLayerNorm::initialize_tiles(MappingTable& mapping_table) {
         auto output_tensor = std::make_unique<Tensor>(_id, name_gen(_name, "output"), _output_shape, _config.precision, false);
         _outputs.push_back(output_tensor.get()->get_id());
         _model->add_tensor(std::move(output_tensor));
-        _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
-                    .optype = "Attention",
-                    .layer_id = _id,
-                    .skip = true}));
-        return; //TODO: fix this
+        _seq = _input_shape.at(0);
+        _dk = _input_shape.at(1);
+        _batch_size = 1;
     }
+    calculate_loops();
     for (uint32_t tokens=0; tokens < _seq*_batch_size; tokens+=_tokens_per_tile) {
         uint32_t remain_tokens = std::min(_seq*_batch_size-tokens, _tokens_per_tile);
         std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{

@@ -1,6 +1,13 @@
 #include "BiasAct.h"
 #include "../Model.h"
 
+static const std::map<std::string, Opcode> activation_map = {
+    {"gelu", Opcode::GELU},
+    {"relu", Opcode::COMP},
+    {"swish", Opcode::SWISH},
+    {"softmax", Opcode::SOFTMAX},
+};
+
 BiasAct::BiasAct(SimulationConfig config, Model* model,
                onnx::NodeProto& node_proto)
     : Operation(config, model, node_proto) {
@@ -24,13 +31,12 @@ BiasAct::BiasAct(SimulationConfig config, Model* model,
     } else {
         pre_defind_tensor->redefine_tensor(_id, _output_shape);
     }
-    calculate_loops();
 }
 
 BiasAct::BiasAct(SimulationConfig config, Model* model,
                std::string name, std::map<std::string, std::string> &attributes)
     : Operation(config, model, name, attributes) {
-    _activation = get_attribute("activation");
+    _activation = activation_map.at(get_attribute("activation"));
     _use_bias = std::stoi(get_attribute("has_bias"));
     _llama_mlp = std::stoi(get_attribute("llama_mlp"));
 }
@@ -44,12 +50,11 @@ void BiasAct::initialize_tiles(MappingTable& mapping_table) {
         auto output_tensor = std::make_unique<Tensor>(_id, name_gen(_name, "output"), _output_shape, _config.precision, false);
         _outputs.push_back(output_tensor.get()->get_id());
         _model->add_tensor(std::move(output_tensor));
-        _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
-                    .optype = "Attention",
-                    .layer_id = _id,
-                    .skip = true}));
-        return; //TODO: fix this
+        _dk = _input_shape.at(1);
+        _seq = _input_shape.at(0);
+        _batch_size = 1;
     }
+    calculate_loops();
     for (uint32_t tokens= 0; tokens<_seq*_batch_size; tokens+=_tokens_per_tile) {
         uint32_t remain_tokens = std::min(_seq*_batch_size-tokens, _tokens_per_tile);
         std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
@@ -112,13 +117,21 @@ void BiasAct::initialize_instructions(Tile* tile, Mapping mapping, uint32_t toke
     }));
 
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-        .opcode = Opcode::GELU,
+        .opcode = _activation,
         .dest_addr = sram_base,
-        .size = _dk * tokens * _config.precision / _config.dram_req_size,
-        .compute_size = _dk * tokens * _config.precision,
+        .size = _output_shape[1] * tokens * _config.precision / _config.dram_req_size,
+        .compute_size = _output_shape[1] * tokens * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base},
     }));
-
+    if(_llama_mlp) {
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+            .opcode = Opcode::MUL,
+            .dest_addr = sram_base,
+            .size = _output_shape[1] * tokens * _config.precision / _config.dram_req_size,
+            .compute_size = _output_shape[1] * tokens * _config.precision,
+            .src_addrs = std::vector<addr_type>{sram_base, sram_bias_base},
+        }));
+    }
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,

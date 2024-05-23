@@ -58,8 +58,10 @@ void Tensor::define_tensor(addr_type address, std::vector<uint32_t> &dims) {
   if (_dims.empty()) {
     _temporal = false;
     _address = address;
+    _size = _precision;
     for (int dim : dims) {
       _dims.push_back(dim);
+      _size *= dim;
     }
   } else {
     throw("Error: cannot redefine already created tensor");
@@ -69,8 +71,10 @@ void Tensor::define_tensor(addr_type address, std::vector<uint32_t> &dims) {
 void Tensor::redefine_tensor(uint32_t id, std::vector<uint32_t> &dims) {
   if (_dims.empty()) {
     _src_node = id;
+    _size = _precision;
     for (int dim : dims) {
       _dims.push_back(dim);
+      _size *= dim;
     }
   } else {
     bool condition = false;
@@ -86,8 +90,10 @@ void Tensor::redefine_tensor(uint32_t id, std::vector<uint32_t> &dims) {
 
 void Tensor::resize_tensor(std::vector<uint32_t> &dims) {
   _dims.clear();
+  _size = _precision;
   for (int dim : dims) {
     _dims.push_back(dim);
+    _size *= dim;
   }
 }
 

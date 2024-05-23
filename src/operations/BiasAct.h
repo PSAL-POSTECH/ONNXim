@@ -23,6 +23,6 @@ class BiasAct : public Operation {
   uint32_t _dk;
   uint32_t _tokens_per_tile;
   bool _llama_mlp;
-  std::string _activation;
   bool _use_bias;
+  Opcode _activation;
 };
