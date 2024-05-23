@@ -16,8 +16,7 @@ class Operation {
   Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
   Operation(const Operation& operation);
   Operation(SimulationConfig config, Model* model,
-            std::string name,  std::map<std::string, std::string>&attribute) 
-    : _config(config), _model(model) ,_name(name), _attributes(attribute) {}
+            std::string name,  std::map<std::string, std::string>&attribute);
   virtual ~Operation() = default;
   virtual void set_finish();
 
@@ -45,7 +44,7 @@ class Operation {
                                     uint32_t C, std::vector<uint32_t> shape);
   addr_type make_weight_address(uint32_t S, uint32_t R, uint32_t M, uint32_t C,
                                 std::vector<uint32_t> shape);
-
+  std::string get_attribute(std::string key);
  protected:
   static const uint32_t _NO_OPERAND = 0;
   static const uint32_t _INPUT_OPERAND = 100;

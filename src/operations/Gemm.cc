@@ -84,7 +84,21 @@ Gemm::Gemm(SimulationConfig config, MappingTable& mapping_table,
 Gemm::Gemm(SimulationConfig config, Model* model, std::string name,
             std::map<std::string, std::string> &attributes) 
     :Operation(config, model, name, attributes) {
-  
+  Mdim = 1;
+  Cdim_w = 0;
+  Cdim = 1;
+  Ndim = 0;
+  _batch_size = 1;
+
+  _input_shape = parse_dims(get_attribute("input_shape"));
+  _output_shape = parse_dims(get_attribute("output_shape"));
+  _weight_shape = parse_dims(get_attribute("weight_shape"));
+  std::unique_ptr<Tensor> output_tensor = std::make_unique<Tensor>(
+        _id, name_gen(_name, "out"), _output_shape, _config.precision, false);
+  _outputs.push_back(output_tensor.get()->get_id());
+  _model->add_tensor(std::move(output_tensor));
+  spdlog::debug("[Gemm] input_shape: {}", _input_shape);
+  spdlog::debug("[Gemm] output_shape : {}", _output_shape);
 }
 
 addr_type Gemm::make_activation_address(uint32_t N, uint32_t H, uint32_t W,

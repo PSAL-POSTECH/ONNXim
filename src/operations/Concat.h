@@ -19,5 +19,5 @@ class Concat : public Operation {
     // std::vector<uint32_t> _dilations;
     // std::vector<uint32_t> _pads;
 
-    int _axis;
+    uint32_t _axis;
 };

@@ -21,6 +21,12 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   }
 }
 
+Model::Model(json model_config, SimulationConfig config, std::string name)
+      :_model_config(model_config), _config(config), _name(name) {
+  _id = generate_id(); 
+  _mapping_table = MappingTable(_config);
+}
+
 Tensor* Model::get_tensor(uint32_t id) {
   return _tensor_map[id].get();
 }

@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
       json model_json = json::parse(std::ifstream(model_path));
       auto model = std::make_unique<LanguageModel>(model_json, config, model_name);
       spdlog::info("Register Language Model: {}", model_name);
-      simulator->register_language_model(model_name, std::move(model));
+      simulator->register_language_model(model_config, std::move(model));
     }
     else {
       std::string model_name = model_config["name"];
