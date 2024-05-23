@@ -19,7 +19,9 @@ GemmWS::GemmWS(SimulationConfig config, MappingTable& mapping_table,
 
 GemmWS::GemmWS(SimulationConfig config, Model* model, std::string name,
                std::map<std::string, std::string>& attributes)
-    : Gemm(config, model, name, attributes) {}
+    : Gemm(config, model, name, attributes) {
+  has_bias = std::stoi(get_attribute("has_bias"));
+}
 
 void GemmWS::initialize_tiles(MappingTable& mapping_table) {
   Mapping::LoopCounts key{.N = _output_shape[_input_shape.size()-2 + Ndim] * _batch_size,

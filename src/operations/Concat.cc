@@ -48,14 +48,27 @@ Concat::Concat(SimulationConfig config, Model* model,
 							 std::string name, std::map<std::string, std::string> &attributes)
 		: Operation(config, model, name, attributes) {
 			//TODO:implement this
+		_axis = std::stoi(get_attribute("axis"));
 }
 
 void Concat::initialize_tiles(MappingTable& mapping_table) {
+	if(_outputs.size() == 0) {
+		std::vector<uint32_t> output_shape = _model->get_tensor(_inputs[0])->get_dims();
+		output_shape[_axis] = 0;
+		for(uint32_t input : _inputs) {
+			Tensor* tensor = _model->get_tensor(input);
+			output_shape[_axis] += tensor->get_dims()[_axis];
+		}
+		auto output_tensor = std::make_unique<Tensor>(_id, name_gen(_name, "output"), output_shape, _config.precision, false);
+		_outputs.push_back(output_tensor->get_id());
+		_model->add_tensor(std::move(output_tensor));
+	}
 	spdlog::trace("initialize_tile {} ", _name);
 	std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
 		.status = Tile::Status::INITIALIZED,
 		.optype = "Concat",
-		.layer_id = _id
+		.layer_id = _id,
+		.skip = true
 	});
 	_tiles.push_back(std::move(tile));
 }

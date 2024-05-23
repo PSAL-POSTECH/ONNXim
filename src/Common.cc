@@ -108,3 +108,24 @@ SimulationConfig initialize_config(json config) {
   }
   return parsed_config;
 }
+
+std::vector<uint32_t> parse_dims(const std::string &str) {
+  std::vector<uint32_t> dims;
+  std::string token;
+  std::istringstream tokenStream(str);
+  while (std::getline(tokenStream, token, ',')) {
+      dims.push_back(std::stoi(token));
+  }
+  return dims;
+}
+
+std::string dims_to_string(const std::vector<uint32_t> &dims){
+  std::string str;
+  for (int i=0; i<dims.size(); i++) {
+    str += std::to_string(dims[i]);
+    if (i != dims.size()-1) {
+      str += ",";
+    }
+  }
+  return str;
+}

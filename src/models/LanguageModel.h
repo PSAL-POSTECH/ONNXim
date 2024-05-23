@@ -66,6 +66,9 @@ class LanguageModel : public Model {
     uint32_t _hidden_size;
     uint32_t _intermediate_size;
     uint32_t _num_layers;
+    uint32_t _qkv_out_dim;
+    uint32_t _ffn1_out_dim;
+    bool _llama_mlp;
 
     uint64_t _wgt_size;  // in bytes
 

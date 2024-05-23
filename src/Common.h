@@ -130,3 +130,7 @@ std::string name_gen(Args... args) {
     ret.resize(ret.size() - 1);
     return ret;
 }
+
+std::vector<uint32_t> parse_dims(const std::string &str);
+
+std::string dims_to_string(const std::vector<uint32_t> &dims);

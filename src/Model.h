@@ -9,11 +9,13 @@
 class Model {
   public:
     Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& map);
-    Model(json model_config, SimulationConfig config, std::string name)
-      :_model_config(model_config), _config(config), _name(name) { _id = generate_id(); }
+    Model(json model_config, SimulationConfig config, std::string name);
+    virtual ~Model() = default;
     uint32_t get_id() { return _id; }
+    json get_model_config() { return _model_config; }
     Tensor* get_tensor(uint32_t id);
     Tensor* find_tensor(std::string name);
+    uint32_t get_root_node_id() { return _root_node_id; }
     void add_tensor(std::unique_ptr<Tensor> tensor);
     void set_layer_finish(uint32_t id); 
 

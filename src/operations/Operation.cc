@@ -89,6 +89,21 @@ Operation::Operation(SimulationConfig config, Model* model,
   }
 }
 
+Operation::Operation(SimulationConfig config, Model* model,
+            std::string name,  std::map<std::string, std::string>&attribute) 
+    : _config(config), _model(model) ,_name(name), _attributes(attribute) {
+  _id = generate_id();
+  _finish = false;
+  Ndim = 0;
+  Cdim = 3;
+  Hdim = 1;
+  Wdim = 2;
+  Mdim = 0;
+  Cdim_w = 1;
+  Sdim = 2;
+  Rdim = 3;
+}
+
 Operation::Operation(const Operation& operation) {
   spdlog::error("Opertion copy is not allowed !");
   exit(EXIT_FAILURE);
@@ -204,4 +219,12 @@ addr_type Operation::make_weight_address(uint32_t S, uint32_t R, uint32_t M,
               _config.precision * _config.core_width;
   }
   return _config.align_address(address);
+}
+
+std::string Operation::get_attribute(std::string key) {
+  if (_attributes.find(key) == _attributes.end()) {
+    spdlog::error("{}: Attribute {} not found", _name, key.c_str());
+    exit(EXIT_FAILURE);
+  }
+  return _attributes[key];
 }

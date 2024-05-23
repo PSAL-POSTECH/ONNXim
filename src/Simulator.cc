@@ -212,10 +212,10 @@ void Simulator::register_language_model(json info, std::unique_ptr<LanguageModel
   std::string(onnxim_path_env) : std::string("./");
   trace_file = fs::path(onnxim_path).append("traces").append(trace_file).string();
   if(_weight_table.find(name) == _weight_table.end()) {
-    model->initialize_model(_weight_table[name]);
+    model->initialize_weight(_weight_table[name]);
   }
   if(info["scheduler"] == "simple") {
-    _lang_scheduler = std::make_unique<LangScheduler>(name, trace_file, std::move(model));
+    _lang_scheduler = std::make_unique<LangScheduler>(name, trace_file, std::move(model), _config);
   } else {
     spdlog::error("Invalid scheduler type");
     exit(EXIT_FAILURE);
