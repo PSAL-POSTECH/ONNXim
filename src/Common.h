@@ -58,7 +58,9 @@ enum class Opcode {
   SOFTMAX,
   LAYERNORM,
   ADD,
+  MUL,
   GELU,
+  SWISH,
   BAR
 };
 
@@ -130,6 +132,7 @@ std::string name_gen(Args... args) {
     ret.resize(ret.size() - 1);
     return ret;
 }
+uint32_t ceil_div(uint32_t src, uint32_t div);
 
 std::vector<uint32_t> parse_dims(const std::string &str);
 

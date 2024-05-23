@@ -311,16 +311,6 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     register_operation(std::move(ff_ln_op));
     input_id = ff_ln_output_id;
   }
-  //LMHead
-  // uint32_t lm_head_weight_id = _wgt_map[name_gen(OperationType::LmHead, ParameterType::Weight)];
-  // auto lm_head_op = std::make_unique<GemmWS>(_config, (Model*) this, OperationType::LmHead, empty_attr);
-  // lm_head_op->add_input(input_id);
-  // lm_head_op->add_input(lm_head_weight_id);
-  // lm_head_op->initialize_tiles(_mapping_table);
-  // uint32_t lm_head_output_id = lm_head_op->get_output(0)->get_id();
-  // register_operation(std::move(lm_head_op));
-
-
 
   for (auto& [key, val]: _operation_map) {
     if(val->check_executable()) {
