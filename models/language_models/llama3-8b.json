@@ -1,0 +1,11 @@
+{
+  "activation_function" : "swish",
+  "num_attention_heads" : 32,
+  "num_kv_heads" : 8,
+  "vocab_size" : 128256,
+  "num_hidden_layers" : 1,
+  "hidden_size" : 4096,
+  "intermediate_size" : 14336,
+  "ffn_type" : "llama",
+  "max_seq_length" : 8192
+}
