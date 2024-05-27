@@ -62,7 +62,6 @@ Attention::Attention(SimulationConfig config, Model* model,
 Attention::Attention(SimulationConfig config, Model* model, 
         std::string name, std::map<std::string, std::string>& attributes)
     :Operation(config, model, name, attributes) {
-    //TODO: implement this
     _batch_size = 1;
     _q_len = std::stoi(get_attribute("num_tokens"));
     _nh = std::stoi(get_attribute("num_heads"));
@@ -330,6 +329,8 @@ void Attention::calculate_loops() {
         uint32_t heads_per_tile = std::min(spad_capacity / total_spad_size_per_head,
                                             acc_spad_capacity/ total_acc_size_per_head);
         if (heads_per_tile > heads_per_kv) heads_per_tile = heads_per_kv;
+        if (_nh / heads_per_tile < _config.num_cores * 2)
+            heads_per_tile = ceil_div(_nh, _config.num_cores * 2);
         if(heads_per_tile % heads_per_kv != 0) heads_per_tile = 1;
         if (heads_per_tile <= 0) {
             use_fused = false;
