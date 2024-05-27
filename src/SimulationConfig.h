@@ -51,6 +51,7 @@ struct SimulationConfig {
   std::string icnt_config_path;
   uint32_t icnt_freq;
   uint32_t icnt_latency;
+  uint32_t icnt_print_interval=0;
 
   /* Sheduler config */
   std::string scheduler_type;

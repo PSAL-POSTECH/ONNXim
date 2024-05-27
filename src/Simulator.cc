@@ -44,11 +44,13 @@ Simulator::Simulator(SimulationConfig config)
     spdlog::error("[Configuration] {} Invalid interconnect type...!");
     exit(EXIT_FAILURE);
   }
+  _icnt_interval = config.icnt_print_interval;
 
   // Create core objects
   _cores.resize(config.num_cores);
   _n_cores = config.num_cores;
   _n_memories = config.dram_channels;
+  _memory_req_size = config.dram_req_size;
   for (int core_index = 0; core_index < _n_cores; core_index++) {
     if (config.core_type == CoreType::SYSTOLIC_OS)
       _cores[core_index] = std::make_unique<SystolicOS>(core_index, _config);
@@ -138,6 +140,8 @@ void Simulator::cycle() {
     }
     // Interconnect cycle
     if (_cycle_mask & ICNT_MASK) {
+      _icnt_cycle++;
+
       for (int core_id = 0; core_id < _n_cores; core_id++) {
         // PUHS core to ICNT. memory request
         if (_cores[core_id]->has_memory_request()) {
@@ -146,12 +150,14 @@ void Simulator::cycle() {
           if (!_icnt->is_full(core_id, front)) {
             _icnt->push(core_id, get_dest_node(front), front);
             _cores[core_id]->pop_memory_request();
+            _nr_from_core++;
           }
         }
         // Push response from ICNT. to Core.
         if (!_icnt->is_empty(core_id)) {
           _cores[core_id]->push_memory_response(_icnt->top(core_id));
           _icnt->pop(core_id);
+          _nr_to_core++;
         }
       }
 
@@ -161,6 +167,7 @@ void Simulator::cycle() {
             !_dram->is_full(mem_id, _icnt->top(_n_cores + mem_id))) {
           _dram->push(mem_id, _icnt->top(_n_cores + mem_id));
           _icnt->pop(_n_cores + mem_id);
+          _nr_to_mem++;
         }
         // Pop response to ICNT from dram
         if (!_dram->is_empty(mem_id) &&
@@ -168,9 +175,19 @@ void Simulator::cycle() {
           _icnt->push(_n_cores + mem_id, get_dest_node(_dram->top(mem_id)),
                       _dram->top(mem_id));
           _dram->pop(mem_id);
+          _nr_from_mem++;
         }
       }
-
+      if (_icnt_interval!=0 && _icnt_cycle % _icnt_interval == 0) {
+        spdlog::info("[ICNT] Core->ICNT request {}GB/Sec", ((_memory_req_size*_nr_from_core*(1000/_icnt_period)/_icnt_interval)));
+        spdlog::info("[ICNT] Core<-ICNT request {}GB/Sec", ((_memory_req_size*_nr_to_core*(1000/_icnt_period)/_icnt_interval)));
+        spdlog::info("[ICNT] ICNT->MEM request {}GB/Sec", ((_memory_req_size*_nr_to_mem*(1000/_icnt_period)/_icnt_interval)));
+        spdlog::info("[ICNT] ICNT<-MEM request {}GB/Sec", ((_memory_req_size*_nr_from_mem*(1000/_icnt_period)/_icnt_interval)));
+        _nr_from_core=0;
+        _nr_to_core=0;
+        _nr_to_mem=0;
+        _nr_from_mem=0;
+      }
       _icnt->cycle();
     }
   }
