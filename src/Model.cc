@@ -206,10 +206,14 @@ bool Model::check_exist_in_exeutable(uint32_t op_id) {
 }
 
 bool Model::check_regressive() {
-  if (_axis_map.find("total_seq_len") == _axis_map.end())
+  if (_axis_map.find("total_seq_len") == _axis_map.end()){
+    spdlog::info("No total_seq_len!");
     return false;
-  if ((_axis_map["total_seq_len"]+1) == _model_config["output_seq_len"])
+  }
+  if ((_axis_map["total_seq_len"]+1) == _model_config["output_seq_len"]) {
+    spdlog::info("Reached output seq len");
     return false;
+  }
   return true;
 }
 
