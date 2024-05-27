@@ -10,7 +10,7 @@ namespace ram {
 Ramulator::Ramulator(const std::string ConfigFilePath, uint32_t num_core, bool is_pim) 
     : MemBase(createMemory(ConfigFilePath, num_core)), is_pim(is_pim) {
   for (int ch = 0; ch < MemBase->get_num_channels(); ++ch) {
-    OutputPendingQueues.push_back(OutputPendingQueue(64));
+    OutputPendingQueues.push_back(OutputPendingQueue(256));
   }
   Callbacks[false] = [&](const ram::Request& Req) {
     int CtrlID = Req.getChannelID();
