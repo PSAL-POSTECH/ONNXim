@@ -87,6 +87,8 @@ SimulationConfig initialize_config(json config) {
     parsed_config.icnt_latency = config["icnt_latency"];
   if (config.contains("icnt_config_path"))
     parsed_config.icnt_config_path = config["icnt_config_path"];
+  if (config.contains("icnt_print_interval"))
+    parsed_config.icnt_print_interval = config["icnt_print_interval"];
 
   parsed_config.scheduler_type = config["scheduler"];
   parsed_config.precision = config["precision"];

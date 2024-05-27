@@ -5,8 +5,8 @@
   "core_width" : 128,
   "core_height" : 128,
 
-  "spad_size" : 65536,
-  "accum_spad_size" : 8192,
+  "spad_size" : 32768,
+  "accum_spad_size" : 4096,
   "sram_width" : 32,
 
   "vector_process_bit" : 65536,
