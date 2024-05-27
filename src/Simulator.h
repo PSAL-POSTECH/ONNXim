@@ -31,6 +31,7 @@ class Simulator {
   SimulationConfig _config;
   uint32_t _n_cores;
   uint32_t _n_memories;
+  uint32_t _memory_req_size;
 
   // Components
   std::vector<std::unique_ptr<Core>> _cores;
@@ -53,6 +54,14 @@ class Simulator {
 
   uint32_t _cycle_mask;
   bool _single_run;
+
+  // Icnt stat
+  uint64_t _nr_from_core=0;
+  uint64_t _nr_to_core=0;
+  uint64_t _nr_from_mem=0;
+  uint64_t _nr_to_mem=0;
+  cycle_type _icnt_cycle=0;
+  uint64_t _icnt_interval=0;
 
   struct CompareModel {
     bool operator()(const std::unique_ptr<Model>& a, const std::unique_ptr<Model>& b) const {
