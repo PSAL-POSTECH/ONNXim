@@ -29,7 +29,7 @@
 
   "icnt_type" : "simple",
   "icnt_latency" : 1,
-  "icnt_freq" : 2000,
+  "icnt_freq" : 8000,
   "icnt_config_path" : "../configs/booksim2_configs/fly_c4_m32.icnt",
 
   "precision" : 2,
