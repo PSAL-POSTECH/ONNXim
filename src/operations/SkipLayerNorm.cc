@@ -131,6 +131,10 @@ void SkipLayerNorm::calculate_loops() {
     _tokens_per_tile = sram_capacity / size_per_token;
     assert (_tokens_per_tile >= 1);
     if (_tokens_per_tile > _seq * _batch_size) _tokens_per_tile = _seq * _batch_size;
-
+    int num_tiles = ceil_div(_seq, _tokens_per_tile);
+    if(num_tiles < _config.num_cores * 2) {
+        _tokens_per_tile = ceil_div(_seq, _config.num_cores * 2);
+        num_tiles = ceil_div(_seq, _tokens_per_tile);
+    }
     spdlog::info("[SkipLayerNorm] tokens_per_tile: {}", _tokens_per_tile);
 }
