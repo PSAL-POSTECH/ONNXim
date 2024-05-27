@@ -77,8 +77,8 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
             _id, name_gen(_name, "output"), _output_shape, _config.precision, false);
         _outputs.push_back(output_tensor.get()->get_id());
         _model->add_tensor(std::move(output_tensor));
-        _seq = get_input(0)->get_dims()[0];
         _input_shape = get_input(0)->get_dims();
+        _seq = get_input(1)->get_dims()[0]; //key first dim
         _weight_shape = get_input(1)->get_dims();
         _liner_output_shape = std::vector<uint32_t>{_q_len, _weight_shape[1]};
         _query_shape = std::vector<uint32_t>{_nh, _q_len, _dk};
