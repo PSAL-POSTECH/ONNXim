@@ -24,6 +24,7 @@
   "dram_channels": 16,
   "dram_req_size": 32,
   "dram_latency" : 10,
+  "dram_print_interval": 100000,
   "dram_config_path" : "../configs/ramulator_configs/HBM-config.cfg",
 
   "icnt_type" : "booksim2",
