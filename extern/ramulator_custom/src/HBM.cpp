@@ -18,6 +18,7 @@ map<string, enum HBM::Org> HBM::org_map = {
 map<string, enum HBM::Speed> HBM::speed_map = {
     {"HBM_1Gbps", HBM::Speed::HBM_1Gbps},
     {"HBM_2Gbps", HBM::Speed::HBM_2Gbps},
+    {"HBM_2_5Gbps", HBM::Speed::HBM_2_5Gbps},
 };
 
 HBM::HBM(Org org, Speed speed)
@@ -51,21 +52,25 @@ void HBM::init_speed()
 {
     const static int RFC_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
         {55, 80, 130},
-        {110, 160, 260}
+        {110, 160, 260},
+        {137, 200, 325}
     };
     const static int REFI1B_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
         {64, 128, 256},
-        {128, 256, 512}
+        {128, 256, 512},
+        {160, 320, 640}
     };
     const static int XS_TABLE[int(Speed::MAX)][int(Org::MAX)] = {
         {60, 85, 135},
-        {120, 170, 270}
+        {120, 170, 270},
+        {150, 213, 338}
     };
 
     int speed = 0, density = 0;
     switch (speed_entry.rate) {
         case 1000: speed = 0; break;
         case 2000: speed = 1; break;
+        case 2400: speed = 2; break;
         default: assert(false);
     };
     switch (org_entry.size >> 10){
