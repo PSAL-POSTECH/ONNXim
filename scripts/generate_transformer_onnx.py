@@ -55,6 +55,7 @@ if "gpt2" in args.model:
                         "seq_len": 1024,
                         "past_seq_len": 0,
                         "total_seq_len": 1024,
+                        "output_seq_len": 1025,
                         "request_time": 0
                     }
                 ]
@@ -71,8 +72,9 @@ if "gpt2" in args.model:
                         "nr_atten": -1,
                         "sequence_length": 1,
                         "seq_len": 1,
-                        "past_seq_len": 1023,
-                        "total_seq_len": 1024,
+                        "past_seq_len": 1024,
+                        "total_seq_len": 1025,
+                        "output_seq_len": 1125,
                         "request_time": 0
                     }
                 ]
@@ -93,7 +95,7 @@ if "bert" in args.model:
                         "sequence_length": 1024,
                         "seq_len": 1024,
                         "past_seq_len": 0,
-                        "total_seq_len": 1024
+                        "total_seq_len": 1025
                     }
                 ]
             }

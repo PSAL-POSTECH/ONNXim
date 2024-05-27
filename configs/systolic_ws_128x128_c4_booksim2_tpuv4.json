@@ -20,8 +20,8 @@
   "scalar_mul_latency" : 1,
 
   "dram_type" : "ramulator",
-  "dram_freq" : 877,
-  "dram_channels": 32,
+  "dram_freq" :1200,
+  "dram_channels": 16,
   "dram_req_size": 32,
   "dram_latency" : 10,
   "dram_config_path" : "../configs/ramulator_configs/HBM-config.cfg",

@@ -242,7 +242,12 @@ void DedicatedCPUScheduler::refresh_status() {
                       req->model->get_request_time()/1000000,
                       req->model->get_start_time()/1000000,
                       (*_core_time)/1000000, *_core_cycle);
+        std::unique_ptr<Model> finished_model = std::move(req->model);
         req = _request_queue.erase(req);
+        if (finished_model->check_regressive()) {
+          finished_model->prepare_regressive();
+          static_cast<Simulator*>(_simulator)->register_model(std::move(finished_model));
+        }
         --req;
       }
     }
@@ -364,7 +369,12 @@ void TimeMultiplexScheduler::refresh_status() {
                       req->model->get_request_time()/1000000,
                       req->model->get_start_time()/1000000,
                       (*_core_time)/1000000, *_core_cycle);
+        std::unique_ptr<Model> finished_model = std::move(req->model);
         req = _request_queue.erase(req);
+        if (finished_model->check_regressive()) {
+          finished_model->prepare_regressive();
+          static_cast<Simulator*>(_simulator)->register_model(std::move(finished_model));
+        }
         --req;
       }
     }
@@ -484,7 +494,12 @@ void HalfSplitScheduler::refresh_status() {
       if (req->model->check_finish()) {
         spdlog::info("Model[{}] finish  at {}", req->model->get_name(),
                      *_core_cycle);
+        std::unique_ptr<Model> finished_model = std::move(req->model);
         req = _request_queue.erase(req);
+        if (finished_model->check_regressive()) {
+          finished_model->prepare_regressive();
+          static_cast<Simulator*>(_simulator)->register_model(std::move(finished_model));
+        }
         --req;
       }
     }
