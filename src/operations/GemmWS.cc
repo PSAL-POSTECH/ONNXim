@@ -110,7 +110,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               .opcode = Opcode::MOVIN,
               .dest_addr = ACCUM_SPAD_BASE +
                           (Ns * mapping.tile_in_loop.M + Ms) * _config.precision,
-              .size = (uint32_t)bias_addrs.size() * n_loop,
+              .size = (uint32_t)bias_addrs.size(),
               .src_addrs = std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
               .operand_id = _INPUT_OPERAND + 2}));
         } else {
