@@ -17,12 +17,12 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
   _core_time = 0;
   _dram_time = 0;
   _icnt_time = 0;
+  char* onnxim_path_env = std::getenv("ONNXIM_HOME");
+  std::string onnxim_path = onnxim_path_env != NULL?
+  std::string(onnxim_path_env) : std::string("./");
   if (config.dram_type == DramType::SIMPLE) {
     _dram = std::make_unique<SimpleDram>(config);
-  } else if (config.dram_type == DramType::RAMULATOR) {
-    char* onnxim_path_env = std::getenv("ONNXIM_HOME");
-    std::string onnxim_path = onnxim_path_env != NULL?
-      std::string(onnxim_path_env) : std::string("./");
+  } else if (config.dram_type == DramType::RAMULATOR1) {
     std::string ramulator_config = fs::path(onnxim_path)
                                        .append("configs")
                                        .append(config.dram_config_path)
@@ -30,7 +30,18 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
     spdlog::info("Ramulator config: {}", ramulator_config);
     config.dram_config_path = ramulator_config;
     _dram = std::make_unique<DramRamulator>(config);
-  } else {
+  } 
+  else if (config.dram_type == DramType::RAMULATOR2) 
+  {
+    std::string ramulator_config = fs::path(onnxim_path)
+                                       .append("configs")
+                                       .append(config.dram_config_path)
+                                       .string();
+    spdlog::info("Ramulator2 config: {}", ramulator_config);
+    config.dram_config_path = ramulator_config;
+    _dram = std::make_unique<DramRamulator2>(config);
+  } 
+  else {
     spdlog::error("[Configuration] Invalid DRAM type...!");
     exit(EXIT_FAILURE);
   }
