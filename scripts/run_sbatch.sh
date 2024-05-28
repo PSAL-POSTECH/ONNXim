@@ -4,6 +4,7 @@ models=("gpt2_s" "gpt2_g" "bert")
 batch_list=("1" "2" "4" "8" "16" "32")
 i=3
 configs=("systolic_ws_128x128_c4_simple_noc_tpuv4") # "systolic_ws_128x128_c4_booksim2_tpuv4")
+no_batch=1
 
 if [ ! -d "$ONNXIM_HOME/results" ]; then
     mkdir $ONNXIM_HOME/results
@@ -27,8 +28,13 @@ for model_file in "${models[@]}"; do
                 mkdir $ONNXIM_HOME/results/$model_file/$batch/$config
             fi
             for (( j=0; j<i; j++ )); do
-                echo "sbatch -J ONNXIM-$model_file -o $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.out  -e $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.err $ONNXIM_HOME/scripts/onnxim_sbatch.sh $config "$model_file"_$batch"
-                sbatch -J ONNXIM-$model_file -o $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.out  -e $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.err $ONNXIM_HOME/scripts/onnxim_sbatch.sh $config "$model_file"_$batch
+                if [ "$no_batch" -eq 0 ]; then
+                    echo "sbatch -J ONNXIM-$model_file -o $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.out  -e $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.err $ONNXIM_HOME/scripts/onnxim_sbatch.sh $config "$model_file"_$batch"
+                    sbatch -J ONNXIM-$model_file -o $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.out  -e $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.err $ONNXIM_HOME/scripts/onnxim_sbatch.sh $config "$model_file"_$batch
+                else
+                    echo "sbatch -J ONNXIM-$model_file -o $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.out  -e $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.err $ONNXIM_HOME/scripts/onnxim_sbatch.sh $config "$model_file""
+                    sbatch -J ONNXIM-$model_file -o $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.out  -e $ONNXIM_HOME/results/$model_file/$batch/$config/result_$j.err $ONNXIM_HOME/scripts/onnxim_sbatch.sh $config "$model_file"
+                fi
             done
         done
     done
