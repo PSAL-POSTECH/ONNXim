@@ -32,6 +32,7 @@ class LangScheduler {
     virtual bool busy();
   protected:
     SimulationConfig _config;
+    json _scheduler_config;
     std::string _name;
     std::unique_ptr<LanguageModel> _language_model;
     std::queue<std::unique_ptr<LangRequest>> _request_queue;
@@ -46,6 +47,7 @@ class LangScheduler {
     uint32_t _hidden_size;
     uint32_t _cache_dim;
     uint32_t _max_seq_length;
+    uint32_t _max_batch_size; 
 
     void parse_request_trace(std::string trace_path);
     
