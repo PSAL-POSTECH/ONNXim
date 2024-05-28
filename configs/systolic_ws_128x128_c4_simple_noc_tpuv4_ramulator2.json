@@ -1,0 +1,38 @@
+{
+  "num_cores" : 4,  
+  "core_type" : "systolic_ws",
+  "core_freq" : 1000,
+  "core_width" : 128,
+  "core_height" : 128,
+
+  "spad_size" : 65536,
+  "accum_spad_size" : 8192,
+  "sram_width" : 32,
+
+  "vector_process_bit" : 65536,
+  "add_latency" : 1,
+  "mul_latency" : 1,
+  "exp_latency" : 1,
+  "gelu_latency" : 1,
+  "add_tree_latency" : 1,
+  "scalar_sqrt_latency" : 1,
+  "scalar_add_latency" : 1,
+  "scalar_mul_latency" : 1,
+
+  "dram_type" : "ramulator2",
+  "dram_freq" :1200,
+  "dram_channels": 16,
+  "dram_req_size": 32,
+  "dram_latency" : 10,
+  "dram_print_interval": 1000000,
+  "dram_config_path" : "../configs/ramulator2_configs/HBM2.yaml",
+
+  "icnt_type" : "simple",
+  "icnt_latency" : 1,
+  "icnt_freq" : 8000,
+  "icnt_config_path" : "../configs/booksim2_configs/fly_c4_m32.icnt",
+
+  "precision" : 2,
+  "layout" : "NHWC",
+  "scheduler" : "simple"
+}

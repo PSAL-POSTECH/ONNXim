@@ -59,7 +59,9 @@ SimulationConfig initialize_config(json config) {
   if ((std::string)config["dram_type"] == "simple")
     parsed_config.dram_type = DramType::SIMPLE;
   else if ((std::string)config["dram_type"] == "ramulator")
-    parsed_config.dram_type = DramType::RAMULATOR;
+    parsed_config.dram_type = DramType::RAMULATOR1;
+  else if ((std::string)config["dram_type"] == "ramulator2")
+    parsed_config.dram_type = DramType::RAMULATOR2;
   else
     throw std::runtime_error(fmt::format("Not implemented dram type {} ",
                                          (std::string)config["dram_type"]));
