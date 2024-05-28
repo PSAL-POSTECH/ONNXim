@@ -24,6 +24,7 @@
   "dram_channels": 2,
   "dram_req_size": 16,
   "dram_latency" : 10,
+  "dram_print_interval": 10000,
   "dram_config_path" : "../configs/ramulator_configs/DDR4-config.cfg",
 
   "icnt_type" : "booksim2",

@@ -75,7 +75,7 @@ public:
 
     struct Queue {
         list<Request> q;
-        unsigned int max = 64;
+        unsigned int max = 256;
         unsigned int size() const {return q.size();}
     };
 
