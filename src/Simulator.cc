@@ -89,10 +89,6 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
     exit(EXIT_FAILURE);
   }
 
-  //Configure Language Model Scheduler
-  if(_language_mode) {
-
-  }
 
   /* Create heap */
   std::make_heap(_models.begin(), _models.end(), CompareModel());
@@ -243,7 +239,7 @@ void Simulator::register_language_model(json info, std::unique_ptr<LanguageModel
     model->initialize_weight(_weight_table[name]);
   }
   if(info["scheduler"] == "simple") {
-    _lang_scheduler = std::make_unique<LangScheduler>(name, trace_file, std::move(model), _config);
+    _lang_scheduler = std::make_unique<LangScheduler>(name, trace_file, std::move(model), _config, info["scheduler_config"]);
   } else {
     spdlog::error("Invalid scheduler type");
     exit(EXIT_FAILURE);

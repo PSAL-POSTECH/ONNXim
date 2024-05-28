@@ -21,7 +21,10 @@ struct LangRequest {
 
 class LangScheduler {
   public:
-    LangScheduler(std::string name, std::string path, std::unique_ptr<LanguageModel> model, SimulationConfig config);
+    LangScheduler(std::string name, std::string path, 
+                  std::unique_ptr<LanguageModel> model,
+                  SimulationConfig config,
+                  json scheduler_config);
     bool can_schedule_model();
     virtual std::unique_ptr<Model> pop_model();
     virtual void finish_model(uint32_t model_id);

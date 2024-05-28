@@ -1,9 +1,11 @@
 #include "LanguageScheduler.h"
 #include <fstream>
 
-LangScheduler::LangScheduler(std::string name, std::string path, std::unique_ptr<LanguageModel> model, SimulationConfig config) {
+LangScheduler::LangScheduler(std::string name, std::string path, std::unique_ptr<LanguageModel> model, 
+                             SimulationConfig config, json _scheduler_config) {
   _name = name;
   _config = config;
+  _scheduler_config = _scheduler_config;
   _language_model = std::move(model);
   json model_config = _language_model->get_model_config();
   _num_layers = model_config["num_hidden_layers"];
@@ -29,8 +31,8 @@ std::unique_ptr<Model> LangScheduler::pop_model() {
 void LangScheduler::cycle() {
   _cycle++;
   //Reqeust Queue to Active Requests if active is empty
-  if(!_request_queue.empty()) {
-    if(_request_queue.front()->request_time <= _cycle && _active_requests.empty()) {
+  while(!_request_queue.empty()) {
+    if(_request_queue.front()->request_time <= _cycle) {
       _request_queue.front()->start_time = _cycle;
       _request_queue.front()->gen_phase = false;
       _request_queue.front()->running = false;
@@ -49,6 +51,9 @@ void LangScheduler::cycle() {
       }
       _active_requests[_request_queue.front()->request_id] = std::move(_request_queue.front());
       _request_queue.pop();
+    }
+    else {
+      break;
     }
   }
 
