@@ -367,8 +367,7 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
   int stride, input_dilation, kernel_dilation, padding, kernel_dim;
   bool trans_input_3120, trans_weight_0132;
   int pool_size, pool_stride, pool_padding;
-
-  batch_size = key.N;
+  batch_size = 1;
   out_channels = key.M;
   in_channels = key.C;
   out_dim = key.P;
@@ -506,6 +505,7 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 	const int kcols = args[5];
 	const int kchs = args[6];
 
+  batch_size = key.N;
 	Mapping mapping;
 	mapping.total_loop = {(uint32_t)batch_size, (uint32_t)in_channels, (uint32_t)out_channels,
                         (uint32_t)kernel_dim, (uint32_t)kernel_dim, (uint32_t)out_dim, (uint32_t)out_dim};
