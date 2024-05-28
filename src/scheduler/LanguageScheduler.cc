@@ -33,20 +33,19 @@ void LangScheduler::cycle() {
     if(_request_queue.front()->request_time <= _cycle && _active_requests.empty()) {
       _request_queue.front()->start_time = _cycle;
       _request_queue.front()->gen_phase = false;
-      _request_queue.front()->current_length = 0;
       _request_queue.front()->running = false;
       _request_queue.front()->key_cache.resize(_num_layers);
       _request_queue.front()->value_cache.resize(_num_layers);
       std::vector<uint32_t> max_dims = {_max_seq_length, _cache_dim};
-      std::vector<uint32_t> zero_dims = {0, _cache_dim};
+      std::vector<uint32_t> first_dims = { _request_queue.front()->current_length, _cache_dim};
       for(uint32_t i = 0; i < _num_layers; i++) {
         //Allocate max_seq_length x cache_dim tensor and redefine to 0 x cache_dim
         _request_queue.front()->key_cache[i] = 
             std::make_unique<Tensor>(_language_model->get_root_node_id(), name_gen(LAYER(i), "KeyCache"),  max_dims, _config.precision, true);
-        _request_queue.front()->key_cache[i]->resize_tensor(zero_dims);
+        _request_queue.front()->key_cache[i]->resize_tensor(first_dims);
         _request_queue.front()->value_cache[i] = 
             std::make_unique<Tensor>(_language_model->get_root_node_id(), name_gen(LAYER(i), "ValueCache"),  max_dims, _config.precision, true);
-        _request_queue.front()->value_cache[i]->resize_tensor(zero_dims);
+        _request_queue.front()->value_cache[i]->resize_tensor(first_dims);
       }
       _active_requests[_request_queue.front()->request_id] = std::move(_request_queue.front());
       _request_queue.pop();
@@ -66,7 +65,7 @@ void LangScheduler::cycle() {
         }
         else {
           input.seq_length = it->second->prompt_length;
-          input.context_length = 0;
+          input.context_length = it->second->current_length;
         }
         for(uint32_t i = 0; i < _num_layers; i++) {
           input.key_cache.push_back(it->second->key_cache[i].get());
@@ -92,7 +91,7 @@ void LangScheduler::finish_model(uint32_t model_id) {
     if(!_active_requests[req_id]->gen_phase) {
       uint32_t promtp_len = _active_requests[req_id]->prompt_length;
       _active_requests[req_id]->gen_phase = true;
-      _active_requests[req_id]->current_length = promtp_len + 1;
+      _active_requests[req_id]->current_length += promtp_len + 1;
     }
     else {
       _active_requests[req_id]->current_length += 1;
@@ -128,16 +127,18 @@ void LangScheduler::parse_request_trace(std::string path) {
   std::getline(trace_file, line); //Skip header
   while (std::getline(trace_file, line)) {
     std::stringstream ss(line);
-    std::string prompt_length, target_length;
+    std::string prompt_length, target_length, cached_len;
     std::getline(ss, prompt_length, ',');
     std::getline(ss, target_length, ',');
+    std::getline(ss, cached_len, ',');
     std::unique_ptr<LangRequest> request = std::make_unique<LangRequest>();
     request->request_id = id++;
     request->request_time = 0;
     request->start_time = 0;
     request->running = false;
     request->prompt_length = std::stoi(prompt_length);
-    request->target_length = std::stoi(target_length);
+    request->target_length = std::stoi(cached_len) + std::stoi(prompt_length) + std::stoi(target_length);
+    request->current_length = std::stoi(cached_len);
     _request_queue.push(std::move(request));
   }
   trace_file.close();
