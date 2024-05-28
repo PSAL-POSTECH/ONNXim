@@ -511,10 +511,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
                         (uint32_t)kernel_dim, (uint32_t)kernel_dim, (uint32_t)out_dim, (uint32_t)out_dim};
 	mapping.tile_out_loop = {ceil_div(batch_size, batches), ceil_div(in_channels, kchs),
               ceil_div(out_channels, ochs), ceil_div(kernel_dim, krows),
-							ceil_div(kernel_dim, kcols), ceil_div(out_dim, orows),
-							ceil_div(out_dim, ocols)};
+							ceil_div(kernel_dim, kcols), ceil_div(out_dim, ocols),
+							ceil_div(out_dim, orows)};
 	mapping.tile_in_loop = {(uint32_t)batches, (uint32_t)kchs, (uint32_t)ochs,
-                          (uint32_t)krows, (uint32_t)kcols, (uint32_t)orows, (uint32_t)ocols};
+                          (uint32_t)krows, (uint32_t)kcols, (uint32_t)ocols, (uint32_t)orows};
 
 	spdlog::info("[Conv] Used gemmini convolution mapping: " \
 		"[T] N{} C{} M{} P{} Q{} S{} R{}, " \
