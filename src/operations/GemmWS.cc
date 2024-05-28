@@ -231,7 +231,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                   std::vector<addr_type>{act_sp_addr, weight_sp_addr}}));
         }
         /*MOVOUT result at the last loop*/
-        if (Cs == mapping.tile_in_loop.C - loop_size && Ms == mapping.tile_in_loop.M - loop_size){
+        if (Cs + loop_size >= mapping.tile_in_loop.C){
           tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::MOVOUT,
               .dest_addr = out_sp_addr,
