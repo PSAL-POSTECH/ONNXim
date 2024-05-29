@@ -87,7 +87,7 @@ TEST(GemmWS1x512x1000Test, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 65850;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -111,7 +111,7 @@ TEST(GemmWS1x512x4096Test, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 276956;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -133,7 +133,7 @@ TEST(GemmWS1x4096x1000Test, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 540155;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -155,6 +155,6 @@ TEST(GemmWS1x4096x4096Test, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 2218131;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }

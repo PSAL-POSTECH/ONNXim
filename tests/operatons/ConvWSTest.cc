@@ -101,7 +101,7 @@ TEST(ConvWSTestResNetConv_0, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 4938719;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -136,7 +136,7 @@ TEST(ConvWSTestResNetConv_3_8, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1881975;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -171,7 +171,7 @@ TEST(ConvWSTestResNetConv_13, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1027536;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -205,7 +205,7 @@ TEST(ConvWSTestResNetConv_16, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 101941;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -240,7 +240,7 @@ TEST(ConvWSTestResNetConv_15_19, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1825897;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -275,7 +275,7 @@ TEST(ConvWSTestResNetConv_24, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 912752;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -311,7 +311,7 @@ TEST(ConvWSTestResNetConv_26, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1882561;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -345,7 +345,7 @@ TEST(ConvWSTestResNetConv_27, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 101435;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -379,7 +379,7 @@ TEST(ConvWSTestResNetConv_35, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 951837;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -413,7 +413,7 @@ TEST(ConvWSTestResNetConv_38, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 102566;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
@@ -447,6 +447,6 @@ TEST(ConvWSTestResNetLast, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1845838;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
