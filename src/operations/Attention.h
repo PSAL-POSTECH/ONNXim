@@ -45,6 +45,7 @@ class Attention : public Operation {
     //void initialize_tiles();
     //void initialize_instructions(Tile &tile, int req_idx, int head_idx, int num_heads);
     void initialize_tiles(MappingTable& mapping_table) override;
+    void initialize_onnx_tiles(MappingTable& mapping_table);
     void initialize_non_fused_tiles(MappingTable& mapping_table);
     void initialize_instructions(Tile* tile, Mapping mapping, int head_idx, int num_heads);
    protected:

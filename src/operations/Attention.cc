@@ -28,6 +28,7 @@ Attention::Attention(SimulationConfig config, Model* model,
     assert(_input_shape.size()==3);
     _batch_size = _input_shape.at(0);
     _dmodel = _weight_shape.at(0);
+    _nkvh = _nh;
     _dk = _dmodel / _nh;
     _q_len = _input_shape.at(1);
     if (has_kv_cache)
@@ -94,6 +95,72 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
     }
     /* Create linear node and tensors */
     uint32_t fused_op_id = 0;
+    /* Fused Attention body */
+    for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
+        int heads_per_tile = _heads_per_tile[req_idx];
+        for (int head_off=0; head_off<_nh; head_off+=heads_per_tile) {
+            uint32_t remain_heads = std::min(_nh-head_off, (uint32_t)heads_per_tile);
+            std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
+                .status = Tile::Status::INITIALIZED,
+                .optype = get_name(),
+                .layer_id = _id,
+                .fused_op_id = fused_op_id++,
+                //.K = 0,
+                .accum = false,
+            });
+            /* dummy mapping */
+            Mapping mapping;
+            _tiles.push_back(std::move(tile));
+            initialize_instructions(_tiles.back().get(), mapping, head_off, heads_per_tile);
+        }
+    }
+}
+
+void Attention::initialize_onnx_tiles(MappingTable& mapping_table) {
+    calculate_loops();
+
+    /* Check using fusion */
+    if (!use_fused) {
+        initialize_non_fused_tiles(mapping_table);
+        return;
+    }
+
+    /* Create linear node and tensors */
+    uint32_t fused_op_id = 0;
+    _projection_node = new GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
+    std::unique_ptr<Tensor> key_projection = std::make_unique<Tensor>(
+        _id, "", _projection_output_shape, _config.precision, false);
+    std::unique_ptr<Tensor> query_projection = std::make_unique<Tensor>(
+        _id, "", _projection_output_shape, _config.precision, false);
+    std::unique_ptr<Tensor> value_projection = std::make_unique<Tensor>(
+       _id, "", _projection_output_shape, _config.precision, false);
+
+    /* Link tensors to linear node */
+    _projection_node->set_model(_model);
+    _projection_node->add_input(_inputs.at(0));
+    _projection_node->add_input(_inputs.at(1));
+    _projection_node->add_input(_inputs.at(2));
+    _projection_node->add_output(key_projection.get()->get_id());
+    _projection_node->add_output(query_projection.get()->get_id());
+    _projection_node->add_output(value_projection.get()->get_id());
+    get_input(0)->add_child_node(_projection_node);
+    key_projection->add_child_node(this);
+    query_projection->add_child_node(this);
+    value_projection->add_child_node(this);
+
+    /* Link key query value to attention node */
+    _key_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(key_projection.get()->get_id());
+    _query_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(query_projection.get()->get_id());
+    _value_projection_id = _INPUT_OPERAND + _inputs.size();
+    _inputs.push_back(value_projection.get()->get_id());
+
+    /* Register tensor */
+    _model->add_tensor(std::move(key_projection));
+    _model->add_tensor(std::move(query_projection));
+    _model->add_tensor(std::move(value_projection));
+
     /* Fused Attention body */
     for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
         int heads_per_tile = _heads_per_tile[req_idx];
