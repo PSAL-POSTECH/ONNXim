@@ -131,7 +131,7 @@ void Core::cycle() {
       if (inst.get() == 0) {
         spdlog::error("null instruction!");
       }
-      if(_ex_inst_queue.empty()){
+      if(_ex_inst_queue.empty() && can_issue_compute(inst)) {
         _ex_inst_queue.push(std::move(inst));
         issued = true;
       }
@@ -141,14 +141,14 @@ void Core::cycle() {
       break;
     }
   }
-  for (int i =0 ; i < _tiles.size(); i++) {
-    if (_tiles[i]->instructions.empty() && _tiles[i]->inst_finished) {
-      _tiles[i]->status = Tile::Status::FINISH;
-      _tiles[i]->stat.cycles = _core_cycle - _tiles[i]->stat.start_cycle;
-      _tiles[i]->stat.memory_stall =
-          _tiles[i]->stat.cycles - _tiles[i]->stat.compute_cycles;
-      _finished_tiles.push(std::move(_tiles[i]));
-      _tiles.pop_front();
+  for (auto tile = _tiles.begin() ; tile < _tiles.end(); tile++) {
+    if ((*tile)->instructions.empty() && (*tile)->inst_finished) {
+      (*tile)->status = Tile::Status::FINISH;
+      (*tile)->stat.cycles = _core_cycle - (*tile)->stat.start_cycle;
+      (*tile)->stat.memory_stall =
+          (*tile)->stat.cycles - (*tile)->stat.compute_cycles;
+      _finished_tiles.push(std::move(*tile));
+      _tiles.erase(tile);
     }
   }
   if(_core_cycle % _config.core_print_interval == 0) {
@@ -181,8 +181,10 @@ void Core::push_memory_response(MemoryAccess *response) {
   if (response->write) {
     _waiting_write_reqs--;
   } else if (response->spad_address >= ACCUM_SPAD_BASE) {
+    assert(_acc_spad.check_allocated(response->spad_address, response->buffer_id));
     _acc_spad.fill(response->spad_address, response->buffer_id);
   } else {
+    assert(_spad.check_allocated(response->spad_address, response->buffer_id));
     _spad.fill(response->spad_address, response->buffer_id);
   }
   delete response;

@@ -18,8 +18,8 @@ Sram::Sram(SimulationConfig config, const cycle_type& core_cycle, bool accum)
 bool Sram::check_hit(addr_type address, int buffer_id) {
   if (_cache_table[buffer_id].find(address) == _cache_table[buffer_id].end())
     return false;
-  _cache_table[buffer_id][address].timestamp = _core_cycle;
-  return _cache_table[buffer_id][address].valid;
+  _cache_table[buffer_id].at(address).timestamp = _core_cycle;
+  return _cache_table[buffer_id].at(address).valid;
 }
 
 bool Sram::check_full(int buffer_id) {
@@ -53,7 +53,7 @@ int Sram::prefetch(addr_type address, int buffer_id, size_t allocated_size,
   } else if (_cache_table[buffer_id].find(address) !=
                  _cache_table[buffer_id].end() &&
              _accum) {
-    assert(_cache_table[buffer_id][address].size == allocated_size);
+    assert(_cache_table[buffer_id].at(address).size == allocated_size);
     return 0;
   } else {
     assert(0);
@@ -69,20 +69,20 @@ int Sram::prefetch(addr_type address, int buffer_id, size_t allocated_size,
 
 void Sram::fill(addr_type address, int buffer_id) {
   assert(check_allocated(address, buffer_id));
-  assert(_cache_table[buffer_id][address].remain_req_count > 0 &&
-         !_cache_table[buffer_id][address].valid);
-  _cache_table[buffer_id][address].remain_req_count--;
-  if (_cache_table[buffer_id][address].remain_req_count == 0) {
-    _cache_table[buffer_id][address].valid = true;
+  assert(_cache_table[buffer_id].at(address).remain_req_count > 0 &&
+         !_cache_table[buffer_id].at(address).valid);
+  _cache_table[buffer_id].at(address).remain_req_count--;
+  if (_cache_table[buffer_id].at(address).remain_req_count == 0) {
+    _cache_table[buffer_id].at(address).valid = true;
     spdlog::trace("MAKE valid {} {}F", buffer_id, address);
   }
 }
 
 void Sram::count_up(addr_type address, int buffer_id) {
   assert(check_allocated(address, buffer_id));
-  _cache_table[buffer_id][address].remain_req_count++;
-  if (_cache_table[buffer_id][address].valid) {
-    _cache_table[buffer_id][address].valid = false;
+  _cache_table[buffer_id].at(address).remain_req_count++;
+  if (_cache_table[buffer_id].at(address).valid) {
+    _cache_table[buffer_id].at(address).valid = false;
     spdlog::trace("MAKE valid {} {}F", buffer_id, address);
   }
 }

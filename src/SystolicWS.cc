@@ -69,10 +69,21 @@ void SystolicWS::cycle() {
   if (!_vector_pipeline.empty() &&
       _vector_pipeline.front()->finish_cycle <= _core_cycle) {
     std::unique_ptr<Instruction> inst = std::move(_vector_pipeline.front());
-    if (inst->dest_addr >= ACCUM_SPAD_BASE)
+    if (inst->dest_addr >= ACCUM_SPAD_BASE) {
+      if(!_acc_spad.check_allocated(inst->dest_addr, inst->accum_spad_id)) {
+        spdlog::error("Vector pipeline -> accum");
+        spdlog::error("Destination not allocated {}", inst->dest_addr);
+      }
       _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
-    else
+    }
+    else {
+      if(!_spad.check_allocated(inst->dest_addr, inst->accum_spad_id)) {
+        spdlog::error("Vector pipeline -> spad");
+        spdlog::error("Destination not allocated {}", inst->dest_addr);
+      }
       _spad.fill(inst->dest_addr, inst->spad_id);
+    }
+      
     if(inst->last_inst)
       inst->my_tile->inst_finished = true;
     _vector_pipeline.pop();
@@ -204,25 +215,26 @@ void SystolicWS::cycle() {
         buffer = &_spad;
         buffer_id = front->spad_id;
       }
-      assert(buffer->check_hit(front->dest_addr, buffer_id));
-      for (addr_type addr : front->src_addrs) {
-        assert(front->base_addr != GARBEGE_ADDR);
-        MemoryAccess *access =
-            new MemoryAccess{.id = generate_mem_access_id(),
-                             .dram_address = addr + front->base_addr,
-                             .spad_address = front->dest_addr,
-                             .size = _config.dram_req_size,
-                             .write = true,
-                             .request = true,
-                             .core_id = _id,
-                             .start_cycle = _core_cycle,
-                             .buffer_id = buffer_id};
-        _waiting_write_reqs++;
-        _request_queue.push(access);
+      if(buffer->check_hit(front->dest_addr, buffer_id)) {
+        for (addr_type addr : front->src_addrs) {
+          assert(front->base_addr != GARBEGE_ADDR);
+          MemoryAccess *access =
+              new MemoryAccess{.id = generate_mem_access_id(),
+                              .dram_address = addr + front->base_addr,
+                              .spad_address = front->dest_addr,
+                              .size = _config.dram_req_size,
+                              .write = true,
+                              .request = true,
+                              .core_id = _id,
+                              .start_cycle = _core_cycle,
+                              .buffer_id = buffer_id};
+          _waiting_write_reqs++;
+          _request_queue.push(access);
+        }
+        if(front->last_inst) 
+          front->my_tile->inst_finished = true;
+        _st_inst_queue.pop();
       }
-      if(front->last_inst) 
-        front->my_tile->inst_finished = true;
-      _st_inst_queue.pop();
     } else {
       assert(0);
     }
