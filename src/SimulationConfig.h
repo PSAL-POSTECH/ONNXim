@@ -18,6 +18,7 @@ struct SimulationConfig {
   uint32_t core_freq;
   uint32_t core_width;
   uint32_t core_height;
+  uint32_t core_print_interval;
 
   /* Vector config*/
   uint32_t vector_process_bit;

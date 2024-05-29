@@ -63,7 +63,7 @@ enum class Opcode {
   SWISH,
   BAR
 };
-
+struct Tile;
 typedef struct {
   Opcode opcode;
   cycle_type start_cycle;
@@ -86,9 +86,11 @@ typedef struct {
 
   bool src_from_accum = false;
   bool zero_init = false;
+  bool last_inst = false;
+  Tile* my_tile;
 } Instruction;
 
-typedef struct {
+struct Tile {
   enum class Status {
     INITIALIZED,
     RUNNING,
@@ -115,7 +117,8 @@ typedef struct {
   int spad_id;
   int accum_spad_id;
   int core_id = -1;
-} Tile;
+  bool inst_finished = false;
+} ;
 
 uint32_t generate_id();
 uint32_t generate_mem_access_id();
