@@ -50,6 +50,10 @@ void Model::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table)
   onnx::ModelProto model_proto;
   std::vector<std::unique_ptr<Tensor>> input_tensors;
   std::ifstream model_istream(_onnx_path);
+  if (!model_istream) {
+    spdlog::error("Error opening file: {}", _onnx_path);
+    exit(EXIT_FAILURE);
+  }
   google::protobuf::io::IstreamInputStream zero_copy_input(&model_istream);
   model_proto.ParseFromZeroCopyStream(&zero_copy_input) && model_istream.eof();
   auto input = model_proto.graph().input();
@@ -145,6 +149,10 @@ void Model::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table
   weight_table.clear();
   onnx::ModelProto model_proto;
   std::ifstream model_istream(_onnx_path);
+  if (!model_istream) {
+    spdlog::error("Error opening file: {}", _onnx_path);
+    exit(EXIT_FAILURE);
+  }
   google::protobuf::io::IstreamInputStream zero_copy_input(&model_istream);
   model_proto.ParseFromZeroCopyStream(&zero_copy_input) && model_istream.eof();
  for(auto initializer : model_proto.graph().initializer()) {
