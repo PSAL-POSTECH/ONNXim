@@ -120,13 +120,16 @@ void Model::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table)
   }
 
   for(auto& [key, val] : _operation_map) {
-    val->initialize_tiles(_mapping_table);
-    /* Register projection node */
+    /* Attention is speacial case */
     if (val->get_optype() == "Attention") {
       Attention* attention_node = static_cast<Attention*>(val.get());
+      attention_node->initialize_onnx_tiles(_mapping_table);
       int projection_id = attention_node->_projection_node->get_id();
       _operation_map[projection_id] = std::move(std::unique_ptr<GemmWS>(attention_node->_projection_node));
       _operation_map[projection_id]->initialize_tiles(_mapping_table);
+    }
+    else {
+      val->initialize_tiles(_mapping_table);
     }
   }
 
