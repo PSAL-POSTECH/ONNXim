@@ -238,12 +238,7 @@ void Simulator::register_language_model(json info, std::unique_ptr<LanguageModel
   if(_weight_table.find(name) == _weight_table.end()) {
     model->initialize_weight(_weight_table[name]);
   }
-  if(info["scheduler"] == "simple") {
-    _lang_scheduler = std::make_unique<LangScheduler>(name, trace_file, std::move(model), _config, info["scheduler_config"]);
-  } else {
-    spdlog::error("Invalid scheduler type");
-    exit(EXIT_FAILURE);
-  }
+  _lang_scheduler = LangScheduler::create(name, trace_file, std::move(model), _config, info);
 }
 
 void Simulator::finish_language_model(uint32_t model_id) {
