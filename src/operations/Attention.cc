@@ -82,7 +82,7 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
         _weight_shape = get_input(1)->get_dims();
         _liner_output_shape = std::vector<uint32_t>{_q_len, _weight_shape[1]};
         _query_shape = std::vector<uint32_t>{_nh, _q_len, _dk};
-        _key_shape = std::vector<uint32_t>{_nkvh, _dk, _seq};
+        _key_shape = std::vector<uint32_t>{_nkvh, _seq, _dk};
         _value_shape = std::vector<uint32_t>{_nkvh, _seq, _dk};
     }
     calculate_loops();
@@ -135,29 +135,31 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
     int kv_head_idx = head_idx / _nkvh;
     addr_type sram_k_ofs = sram_key_base + kv_head_idx * (_dk * seq_len) * _config.precision;
     addr_type sram_v_ofs = sram_value_base + kv_head_idx * (_dk * seq_len) * _config.precision;
-    std::set<addr_type> dram_key_addrs;    // = _key[req_idx]->get_all_addrs();
-    std::set<addr_type> dram_value_addrs;
+    std::set<addr_type> dram_kv_addrs;    // = _key[req_idx]->get_all_addrs();
 
-    for(int i = 0; i <_dk; i++) {
-        for(int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
-            std::vector<uint32_t> key_idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
-            std::vector<uint32_t> value_idx = {(uint32_t)(kv_head_idx), (uint32_t)i, (uint32_t)seq_idx};
-            dram_key_addrs.insert(key_addr + make_address(key_idx, _key_shape));
-            dram_value_addrs.insert(value_addr + make_address(value_idx, _value_shape));
+    for(int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
+        for(int i = 0; i <_dk; i++) {
+            std::vector<uint32_t> idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
+            dram_kv_addrs.insert(make_address(idx, _key_shape));
         }
+    }
+    std::vector<addr_type> key_addrs, value_addrs;
+    for(auto itr = dram_kv_addrs.begin(); itr != dram_kv_addrs.end(); itr++) {
+        key_addrs.push_back(key_addr + *itr);
+        value_addrs.push_back(value_addr + *itr);
     }
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_k_ofs,
-        .size = (uint32_t)dram_key_addrs.size(),
-        .src_addrs = std::vector<addr_type>(dram_key_addrs.begin(), dram_key_addrs.end()),
+        .size = (uint32_t)value_addrs.size(),
+        .src_addrs = key_addrs,
         .operand_id = _INPUT_OPERAND + 1,  // key
     }));
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_v_ofs,
-        .size = (uint32_t)dram_value_addrs.size(),
-        .src_addrs = std::vector<addr_type>(dram_value_addrs.begin(), dram_value_addrs.end()),
+        .size = (uint32_t)value_addrs.size(),
+        .src_addrs = value_addrs,
         .operand_id = _INPUT_OPERAND + 2,  // value
     }));
     for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
@@ -167,9 +169,8 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         std::set<addr_type> dram_query_addrs;  // = _query[req_idx]->get_all_addrs();
         std::set<addr_type> dram_output_addrs;
         for (int i = 0; i < _dk; i++) {
-            for (int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
+            for (int seq_idx = 0; seq_idx < q_len; seq_idx++) {
                 // key:  h, d_k, seq_len
-                if (q_len == 1 && seq_idx > 0) continue;
                 std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
                 std::vector<uint32_t> output_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
                 dram_query_addrs.insert(query_addr + make_address(query_idx, _query_shape));
@@ -328,15 +329,16 @@ void Attention::calculate_loops() {
 
         uint32_t heads_per_tile = std::min(spad_capacity / total_spad_size_per_head,
                                             acc_spad_capacity/ total_acc_size_per_head);
-        if (heads_per_tile > heads_per_kv) heads_per_tile = heads_per_kv;
-        if (_nh / heads_per_tile < _config.num_cores * 2)
-            heads_per_tile = ceil_div(_nh, _config.num_cores * 2);
-        if(heads_per_tile % heads_per_kv != 0) heads_per_tile = 1;
         if (heads_per_tile <= 0) {
             use_fused = false;
             spdlog::info("[Attention] Use non fusion attention!");
             break;
         }
+        if (heads_per_tile > heads_per_kv) heads_per_tile = heads_per_kv;
+        if (_nh / heads_per_tile < _config.num_cores * 2)
+            heads_per_tile = ceil_div(_nh, _config.num_cores * 2);
+        if(heads_per_tile % heads_per_kv != 0) heads_per_tile = 1;
+ 
 
         spdlog::info("[Fused Attention] ({}) heads_per_tile: {}", i, heads_per_tile);
         spdlog::info("[Fused Attention] q_len: {}, seq_len: {}, dk: {}", q_len, seq_len, _dk);

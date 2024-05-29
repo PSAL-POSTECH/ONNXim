@@ -60,6 +60,8 @@ void SystolicWS::cycle() {
       _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
     else
       _spad.fill(inst->dest_addr, inst->spad_id);
+    if(inst->last_inst)
+      inst->my_tile->inst_finished = true;
     _compute_pipeline.pop();
   }
 
@@ -71,6 +73,8 @@ void SystolicWS::cycle() {
       _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
     else
       _spad.fill(inst->dest_addr, inst->spad_id);
+    if(inst->last_inst)
+      inst->my_tile->inst_finished = true;
     _vector_pipeline.pop();
   }
   /* LD in struction queue */
@@ -216,6 +220,8 @@ void SystolicWS::cycle() {
         _waiting_write_reqs++;
         _request_queue.push(access);
       }
+      if(front->last_inst) 
+        front->my_tile->inst_finished = true;
       _st_inst_queue.pop();
     } else {
       assert(0);
