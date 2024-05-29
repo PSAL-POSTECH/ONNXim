@@ -38,7 +38,8 @@ SimulationConfig initialize_config(json config) {
   parsed_config.core_freq = config["core_freq"];
   parsed_config.core_width = config["core_width"];
   parsed_config.core_height = config["core_height"];
-  parsed_config.core_print_interval = config["core_print_interval"];
+  if (config.contains("core_print_interval"))
+    parsed_config.core_print_interval = config["core_print_interval"];
 
   /* Vector configs */
   parsed_config.vector_process_bit = config["vector_process_bit"];
