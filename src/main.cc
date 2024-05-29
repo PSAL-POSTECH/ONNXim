@@ -49,6 +49,11 @@ int main(int argc, char** argv) {
 
   json config_json;
   std::ifstream config_file(config_path);
+  if (!config_file) {
+    spdlog::error("Error opening file: {}", config_path);
+    exit(EXIT_FAILURE);
+  }
+
   config_file >> config_json;
   config_file.close();
   SimulationConfig config = initialize_config(config_json);
@@ -71,6 +76,11 @@ int main(int argc, char** argv) {
   std::string models_list_path;
   cmd_parser.set_if_defined("models_list", &models_list_path);
   std::ifstream models_list_file(models_list_path);
+  if (!models_list_file) {
+    spdlog::error("Error opening file: {}", models_list_path);
+    exit(EXIT_FAILURE);
+  }
+
   json models_list;
   models_list_file >> models_list;
   models_list_file.close();
@@ -80,7 +90,13 @@ int main(int argc, char** argv) {
       std::string model_name = model_config["name"];
       std::string model_path =
         fmt::format("{}/{}/{}.json", model_base_path, "language_models", model_name);
-      json model_json = json::parse(std::ifstream(model_path));
+      std::ifstream model_file(model_path);
+      if (!models_list_file) {
+        spdlog::error("Error opening file: {}", model_path);
+        exit(EXIT_FAILURE);
+      }
+
+      json model_json = json::parse(model_file);
       auto model = std::make_unique<LanguageModel>(model_json, config, model_name);
       spdlog::info("Register Language Model: {}", model_name);
       simulator->register_language_model(model_config, std::move(model));
