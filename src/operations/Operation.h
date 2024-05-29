@@ -15,6 +15,8 @@ class Operation {
   Operation(SimulationConfig config, MappingTable& mapping_table);
   Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
   Operation(const Operation& operation);
+  Operation(SimulationConfig config, Model* model,
+            std::string name,  std::map<std::string, std::string>&attribute);
   virtual ~Operation() = default;
   virtual void set_finish();
 
@@ -23,8 +25,8 @@ class Operation {
   virtual uint32_t get_id() { return _id; }
   virtual uint32_t num_inputs() { return _inputs.size(); }
   virtual Tensor* get_input(int id);
-  virtual void add_input(int id) { _inputs.push_back(id); }
-  virtual void add_output(int id) { _outputs.push_back(id); }
+  virtual void add_input(int id);
+  virtual void add_output(int id);
   virtual uint32_t num_outputs() { return _outputs.size(); }
   virtual Tensor* get_output(int id);
   virtual void set_model(Model* model) { _model=model; }
@@ -42,7 +44,7 @@ class Operation {
                                     uint32_t C, std::vector<uint32_t> shape);
   addr_type make_weight_address(uint32_t S, uint32_t R, uint32_t M, uint32_t C,
                                 std::vector<uint32_t> shape);
-
+  std::string get_attribute(std::string key);
  protected:
   static const uint32_t _NO_OPERAND = 0;
   static const uint32_t _INPUT_OPERAND = 100;

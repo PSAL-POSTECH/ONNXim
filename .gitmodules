@@ -10,3 +10,6 @@
 [submodule "extern/booksim"]
 	path = extern/booksim
 	url = https://github.com/PSAL-POSTECH/booksim.git
+[submodule "extern/ramulator2"]
+	path = extern/ramulator2
+	url = git@github.com:PSAL-POSTECH/ramulator2.git

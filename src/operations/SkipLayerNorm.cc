@@ -32,10 +32,27 @@ SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model* model,
             pre_defind_tensor->redefine_tensor(_id, _output_shape);
         }
     }
-    calculate_loops();
+
+}
+
+SkipLayerNorm::SkipLayerNorm(SimulationConfig config, Model *model,
+                std::string name, std::map<std::string, std::string>& attributes)
+    : Operation(config, model, name, attributes) {
+//TODO:
 }
 
 void SkipLayerNorm::initialize_tiles(MappingTable& mapping_table) {
+    if(_outputs.size() == 0) {
+        _input_shape = get_input(0)->get_dims();
+        _output_shape = _input_shape;
+        auto output_tensor = std::make_unique<Tensor>(_id, name_gen(_name, "output"), _output_shape, _config.precision, false);
+        _outputs.push_back(output_tensor.get()->get_id());
+        _model->add_tensor(std::move(output_tensor));
+        _seq = _input_shape.at(0);
+        _dk = _input_shape.at(1);
+        _batch_size = 1;
+    }
+    calculate_loops();
     for (uint32_t tokens=0; tokens < _seq*_batch_size; tokens+=_tokens_per_tile) {
         uint32_t remain_tokens = std::min(_seq*_batch_size-tokens, _tokens_per_tile);
         std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
@@ -114,6 +131,10 @@ void SkipLayerNorm::calculate_loops() {
     _tokens_per_tile = sram_capacity / size_per_token;
     assert (_tokens_per_tile >= 1);
     if (_tokens_per_tile > _seq * _batch_size) _tokens_per_tile = _seq * _batch_size;
-
+    int num_tiles = ceil_div(_seq, _tokens_per_tile);
+    if(num_tiles < _config.num_cores * 2) {
+        _tokens_per_tile = ceil_div(_seq, _config.num_cores * 2);
+        num_tiles = ceil_div(_seq, _tokens_per_tile);
+    }
     spdlog::info("[SkipLayerNorm] tokens_per_tile: {}", _tokens_per_tile);
 }

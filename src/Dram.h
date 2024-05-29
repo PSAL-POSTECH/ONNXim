@@ -7,6 +7,8 @@
 
 #include "Common.h"
 #include "ramulator/Ramulator.hpp"
+#include "ramulator2.hh"
+
 
 class Dram {
  public:
@@ -69,4 +71,23 @@ class DramRamulator : public Dram {
   std::vector<uint64_t> _processed_requests;
 };
 
+class DramRamulator2 : public Dram {
+ public:
+  DramRamulator2(SimulationConfig config);
+
+  virtual bool running() override;
+  virtual void cycle() override;
+  virtual bool is_full(uint32_t cid, MemoryAccess* request) override;
+  virtual void push(uint32_t cid, MemoryAccess* request) override;
+  virtual bool is_empty(uint32_t cid) override;
+  virtual MemoryAccess* top(uint32_t cid) override;
+  virtual void pop(uint32_t cid) override;
+  virtual void print_stat() override;
+
+ private:
+  std::vector<std::unique_ptr<NDPSim::Ramulator2>> _mem;
+  int _tx_ch_log2;
+  int _tx_log2;
+  int _req_size;
+};
 #endif

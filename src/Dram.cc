@@ -132,3 +132,69 @@ void DramRamulator::print_stat() {
   spdlog::info("DRAM: AVG BW Util {:.2f}%", util);
   _mem->print_stats();
 }
+
+DramRamulator2::DramRamulator2(SimulationConfig config) {
+  _n_ch = config.dram_channels;
+  _req_size = config.dram_req_size;
+  _config = config;
+  _mem.resize(_n_ch);
+  for (int ch = 0; ch < _n_ch; ch++) {
+    _mem[ch] = std::make_unique<NDPSim::Ramulator2>(
+      ch, _n_ch, config.dram_config_path, "Ramulator2", _config.dram_print_interval);
+  }
+  _tx_log2 = log2(_req_size);
+  _tx_ch_log2 = log2(_n_ch) + _tx_log2;
+}
+
+bool DramRamulator2::running() { 
+  return false;
+}
+
+void DramRamulator2::cycle() {
+  for (int ch = 0; ch < _n_ch; ch++) {
+    _mem[ch]->cycle();
+  }
+}
+
+bool DramRamulator2::is_full(uint32_t cid, MemoryAccess* request) {
+  return _mem[cid]->full();
+}
+
+void DramRamulator2::push(uint32_t cid, MemoryAccess* request) {
+  addr_type atomic_bytes =_config.dram_req_size;
+  addr_type target_addr = request->dram_address;
+  // align address
+  addr_type start_addr = target_addr - (target_addr % atomic_bytes);
+  assert(start_addr == target_addr);
+  assert(request->size == atomic_bytes);
+  target_addr = (target_addr >> _tx_ch_log2) << _tx_log2;
+  NDPSim::mem_fetch* mf = new NDPSim::mem_fetch();
+  mf->addr = target_addr;
+  mf->size = request->size;
+  mf->write = request->write;
+  mf->request = true;
+  mf->origin_data = request;
+  _mem[cid]->push(mf);
+}
+
+bool DramRamulator2::is_empty(uint32_t cid) { 
+  return _mem[cid]->return_queue_top() == NULL;
+}
+
+MemoryAccess* DramRamulator2::top(uint32_t cid) {
+  assert(!is_empty(cid));
+  NDPSim::mem_fetch* mf = _mem[cid]->return_queue_top();
+  ((MemoryAccess*)mf->origin_data)->request = false;
+  return (MemoryAccess*)mf->origin_data;
+}
+
+void DramRamulator2::pop(uint32_t cid) {
+  assert(!is_empty(cid));
+  _mem[cid]->return_queue_pop();
+}
+
+void DramRamulator2::print_stat() {
+  for (int ch = 0; ch < _n_ch; ch++) {
+    _mem[ch]->print(stdout);
+  }
+}

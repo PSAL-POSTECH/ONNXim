@@ -58,7 +58,9 @@ enum class Opcode {
   SOFTMAX,
   LAYERNORM,
   ADD,
+  MUL,
   GELU,
+  SWISH,
   BAR
 };
 
@@ -119,3 +121,19 @@ uint32_t generate_id();
 uint32_t generate_mem_access_id();
 addr_type allocate_address(uint32_t size);
 SimulationConfig initialize_config(json config);
+template <typename... Args>
+std::string name_gen(Args... args) {
+    std::vector<std::string> strs = {args...};
+    assert(!strs.empty());
+    std::string ret = "";
+    for (auto &str : strs) {
+        ret += str + ".";
+    }
+    ret.resize(ret.size() - 1);
+    return ret;
+}
+uint32_t ceil_div(uint32_t src, uint32_t div);
+
+std::vector<uint32_t> parse_dims(const std::string &str);
+
+std::string dims_to_string(const std::vector<uint32_t> &dims);

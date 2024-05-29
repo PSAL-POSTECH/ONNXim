@@ -8,6 +8,7 @@ class GemmWS : public Gemm {
   GemmWS(SimulationConfig config, MappingTable& mapping_table,
          std::vector<uint32_t> input_shape, std::vector<uint32_t> weight_shape,
          std::vector<uint32_t> output_shape);
+  GemmWS(SimulationConfig config, Model* model, std::string name, std::map<std::string, std::string>& attribute);
   virtual void initialize_tiles(MappingTable& mapping_table) override;
   bool has_bias = true;
  protected:

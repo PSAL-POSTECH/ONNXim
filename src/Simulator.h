@@ -6,6 +6,7 @@
 #include "Interconnect.h"
 #include "Model.h"
 #include "scheduler/Scheduler.h"
+#include "scheduler/LanguageScheduler.h"
 #include <queue>
 
 #define CORE_MASK 0x1 << 1
@@ -14,8 +15,10 @@
 
 class Simulator {
  public:
-  Simulator(SimulationConfig config);
+  Simulator(SimulationConfig config, bool language_mode);
   void register_model(std::unique_ptr<Model> model);
+  void register_language_model(json info, std::unique_ptr<LanguageModel> model);
+  void finish_language_model(uint32_t model_id);
   void run_simulator();
   const double get_tile_ops();
   const size_t get_number_tile() { return _tile_timestamp.size(); }
@@ -54,6 +57,8 @@ class Simulator {
 
   uint32_t _cycle_mask;
   bool _single_run;
+  bool _language_mode;
+  std::unique_ptr<LangScheduler> _lang_scheduler;
 
   // Icnt stat
   uint64_t _nr_from_core=0;
@@ -71,6 +76,7 @@ class Simulator {
   robin_hood::unordered_map<std::string, 
     std::vector<std::unique_ptr<Tensor>>> _weight_table;
   std::vector<std::unique_ptr<Model>>  _models;
+  robin_hood::unordered_map<std::string, std::unique_ptr<Model>> _language_models;
   std::vector<std::chrono::time_point<std::chrono::high_resolution_clock>> _tile_timestamp;
 
   bool check_defined_model(std::string model_name);

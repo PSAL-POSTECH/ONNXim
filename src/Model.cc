@@ -6,6 +6,7 @@
 
 Model::Model(std::string onnx_path, json model_config, SimulationConfig config, std::string name, MappingTable& mapping_table) {
   _onnx_path = onnx_path;
+  _id = generate_id();
   _name = name;
   _root_node_id = generate_id();
   _config = config;
@@ -18,6 +19,12 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   if (_model_config.contains("partition_id")) {
     _partition_id = uint32_t(_model_config["partition_id"]);
   }
+}
+
+Model::Model(json model_config, SimulationConfig config, std::string name)
+      :_model_config(model_config), _config(config), _name(name) {
+  _id = generate_id(); 
+  _mapping_table = MappingTable(_config);
 }
 
 Tensor* Model::get_tensor(uint32_t id) {

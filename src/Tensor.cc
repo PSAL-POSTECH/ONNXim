@@ -6,6 +6,7 @@
 Tensor::Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto, int precision,
                bool produced = false) {
   _id = generate_id();
+  _temporal = false;
   _src_node = src_node;
   _name = tensor_proto.name();
   for (int dim : tensor_proto.dims()) {
@@ -19,6 +20,7 @@ Tensor::Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto, int precision
 
 Tensor::Tensor(uint32_t src_node, std::string name, std::vector<uint32_t> &dims,
                int precision, bool produced = false) {
+  _temporal = false;
   _id = generate_id();
   _src_node = src_node;
   _name = name;
@@ -32,6 +34,7 @@ Tensor::Tensor(uint32_t src_node, std::string name, std::vector<uint32_t> &dims,
 }
 
 Tensor::Tensor(const Tensor &tensor) {
+  _temporal = false;
   _produced = tensor._produced;
   _id = tensor._id;
   _name = tensor._name;
@@ -42,11 +45,36 @@ Tensor::Tensor(const Tensor &tensor) {
   _size = tensor._size;
 }
 
+Tensor::Tensor(uint32_t src_node, std::string name, int precision) {
+  //Temproal definition, need to define
+  _temporal = true;
+  _id = generate_id();
+  _src_node = src_node;
+  _name = name;
+  _precision = precision;
+}
+
+void Tensor::define_tensor(addr_type address, std::vector<uint32_t> &dims) {
+  if (_dims.empty()) {
+    _temporal = false;
+    _address = address;
+    _size = _precision;
+    for (int dim : dims) {
+      _dims.push_back(dim);
+      _size *= dim;
+    }
+  } else {
+    throw("Error: cannot redefine already created tensor");
+  }
+}
+
 void Tensor::redefine_tensor(uint32_t id, std::vector<uint32_t> &dims) {
   if (_dims.empty()) {
     _src_node = id;
+    _size = _precision;
     for (int dim : dims) {
       _dims.push_back(dim);
+      _size *= dim;
     }
   } else {
     bool condition = false;
@@ -57,6 +85,15 @@ void Tensor::redefine_tensor(uint32_t id, std::vector<uint32_t> &dims) {
       }
     }
     if (!condition) throw("Error: cannot redefine already created tensor");
+  }
+}
+
+void Tensor::resize_tensor(std::vector<uint32_t> &dims) {
+  _dims.clear();
+  _size = _precision;
+  for (int dim : dims) {
+    _dims.push_back(dim);
+    _size *= dim;
   }
 }
 
