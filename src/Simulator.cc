@@ -8,8 +8,8 @@
 
 namespace fs = std::filesystem;
 
-Simulator::Simulator(SimulationConfig config)
-    : _config(config), _core_cycles(0) {
+Simulator::Simulator(SimulationConfig config, bool language_mode)
+    : _config(config), _core_cycles(0), _language_mode(language_mode) {
   // Create dram object
   _core_period = 1000000 / (config.core_freq);
   _icnt_period = 1000000 / (config.icnt_freq);
@@ -17,12 +17,12 @@ Simulator::Simulator(SimulationConfig config)
   _core_time = 0;
   _dram_time = 0;
   _icnt_time = 0;
+  char* onnxim_path_env = std::getenv("ONNXIM_HOME");
+  std::string onnxim_path = onnxim_path_env != NULL?
+  std::string(onnxim_path_env) : std::string("./");
   if (config.dram_type == DramType::SIMPLE) {
     _dram = std::make_unique<SimpleDram>(config);
-  } else if (config.dram_type == DramType::RAMULATOR) {
-    char* onnxim_path_env = std::getenv("ONNXIM_HOME");
-    std::string onnxim_path = onnxim_path_env != NULL?
-      std::string(onnxim_path_env) : std::string("./");
+  } else if (config.dram_type == DramType::RAMULATOR1) {
     std::string ramulator_config = fs::path(onnxim_path)
                                        .append("configs")
                                        .append(config.dram_config_path)
@@ -30,7 +30,18 @@ Simulator::Simulator(SimulationConfig config)
     spdlog::info("Ramulator config: {}", ramulator_config);
     config.dram_config_path = ramulator_config;
     _dram = std::make_unique<DramRamulator>(config);
-  } else {
+  } 
+  else if (config.dram_type == DramType::RAMULATOR2) 
+  {
+    std::string ramulator_config = fs::path(onnxim_path)
+                                       .append("configs")
+                                       .append(config.dram_config_path)
+                                       .string();
+    spdlog::info("Ramulator2 config: {}", ramulator_config);
+    config.dram_config_path = ramulator_config;
+    _dram = std::make_unique<DramRamulator2>(config);
+  } 
+  else {
     spdlog::error("[Configuration] Invalid DRAM type...!");
     exit(EXIT_FAILURE);
   }
@@ -62,6 +73,7 @@ Simulator::Simulator(SimulationConfig config)
     }
   }
   
+  //Configure Hardware Scheduler
   if (config.scheduler_type == "simple") {
     _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles, &_core_time, this);
   } else if (config.scheduler_type == "partition_cpu") {
@@ -77,6 +89,7 @@ Simulator::Simulator(SimulationConfig config)
     exit(EXIT_FAILURE);
   }
 
+
   /* Create heap */
   std::make_heap(_models.begin(), _models.end(), CompareModel());
 }
@@ -87,6 +100,13 @@ void Simulator::run_simulator() {
 }
 
 void Simulator::handle_model() {
+  if(_language_mode) {
+    _lang_scheduler->cycle();
+    if(_lang_scheduler->can_schedule_model()) {
+      _models.push_back(_lang_scheduler->pop_model());
+      std::push_heap(_models.begin(), _models.end(), CompareModel());
+    }
+  }
   while (!_models.empty() && _models.front()->get_request_time() <= _core_time) {
     std::unique_ptr<Model> launch_model = std::move(_models.front());
     std::pop_heap(_models.begin(), _models.end(), CompareModel());
@@ -208,6 +228,23 @@ void Simulator::register_model(std::unique_ptr<Model> model) {
   std::push_heap(_models.begin(), _models.end(), CompareModel());
 }
 
+void Simulator::register_language_model(json info, std::unique_ptr<LanguageModel> model) {
+  std::string name = info["name"];
+  std::string trace_file = info["trace_file"];
+  char* onnxim_path_env = std::getenv("ONNXIM_HOME");
+  std::string onnxim_path = onnxim_path_env != NULL?
+  std::string(onnxim_path_env) : std::string("./");
+  trace_file = fs::path(onnxim_path).append("traces").append(trace_file).string();
+  if(_weight_table.find(name) == _weight_table.end()) {
+    model->initialize_weight(_weight_table[name]);
+  }
+  _lang_scheduler = LangScheduler::create(name, trace_file, std::move(model), _config, info);
+}
+
+void Simulator::finish_language_model(uint32_t model_id) {
+  _lang_scheduler->finish_model(model_id);
+}
+
 bool Simulator::running() {
   bool running = false;
   running |= !_models.empty();
@@ -217,6 +254,9 @@ bool Simulator::running() {
   running = running || _icnt->running();
   running = running || _dram->running();
   running = running || !_scheduler->empty();
+  if(_language_mode) {
+    running = running || _lang_scheduler->busy();
+  }
   return running;
 }
 

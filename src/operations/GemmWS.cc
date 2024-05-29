@@ -16,6 +16,13 @@ GemmWS::GemmWS(SimulationConfig config, MappingTable& mapping_table,
                std::vector<uint32_t> weight_shape,
                std::vector<uint32_t> output_shape)
     : Gemm(config, mapping_table, input_shape, weight_shape, output_shape) {}
+
+GemmWS::GemmWS(SimulationConfig config, Model* model, std::string name,
+               std::map<std::string, std::string>& attributes)
+    : Gemm(config, model, name, attributes) {
+  has_bias = std::stoi(get_attribute("has_bias"));
+}
+
 void GemmWS::initialize_tiles(MappingTable& mapping_table) {
   Mapping::LoopCounts key{.N = _output_shape[_input_shape.size()-2 + Ndim] * _batch_size,
                           .C = _weight_shape[Cdim_w],
@@ -66,6 +73,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
   int tout_m_offset = tile->M * mapping.tile_in_loop.M;
   int tout_c_offset = tile->C * mapping.tile_in_loop.C;
   int tout_n_offset = tile->batch * mapping.tile_in_loop.N;
+  int elems_per_access = _config.dram_req_size / _config.precision;
 
   addr_type act_sp_base_addr = SPAD_BASE;
   addr_type weight_sp_base_addr = SPAD_BASE + mapping.tile_in_loop.N *
@@ -92,7 +100,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                       : loop_size;
       if(m_loop <= 0) break;
       for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
-        std::set<addr_type> bias_addrs;
+        std::vector<addr_type> bias_addrs;
         int N_offset = tout_n_offset + Ns;
         if (N_offset >= mapping.total_loop.N)
           break;
@@ -100,10 +108,10 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
         int n_loop = N_offset + loop_size > mapping.total_loop.N
                         ? mapping.total_loop.N - N_offset
                         : loop_size;
-        for (int iter_m = 0; iter_m < m_loop; iter_m++) {
+        for (int iter_m = 0; iter_m < m_loop; iter_m+=elems_per_access) {
           int M = tout_m_offset + Ms + iter_m;
           if (M >= mapping.total_loop.M) continue;
-          bias_addrs.insert(third_addr + make_activation_address(0, 0, 0, M, _output_shape));
+          bias_addrs.push_back(third_addr + make_activation_address(0, 0, 0, M, _output_shape));
         }
         if (has_bias) {
           tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
@@ -155,12 +163,12 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
             (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
         /* MOVIN Activation */
         if (Ms == 0) {
-          std::set<addr_type> input_set;
-          for (int iter_c = 0; iter_c < c_loop; iter_c++) {
-            for (int iter_n = 0; iter_n < n_loop; iter_n++) {
+          std::vector<addr_type> input_set;
+          for (int iter_n = 0; iter_n < n_loop; iter_n++) {
+            for (int iter_c = 0; iter_c < c_loop; iter_c+=elems_per_access) {
               int N = N_offset + iter_n;
               int C = C_offset + iter_c;
-              input_set.insert(
+              input_set.push_back(
                   first_addr + make_activation_address(N, 0, 0, C, _input_shape));
             }
           }
@@ -168,17 +176,16 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               .opcode = Opcode::MOVIN,
               .dest_addr = act_sp_addr,
               .size = (uint32_t)input_set.size(),
-              .src_addrs =
-                  std::vector<addr_type>(input_set.begin(), input_set.end()),
+              .src_addrs = input_set,
               .operand_id = _INPUT_OPERAND,
               .tile_k = mapping.tile_in_loop.C,
               .tile_n = mapping.tile_in_loop.N}));
         }
         /* MOVIN Weight */
         if (Ns == 0) {
-          std::set<addr_type> weight_set;
+          std::vector<addr_type> weight_set;
           for (int iter_m = 0; iter_m < m_loop; iter_m++) {
-            for (int iter_c = 0; iter_c < c_loop; iter_c++) {
+            for (int iter_c = 0; iter_c < c_loop; iter_c+=elems_per_access) {
               int M = M_offset + iter_m;
               int C = C_offset + iter_c;
               std::vector<uint32_t> weight_shape_4d;
@@ -187,7 +194,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               weight_shape_4d[Sdim] = 1;
               weight_shape_4d[Rdim] = 1;
               weight_shape_4d[Cdim_w] = _weight_shape[1];
-              weight_set.insert(
+              weight_set.push_back(
                   second_addr + make_weight_address(0, 0, M, C, weight_shape_4d));
             }
           }
@@ -195,18 +202,17 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               .opcode = Opcode::MOVIN,
               .dest_addr = weight_sp_addr,
               .size = (uint32_t)weight_set.size(),
-              .src_addrs =
-                  std::vector<addr_type>(weight_set.begin(), weight_set.end()),
+              .src_addrs = weight_set,
               .operand_id = _INPUT_OPERAND + 1,
               .tile_m = mapping.tile_in_loop.M,
               .tile_k = mapping.tile_in_loop.C}));
         }
-        std::set<addr_type> output_set;
+        std::vector<addr_type> output_set;
         for (int iter_n = 0; iter_n < n_loop; iter_n++) {
-          for (int iter_m = 0; iter_m < m_loop; iter_m++) {
+          for (int iter_m = 0; iter_m < m_loop; iter_m+=elems_per_access) {
             int N = N_offset + iter_n;
             int M = M_offset + iter_m;
-            output_set.insert(output_addr + make_activation_address(N, 0, 0, M, _output_shape));
+            output_set.push_back(output_addr + make_activation_address(N, 0, 0, M, _output_shape));
           }
         }
 
@@ -236,8 +242,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               .opcode = Opcode::MOVOUT,
               .dest_addr = out_sp_addr,
               .size = (uint32_t)output_set.size(),
-              .src_addrs =
-                  std::vector<addr_type>(output_set.begin(), output_set.end()),
+              .src_addrs = output_set,
               .operand_id = _OUTPUT_OPERAND}));
         }
       }

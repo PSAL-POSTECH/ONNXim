@@ -1,7 +1,14 @@
-#include "BiasGelu.h"
+#include "BiasAct.h"
 #include "../Model.h"
 
-BiasGelu::BiasGelu(SimulationConfig config, Model* model,
+static const std::map<std::string, Opcode> activation_map = {
+    {"gelu", Opcode::GELU},
+    {"relu", Opcode::COMP},
+    {"swish", Opcode::SWISH},
+    {"softmax", Opcode::SOFTMAX},
+};
+
+BiasAct::BiasAct(SimulationConfig config, Model* model,
                onnx::NodeProto& node_proto)
     : Operation(config, model, node_proto) {
 
@@ -24,16 +31,30 @@ BiasGelu::BiasGelu(SimulationConfig config, Model* model,
     } else {
         pre_defind_tensor->redefine_tensor(_id, _output_shape);
     }
-    calculate_loops();
 }
 
-BiasGelu::BiasGelu(SimulationConfig config, Model* model,
+BiasAct::BiasAct(SimulationConfig config, Model* model,
                std::string name, std::map<std::string, std::string> &attributes)
     : Operation(config, model, name, attributes) {
-//TODO:implement this
+    _activation = activation_map.at(get_attribute("activation"));
+    _use_bias = std::stoi(get_attribute("has_bias"));
+    _llama_mlp = std::stoi(get_attribute("llama_mlp"));
 }
 
-void BiasGelu::initialize_tiles(MappingTable& mapping_table) {
+void BiasAct::initialize_tiles(MappingTable& mapping_table) {
+    if(_outputs.size() == 0) {
+        _input_shape = get_input(0)->get_dims();
+        _output_shape = _input_shape;
+        if(_llama_mlp)
+            _output_shape[1] = _input_shape[1] / 2;
+        auto output_tensor = std::make_unique<Tensor>(_id, name_gen(_name, "output"), _output_shape, _config.precision, false);
+        _outputs.push_back(output_tensor.get()->get_id());
+        _model->add_tensor(std::move(output_tensor));
+        _dk = _input_shape.at(1);
+        _seq = _input_shape.at(0);
+        _batch_size = 1;
+    }
+    calculate_loops();
     for (uint32_t tokens= 0; tokens<_seq*_batch_size; tokens+=_tokens_per_tile) {
         uint32_t remain_tokens = std::min(_seq*_batch_size-tokens, _tokens_per_tile);
         std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
@@ -50,7 +71,7 @@ void BiasGelu::initialize_tiles(MappingTable& mapping_table) {
     }
 }
 
-void BiasGelu::initialize_instructions(Tile* tile, Mapping mapping, uint32_t token_offset, uint32_t tokens) {
+void BiasAct::initialize_instructions(Tile* tile, Mapping mapping, uint32_t token_offset, uint32_t tokens) {
     addr_type sram_base = SPAD_BASE;
     addr_type sram_bias_base = sram_base + tokens * _dk * _config.precision;
 
@@ -96,13 +117,21 @@ void BiasGelu::initialize_instructions(Tile* tile, Mapping mapping, uint32_t tok
     }));
 
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-        .opcode = Opcode::GELU,
+        .opcode = _activation,
         .dest_addr = sram_base,
-        .size = _dk * tokens * _config.precision / _config.dram_req_size,
-        .compute_size = _dk * tokens * _config.precision,
+        .size = _output_shape[1] * tokens * _config.precision / _config.dram_req_size,
+        .compute_size = _output_shape[1] * tokens * _config.precision,
         .src_addrs = std::vector<addr_type>{sram_base},
     }));
-
+    if(_llama_mlp) {
+        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+            .opcode = Opcode::MUL,
+            .dest_addr = sram_base,
+            .size = _output_shape[1] * tokens * _config.precision / _config.dram_req_size,
+            .compute_size = _output_shape[1] * tokens * _config.precision,
+            .src_addrs = std::vector<addr_type>{sram_base, sram_bias_base},
+        }));
+    }
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,
@@ -112,13 +141,17 @@ void BiasGelu::initialize_instructions(Tile* tile, Mapping mapping, uint32_t tok
     }));
 }
 
-void BiasGelu::calculate_loops() {
+void BiasAct::calculate_loops() {
     uint32_t size_per_token = _dk * _config.precision;
     uint32_t sram_capacity = _config.spad_size KB / 2;  // unit: byte
 
     _tokens_per_tile = (sram_capacity / size_per_token) - 1; 
     assert (_tokens_per_tile >= 1);
     if (_tokens_per_tile > _seq * _batch_size) _tokens_per_tile = _seq * _batch_size;
-
-    spdlog::info("[BiasGeLU] tokens_per_tile: {}", _tokens_per_tile);
+    int num_tiles = ceil_div(_seq, _tokens_per_tile);
+    if(num_tiles < _config.num_cores * 2) {
+        _tokens_per_tile = ceil_div(_seq, _config.num_cores * 2);
+        num_tiles = ceil_div(_seq, _tokens_per_tile);
+    }
+    spdlog::info("[BiasAct] tokens_per_tile: {}", _tokens_per_tile);
 }

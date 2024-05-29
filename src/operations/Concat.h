@@ -7,6 +7,8 @@ class Concat : public Operation {
   public:
     Concat(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
     Concat(const Concat& src);
+    Concat(SimulationConfig config, Model* model, std::string name,
+                  std::map<std::string, std::string>& attributes);
     virtual void initialize_tiles(MappingTable& mapping_table) override;
     virtual void initialize_instructions(Tile* tile, Mapping mapping) override;
   protected:
@@ -17,5 +19,5 @@ class Concat : public Operation {
     // std::vector<uint32_t> _dilations;
     // std::vector<uint32_t> _pads;
 
-    int _axis;
+    uint32_t _axis;
 };

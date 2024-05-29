@@ -1,0 +1,11 @@
+{
+  "activation_function" : "relu",
+  "num_attention_heads" : 12,
+  "num_kv_heads" : 12,
+  "vocab_size" : 50272,
+  "num_hidden_layers" : 1,
+  "hidden_size" : 768,
+  "intermediate_size" : 3072,
+  "ffn_type" : "default",
+  "max_seq_length" : 2048
+}

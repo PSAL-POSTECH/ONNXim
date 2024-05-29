@@ -83,7 +83,7 @@ public:
 		int pool_size, int pool_stride);
   Mapping calc_conv_mapping(Mapping::LoopCounts &key);
 private:
-  uint32_t ceil_div(uint32_t src, uint32_t div) { return (src+div-1)/div; }
+  
   typedef std::map<Mapping::LoopCounts, Mapping> _MappingTable;
   _MappingTable _mapping_table;
   SimulationConfig _config;

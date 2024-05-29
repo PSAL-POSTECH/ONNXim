@@ -59,7 +59,9 @@ SimulationConfig initialize_config(json config) {
   if ((std::string)config["dram_type"] == "simple")
     parsed_config.dram_type = DramType::SIMPLE;
   else if ((std::string)config["dram_type"] == "ramulator")
-    parsed_config.dram_type = DramType::RAMULATOR;
+    parsed_config.dram_type = DramType::RAMULATOR1;
+  else if ((std::string)config["dram_type"] == "ramulator2")
+    parsed_config.dram_type = DramType::RAMULATOR2;
   else
     throw std::runtime_error(fmt::format("Not implemented dram type {} ",
                                          (std::string)config["dram_type"]));
@@ -109,4 +111,27 @@ SimulationConfig initialize_config(json config) {
     }
   }
   return parsed_config;
+}
+
+uint32_t ceil_div(uint32_t src, uint32_t div) { return (src+div-1)/div; }
+
+std::vector<uint32_t> parse_dims(const std::string &str) {
+  std::vector<uint32_t> dims;
+  std::string token;
+  std::istringstream tokenStream(str);
+  while (std::getline(tokenStream, token, ',')) {
+      dims.push_back(std::stoi(token));
+  }
+  return dims;
+}
+
+std::string dims_to_string(const std::vector<uint32_t> &dims){
+  std::string str;
+  for (int i=0; i<dims.size(); i++) {
+    str += std::to_string(dims[i]);
+    if (i != dims.size()-1) {
+      str += ",";
+    }
+  }
+  return str;
 }

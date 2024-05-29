@@ -12,7 +12,7 @@ option(USE_RAMULATOR "USE_RAMULATOR" ON)
 list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/extern)
 
 # C++ setttings
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(ONNX_ML 1)
 set(JSON_BuildTests OFF CACHE INTERNAL "")
 set(EXECUTABLE_OUTPUT_PATH "${CMAKE_SOURCE_DIR}/build/bin")
@@ -30,6 +30,11 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/src")
 # Add libaray ramulator
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/ramulator_custom")
 
+# Add libaray ramulator
+add_subdirectory("${PROJECT_SOURCE_DIR}/extern/ramulator2")
+include_directories("${PROJECT_SOURCE_DIR}/extern/ramulator2/src")
+include_directories("${PROJECT_SOURCE_DIR}/extern/ramulator2/resources/ndp_wrappers")
+
 # Add libaray booksim
 add_subdirectory("${PROJECT_SOURCE_DIR}/extern/booksim")
 
@@ -45,11 +50,11 @@ set_target_properties(onnx PROPERTIES FOLDER "extern/onnx")
 set_target_properties(onnx_proto PROPERTIES FOLDER "extern/onnx")
 
 target_include_directories(Simulator PUBLIC ${ONNX_INCLUDE_DIRS})
-target_link_libraries(Simulator ramulator booksim2)
+target_link_libraries(Simulator ramulator1 booksim2 ramulator)
 target_link_libraries(Simulator ${PROTOBUF_LIB} onnx_proto ${CONAN_LIBS} stdc++fs)
 
 target_include_directories(Simulator_lib PUBLIC ${ONNX_INCLUDE_DIRS})
-target_link_libraries(Simulator_lib ramulator booksim2)
+target_link_libraries(Simulator_lib ramulator1 booksim2 ramulator)
 target_link_libraries(Simulator_lib ${PROTOBUF_LIB} onnx_proto ${CONAN_LIBS} stdc++fs)
 
 enable_testing()
