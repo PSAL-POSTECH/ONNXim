@@ -129,7 +129,7 @@ void BiasAct::initialize_instructions(Tile* tile, Mapping mapping, uint32_t toke
             .dest_addr = sram_base,
             .size = _output_shape[1] * tokens * _config.precision / _config.dram_req_size,
             .compute_size = _output_shape[1] * tokens * _config.precision,
-            .src_addrs = std::vector<addr_type>{sram_base, sram_bias_base},
+            .src_addrs = std::vector<addr_type>{sram_base},
         }));
     }
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{

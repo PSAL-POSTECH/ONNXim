@@ -7,6 +7,7 @@ ONNXim is a fast cycle-level simulator that can model multi-core NPUs for DNN in
 - Support for cycle-level simulation of memory (through [Ramulator](https://github.com/CMU-SAFARI/ramulator)) and network-on-chip (through [Booksim2](https://github.com/booksim/booksim2)), which is important for properly modeling memory-bound operations in deep learning.
 - Use of ONNX graphs as DNN model specifications, enabling simulation of DNNs implemented in different deep learning frameworks (e.g., PyTorch and TensorFlow).
 - Support language models that do not use ONNX graphs. Additionally, enable auto-regressive generation phases and iteration-level batching.
+
 For more details, please refer to our paper (TBA).
 
 ![Speedup](/img/speedup.png)
