@@ -21,6 +21,10 @@ struct LangRequest {
 
 class LangScheduler {
   public:
+    static std::unique_ptr<LangScheduler> create(std::string name, std::string path, 
+                                                  std::unique_ptr<LanguageModel> model,
+                                                  SimulationConfig config,
+                                                  json scheduler_config);
     LangScheduler(std::string name, std::string path, 
                   std::unique_ptr<LanguageModel> model,
                   SimulationConfig config,
@@ -49,8 +53,11 @@ class LangScheduler {
     uint32_t _max_seq_length;
     uint32_t _max_batch_size; 
 
+    std::vector<uint32_t> _max_dims;
+
     void parse_request_trace(std::string trace_path);
-    
+    void init_request(std::unique_ptr<LangRequest>& request);
+    void init_inputs_and_model();
 };
 
 #endif
