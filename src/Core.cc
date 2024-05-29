@@ -29,8 +29,6 @@ Core::Core(uint32_t id, SimulationConfig config)
       _acc_spad(Sram(config, _core_cycle, true)) {
   _waiting_write_reqs = 0;
   _running_layer = -1;
-  _current_spad = 0;
-  _current_acc_spad = 0;
 }
 
 bool Core::can_issue(bool is_accum_tile) {
@@ -44,19 +42,27 @@ void Core::issue(std::unique_ptr<Tile> op) {
              .memory_stall = 0,
              .sram_reads = 0,
              .sram_writes = 0};
+  int spad_id = 0;
+  int acc_spad_id = 0;
+
+  if (_tiles.size() == 1) {
+    spad_id = _tiles[0]->spad_id;
+    acc_spad_id = _tiles[0]->accum_spad_id;
+  }
+
   /* Double buffer */
-  _current_spad = (_current_spad + 1) % 2;
-  _spad.flush(_current_spad);
-  op->spad_id = _current_spad;
+  spad_id = (spad_id + 1) % 2;
+  _spad.flush(spad_id);
   if (!op->accum || !(_current_layer_id == op->layer_id && _current_fused_op_id == op->fused_op_id)) {
     /* Accumeulate tile uses same acc spad buffer */
-    _current_acc_spad = (_current_acc_spad + 1) % 2;
-    _acc_spad.flush(_current_acc_spad);
+    acc_spad_id = (acc_spad_id + 1) % 2;
+    _acc_spad.flush(acc_spad_id);
   }
   _current_layer_id = op->layer_id;
   _current_fused_op_id = op->fused_op_id;
 
-  op->accum_spad_id = _current_acc_spad;
+  op->spad_id = spad_id;
+  op->accum_spad_id = acc_spad_id;
   op->status = Tile::Status::RUNNING;
   if (op->skip) {
     op->status = Tile::Status::FINISH;
@@ -149,6 +155,7 @@ void Core::cycle() {
           (*tile)->stat.cycles - (*tile)->stat.compute_cycles;
       _finished_tiles.push(std::move(*tile));
       _tiles.erase(tile);
+      break;
     }
   }
   if(_core_cycle % _config.core_print_interval == 0) {
@@ -181,7 +188,6 @@ void Core::push_memory_response(MemoryAccess *response) {
   if (response->write) {
     _waiting_write_reqs--;
   } else if (response->spad_address >= ACCUM_SPAD_BASE) {
-    assert(_acc_spad.check_allocated(response->spad_address, response->buffer_id));
     _acc_spad.fill(response->spad_address, response->buffer_id);
   } else {
     assert(_spad.check_allocated(response->spad_address, response->buffer_id));

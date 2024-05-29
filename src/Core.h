@@ -105,8 +105,6 @@ class Core {
   std::queue<MemoryAccess*> _response_queue;
   uint32_t _waiting_write_reqs;
 
-  int _current_spad;
-  int _current_acc_spad;
   uint32_t _current_layer_id;
   uint32_t _current_fused_op_id;
   Sram _spad;
