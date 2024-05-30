@@ -38,57 +38,24 @@ class Core {
   const SimulationConfig _config;
 
   cycle_type _core_cycle;
-  uint64_t _compute_end_cycle;
   
-  cycle_type _stat_compute_cycle;
   cycle_type _stat_idle_cycle;
-  cycle_type _stat_memory_cycle;
+  cycle_type _stat_memory_idle_cycle;
 
   cycle_type _stat_tot_compute_cycle = 0;
   cycle_type _stat_tot_idle_cycle = 0;
-  cycle_type _stat_tot_memory_cycle = 0;
+  cycle_type _stat_tot_memory_idle_cycle = 0;
 
   cycle_type _accum_request_rr_cycle;
   cycle_type _max_request_rr_cycle;
   cycle_type _min_request_rr_cycle;
-
-  cycle_type _compute_memory_stall_cycle;
-  cycle_type _layernorm_stall_cycle;
-  cycle_type _softmax_stall_cycle;
-  cycle_type _add_stall_cycle;
-  cycle_type _gelu_stall_cycle;
-  cycle_type _load_memory_cycle;
-  cycle_type _store_memory_cycle;
-
-  cycle_type _stat_tot_compute_memory_stall_cycle = 0;
-  cycle_type _stat_tot_layernorm_stall_cycle = 0;
-  cycle_type _stat_tot_softmax_stall_cycle = 0;
-  cycle_type _stat_tot_add_stall_cycle = 0;
-  cycle_type _stat_tot_gelu_stall_cycle = 0;
-  cycle_type _stat_tot_load_memory_cycle = 0;
-  cycle_type _stat_tot_store_memory_cycle = 0;
   
   /* Vector Unit Params */
   cycle_type _stat_vec_compute_cycle;
-  cycle_type _stat_vec_memory_cycle;  // Does not acctuall count yet
-  cycle_type _stat_vec_idle_cycle;    // Does not acctuall count yet
-
   cycle_type _stat_tot_vec_compute_cycle = 0;
-  cycle_type _stat_tot_vec_memory_cycle = 0;
-  cycle_type _stat_tot_vec_idle_cycle = 0;
 
   cycle_type _stat_matmul_cycle;
-  cycle_type _stat_layernorm_cycle;
-  cycle_type _stat_add_cycle;
-  cycle_type _stat_gelu_cycle;
-  cycle_type _stat_softmax_cycle;
-
   cycle_type _stat_tot_matmul_cycle = 0;
-  cycle_type _stat_tot_layernorm_cycle = 0;
-  cycle_type _stat_tot_add_cycle = 0;
-  cycle_type _stat_tot_gelu_cycle = 0;
-  cycle_type _stat_tot_softmax_cycle = 0;
-
 
   int _running_layer;
   std::deque<std::unique_ptr<Tile>> _tiles;

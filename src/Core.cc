@@ -6,25 +6,10 @@ Core::Core(uint32_t id, SimulationConfig config)
     : _id(id),
       _config(config),
       _core_cycle(0),
-      _compute_end_cycle(0),
       _stat_idle_cycle(0),
-      _stat_compute_cycle(0),
-      _stat_memory_cycle(0),
+      _stat_memory_idle_cycle(0),
       _stat_vec_compute_cycle(0),
-      _stat_vec_memory_cycle(0),
-      _stat_vec_idle_cycle(0),
-      _compute_memory_stall_cycle(0),
-      _layernorm_stall_cycle(0),
-      _softmax_stall_cycle(0),
-      _add_stall_cycle(0),
-      _gelu_stall_cycle(0),
-      _load_memory_cycle(0),
-      _store_memory_cycle(0),
       _stat_matmul_cycle(0),
-      _stat_layernorm_cycle(0),
-      _stat_add_cycle(0),
-      _stat_gelu_cycle(0),
-      _stat_softmax_cycle(0),
       _spad(Sram(config, _core_cycle, false)),
       _acc_spad(Sram(config, _core_cycle, true)) {
   _waiting_write_reqs = 0;
@@ -218,25 +203,17 @@ bool Core::can_issue_compute(std::unique_ptr<Instruction>& inst) {
 void Core::print_stats() {
   update_stats();
   spdlog::info(
-      "Core [{}] : MatMul cycle {} LayerNorm cycle {} Softmax cycle {} "
-      "Add cycle {}  Gelu cycle {}",
-      _id, _stat_tot_matmul_cycle, _stat_tot_layernorm_cycle, _stat_tot_softmax_cycle, _stat_tot_add_cycle,
-      _stat_tot_gelu_cycle);
+      "Core [{}] : MatMul active cycle {} Vector active cycle {} ",
+      _id, _stat_tot_matmul_cycle, _stat_tot_vec_compute_cycle);
 
   spdlog::info(
-      "Core [{}] : MatMul stall cycle {} LayerNorm stall cycle {} "
-      "Softmax stall cycle {} Add stall cycle {} Gelu stall cycle {}",
-      _id, _stat_tot_compute_memory_stall_cycle, _stat_tot_layernorm_stall_cycle, _stat_tot_softmax_stall_cycle,
-      _stat_tot_add_stall_cycle, _stat_tot_gelu_stall_cycle);
+      "Core [{}] : Memory unit idle cycle {} "
+      "Core idle cycle {} ",
+      _id, _stat_tot_memory_idle_cycle, _stat_tot_idle_cycle);
 
-
-  spdlog::info(
-      "Core [{}] : Load stall cycle {} Store stall cycle {} "
-      "Total memory stall {} Idle cycle {}",
-      _id, _stat_tot_load_memory_cycle, _stat_tot_store_memory_cycle,
-      _stat_tot_memory_cycle, _stat_tot_idle_cycle);
-
-  spdlog::info("Core [{}] : Total cycle: {}", _id, _core_cycle);
+  spdlog::info("Core [{}] : Systolic Array Utilization(%) {:.2f}, Vector Unit Utilization(%) {:.2f}, Total cycle: {}",
+      _id, static_cast<float>(_stat_tot_matmul_cycle * 100) / _core_cycle,
+      static_cast<float>(_stat_tot_vec_compute_cycle * 100) / _core_cycle, _core_cycle);
 }
 
 void Core::print_current_stats() {
@@ -244,62 +221,30 @@ void Core::print_current_stats() {
   if(_id != 0) 
     level = spdlog::level::debug;
     spdlog::log(level,
-      "Core [{}] : MatMul cycle {} LayerNorm cycle {} Softmax cycle {} "
-      "Add cycle {}  Gelu cycle {}",
-      _id, _stat_matmul_cycle, _stat_layernorm_cycle, _stat_softmax_cycle, _stat_add_cycle,
-      _stat_gelu_cycle);
+      "Core [{}] : MatMul active cycle {} Vector active cycle {} ",
+      _id, _stat_matmul_cycle, _stat_vec_compute_cycle);
 
   spdlog::log(level,
-      "Core [{}] : MatMul stall cycle {} LayerNorm stall cycle {} "
-      "Softmax stall cycle {} Add stall cycle {} Gelu stall cycle {}",
-      _id, _compute_memory_stall_cycle, _layernorm_stall_cycle, _softmax_stall_cycle,
-      _add_stall_cycle, _gelu_stall_cycle);
+      "Core [{}] : issued tile {} ", _id, _tiles.size());
 
   spdlog::log(level,
-      "Core [{}] : Load stall cycle {} Store stall cycle {} "
-      "Total memory stall {} Idle cycle {}",
-      _id, _load_memory_cycle, _store_memory_cycle,
-      _stat_memory_cycle, _stat_idle_cycle);
-
-  spdlog::log(level,"Core [{}] : Total cycle: {}", _id, _core_cycle);
+      "Core [{}] : Memory unit idle cycle {} "
+      "Core idle cycle {} ",
+      _id, _stat_memory_idle_cycle, _stat_idle_cycle);
+  spdlog::log(level,"Core [{}] : Systolic Array Utilization(%) {:.2f}, Vector Unit Utilization(%) {:.2f}, Total cycle: {}",
+      _id, static_cast<float>(_stat_matmul_cycle * 100) / _config.core_print_interval,
+      static_cast<float>(_stat_vec_compute_cycle * 100) / _config.core_print_interval, _core_cycle);
   update_stats();
 }
 
 void Core::update_stats() {
-  _stat_tot_compute_cycle += _stat_compute_cycle;
-  _stat_tot_memory_cycle += _stat_memory_cycle;
+  _stat_tot_memory_idle_cycle += _stat_memory_idle_cycle;
   _stat_tot_idle_cycle += _stat_idle_cycle;
-  _stat_tot_compute_memory_stall_cycle += _compute_memory_stall_cycle;
-  _stat_tot_layernorm_stall_cycle += _layernorm_stall_cycle;
-  _stat_tot_softmax_stall_cycle += _softmax_stall_cycle;
-  _stat_tot_add_stall_cycle += _add_stall_cycle;
-  _stat_tot_gelu_stall_cycle += _gelu_stall_cycle;
-  _stat_tot_load_memory_cycle += _load_memory_cycle;
-  _stat_tot_store_memory_cycle += _store_memory_cycle;
   _stat_tot_vec_compute_cycle += _stat_vec_compute_cycle;
-  _stat_tot_vec_memory_cycle += _stat_vec_memory_cycle;
-  _stat_tot_vec_idle_cycle += _stat_vec_idle_cycle;
   _stat_tot_matmul_cycle += _stat_matmul_cycle;
-  _stat_tot_layernorm_cycle += _stat_layernorm_cycle;
-  _stat_tot_add_cycle += _stat_add_cycle;
-  _stat_tot_gelu_cycle += _stat_gelu_cycle;
-  _stat_tot_softmax_cycle += _stat_softmax_cycle;
-  _stat_compute_cycle = 0;
-  _stat_memory_cycle = 0;
+
+  _stat_memory_idle_cycle = 0;
   _stat_idle_cycle = 0;
-  _compute_memory_stall_cycle = 0;
-  _layernorm_stall_cycle = 0;
-  _softmax_stall_cycle = 0;
-  _add_stall_cycle = 0;
-  _gelu_stall_cycle = 0;
-  _load_memory_cycle = 0;
-  _store_memory_cycle = 0;
   _stat_vec_compute_cycle = 0;
-  _stat_vec_memory_cycle = 0;
-  _stat_vec_idle_cycle = 0;
   _stat_matmul_cycle = 0;
-  _stat_layernorm_cycle = 0;
-  _stat_add_cycle = 0;
-  _stat_gelu_cycle = 0;
-  _stat_softmax_cycle = 0;
 }
