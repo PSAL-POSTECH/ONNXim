@@ -193,48 +193,15 @@ void SystolicWS::cycle() {
       assert(0);
     }
   }
-  if (_compute_pipeline.empty() && _ex_inst_queue.empty()) {
-    _stat_memory_cycle++;
-  } else if (!_compute_pipeline.empty()) {
-    _stat_compute_cycle++;
-  }
-  if (!_vector_pipeline.empty()) {  // Vector unit compute
-    _stat_vec_compute_cycle++;
-  }
 
   // xxx will it work well on double buffered code? no.
-  bool is_idle = _compute_pipeline.empty();
-  is_idle = is_idle && _vector_pipeline.empty();
+  bool is_idle = _compute_pipeline.empty() && _vector_pipeline.empty();
+  bool is_running = running();
 
-  if (is_idle) {
-    _stat_memory_cycle++;
-
-    if (_ex_inst_queue.empty()) {
-      _store_memory_cycle++;
-    } else {
-      _load_memory_cycle++;
-      switch (_ex_inst_queue.front()->opcode) {
-        case Opcode::GEMM:
-        case Opcode::GEMM_PRELOAD:
-          _compute_memory_stall_cycle++;
-          break;
-        case Opcode::LAYERNORM:
-          _layernorm_stall_cycle++;
-          break;
-        case Opcode::SOFTMAX:
-          _softmax_stall_cycle++;
-          break;
-        case Opcode::ADD:
-          _add_stall_cycle++;
-          break;
-        case Opcode::GELU:
-          _gelu_stall_cycle++;
-          break;
-      }
-    }
-  } else if (!_compute_pipeline.empty()) {
-      _stat_matmul_cycle++;
-  } else {
+  if (!_compute_pipeline.empty())
+    _stat_matmul_cycle++;
+  if (!_vector_pipeline.empty()) {
+    _stat_vec_compute_cycle++;
     switch (_vector_pipeline.front()->opcode) {
       case Opcode::LAYERNORM:
         _stat_layernorm_cycle++;
@@ -251,9 +218,11 @@ void SystolicWS::cycle() {
     }
   }
 
-  if (!running()) {
+  if (_request_queue.empty())
+    _stat_memory_idle_cycle++;
+
+  if (!is_running)
     _stat_idle_cycle++;
-  }
   Core::cycle();
 }
 

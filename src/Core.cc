@@ -9,17 +9,13 @@ Core::Core(uint32_t id, SimulationConfig config)
       _compute_end_cycle(0),
       _stat_idle_cycle(0),
       _stat_compute_cycle(0),
-      _stat_memory_cycle(0),
+      _stat_memory_idle_cycle(0),
       _stat_vec_compute_cycle(0),
-      _stat_vec_memory_cycle(0),
-      _stat_vec_idle_cycle(0),
-      _compute_memory_stall_cycle(0),
+      _gemm_stall_cycle(0),
       _layernorm_stall_cycle(0),
       _softmax_stall_cycle(0),
       _add_stall_cycle(0),
       _gelu_stall_cycle(0),
-      _load_memory_cycle(0),
-      _store_memory_cycle(0),
       _stat_matmul_cycle(0),
       _stat_layernorm_cycle(0),
       _stat_add_cycle(0),
@@ -141,6 +137,28 @@ void Core::cycle() {
         _ex_inst_queue.push(std::move(inst));
         issued = true;
       }
+
+      /* Handle stalled instruction */
+      if (!issued && _compute_pipeline.empty() && _vector_pipeline.empty()) {
+        switch (inst->opcode) {
+          case Opcode::GEMM:
+          case Opcode::GEMM_PRELOAD:
+            _gemm_stall_cycle++;
+            break;
+          case Opcode::LAYERNORM:
+            _layernorm_stall_cycle++;
+            break;
+          case Opcode::SOFTMAX:
+            _softmax_stall_cycle++;
+            break;
+          case Opcode::ADD:
+            _add_stall_cycle++;
+            break;
+          case Opcode::GELU:
+            _gelu_stall_cycle++;
+            break;
+        }
+      }
     }
     if (issued) {
       _tiles[i]->instructions.pop_front();
@@ -224,17 +242,15 @@ void Core::print_stats() {
       _stat_tot_gelu_cycle);
 
   spdlog::info(
-      "Core [{}] : MatMul stall cycle {} LayerNorm stall cycle {} "
-      "Softmax stall cycle {} Add stall cycle {} Gelu stall cycle {}",
-      _id, _stat_tot_compute_memory_stall_cycle, _stat_tot_layernorm_stall_cycle, _stat_tot_softmax_stall_cycle,
+      "Core [{}] : Matmul stall cycle {} LayerNorm stall cycle {} Softmax stall cycle {} "
+      "Add stall cycle {}  Gelu stall cycle {} ",
+      _id, _stat_tot_gemm_stall_cycle, _stat_tot_layernorm_stall_cycle, _stat_tot_softmax_stall_cycle,
       _stat_tot_add_stall_cycle, _stat_tot_gelu_stall_cycle);
 
-
   spdlog::info(
-      "Core [{}] : Load stall cycle {} Store stall cycle {} "
-      "Total memory stall {} Idle cycle {}",
-      _id, _stat_tot_load_memory_cycle, _stat_tot_store_memory_cycle,
-      _stat_tot_memory_cycle, _stat_tot_idle_cycle);
+      "Core [{}] : Memory unit idle cycle {} "
+      "Core idle cycle {} ",
+      _id, _stat_tot_memory_idle_cycle, _stat_tot_idle_cycle);
 
   spdlog::info("Core [{}] : Total cycle: {}", _id, _core_cycle);
 }
@@ -250,16 +266,15 @@ void Core::print_current_stats() {
       _stat_gelu_cycle);
 
   spdlog::log(level,
-      "Core [{}] : MatMul stall cycle {} LayerNorm stall cycle {} "
-      "Softmax stall cycle {} Add stall cycle {} Gelu stall cycle {}",
-      _id, _compute_memory_stall_cycle, _layernorm_stall_cycle, _softmax_stall_cycle,
+      "Core [{}] : Matmul stall cycle {} LayerNorm stall cycle {} Softmax stall cycle {} "
+      "Add stall cycle {}  Gelu stall cycle {} ",
+      _id, _gemm_stall_cycle, _layernorm_stall_cycle, _softmax_stall_cycle,
       _add_stall_cycle, _gelu_stall_cycle);
 
   spdlog::log(level,
-      "Core [{}] : Load stall cycle {} Store stall cycle {} "
-      "Total memory stall {} Idle cycle {}",
-      _id, _load_memory_cycle, _store_memory_cycle,
-      _stat_memory_cycle, _stat_idle_cycle);
+      "Core [{}] : Memory unit idle cycle {} "
+      "Core idle cycle {} ",
+      _id, _stat_memory_idle_cycle, _stat_idle_cycle);
 
   spdlog::log(level,"Core [{}] : Total cycle: {}", _id, _core_cycle);
   update_stats();
@@ -267,36 +282,30 @@ void Core::print_current_stats() {
 
 void Core::update_stats() {
   _stat_tot_compute_cycle += _stat_compute_cycle;
-  _stat_tot_memory_cycle += _stat_memory_cycle;
+  _stat_tot_memory_idle_cycle += _stat_memory_idle_cycle;
   _stat_tot_idle_cycle += _stat_idle_cycle;
-  _stat_tot_compute_memory_stall_cycle += _compute_memory_stall_cycle;
+  _stat_tot_gemm_stall_cycle += _gemm_stall_cycle;
   _stat_tot_layernorm_stall_cycle += _layernorm_stall_cycle;
   _stat_tot_softmax_stall_cycle += _softmax_stall_cycle;
   _stat_tot_add_stall_cycle += _add_stall_cycle;
   _stat_tot_gelu_stall_cycle += _gelu_stall_cycle;
-  _stat_tot_load_memory_cycle += _load_memory_cycle;
-  _stat_tot_store_memory_cycle += _store_memory_cycle;
   _stat_tot_vec_compute_cycle += _stat_vec_compute_cycle;
-  _stat_tot_vec_memory_cycle += _stat_vec_memory_cycle;
-  _stat_tot_vec_idle_cycle += _stat_vec_idle_cycle;
   _stat_tot_matmul_cycle += _stat_matmul_cycle;
   _stat_tot_layernorm_cycle += _stat_layernorm_cycle;
   _stat_tot_add_cycle += _stat_add_cycle;
   _stat_tot_gelu_cycle += _stat_gelu_cycle;
   _stat_tot_softmax_cycle += _stat_softmax_cycle;
   _stat_compute_cycle = 0;
-  _stat_memory_cycle = 0;
+  _stat_memory_idle_cycle = 0;
   _stat_idle_cycle = 0;
-  _compute_memory_stall_cycle = 0;
+
+  _gemm_stall_cycle = 0;
   _layernorm_stall_cycle = 0;
   _softmax_stall_cycle = 0;
   _add_stall_cycle = 0;
   _gelu_stall_cycle = 0;
-  _load_memory_cycle = 0;
-  _store_memory_cycle = 0;
+
   _stat_vec_compute_cycle = 0;
-  _stat_vec_memory_cycle = 0;
-  _stat_vec_idle_cycle = 0;
   _stat_matmul_cycle = 0;
   _stat_layernorm_cycle = 0;
   _stat_add_cycle = 0;

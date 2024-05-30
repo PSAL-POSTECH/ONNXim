@@ -44,19 +44,15 @@ void GlobalAvgPool::initialize_tiles(MappingTable& mapping_table) {
   spdlog::trace("initialize_tile {}", _name);
   std::vector<uint32_t> output_shape = get_output(0)->get_dims();
 
-  for (uint32_t N = 0; N < output_shape[Ndim]; N++) {
-    for (uint32_t C = 0; C < output_shape[Cdim]; C++) {
-      _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
-                            .optype = "GlobalAvgPool",
-                            .layer_id = _id,
-                            .batch = N,
-                            .Q = 0,
-                            .P = 0,
-                            .C = C,
-                            .skip = true}));
-      initialize_instructions(_tiles.back().get(), Mapping{});
-    }
-  }
+  _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
+                        .optype = "GlobalAvgPool",
+                        .layer_id = _id,
+                        .batch = N,
+                        .Q = 0,
+                        .P = 0,
+                        .C = C,
+                        .skip = true}));
+  initialize_instructions(_tiles.back().get(), Mapping{});
 }
 
 void GlobalAvgPool::initialize_instructions(Tile* tile, Mapping mapping) {
