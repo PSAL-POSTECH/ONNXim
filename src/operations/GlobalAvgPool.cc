@@ -47,10 +47,10 @@ void GlobalAvgPool::initialize_tiles(MappingTable& mapping_table) {
   _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
                         .optype = "GlobalAvgPool",
                         .layer_id = _id,
-                        .batch = N,
+                        .batch = 1,
                         .Q = 0,
                         .P = 0,
-                        .C = C,
+                        .C = 1,
                         .skip = true}));
   initialize_instructions(_tiles.back().get(), Mapping{});
 }
