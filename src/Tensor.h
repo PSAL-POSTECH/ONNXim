@@ -29,6 +29,7 @@ class Tensor {
   void allocate_tensor(int precision);
   addr_type get_address() { return _address; }
   uint32_t get_size() { return _size; }
+  void print_tensor();
 
  private:
   bool _temporal;

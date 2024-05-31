@@ -14,7 +14,7 @@ Tensor::Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto, int precision
   }
   spdlog::trace("Tensor: {}", _name);
   _produced = produced;
-
+  _precision = precision;
   allocate_tensor(precision);
 }
 
@@ -29,7 +29,7 @@ Tensor::Tensor(uint32_t src_node, std::string name, std::vector<uint32_t> &dims,
   }
   spdlog::trace("Tensor: {} {}", _name, dims);
   _produced = produced;
-
+  _precision = precision;
   allocate_tensor(precision);
 }
 
@@ -43,6 +43,7 @@ Tensor::Tensor(const Tensor &tensor) {
   _child_nodes = tensor._child_nodes;
   _address = tensor._address;
   _size = tensor._size;
+  _precision = tensor._precision;
 }
 
 Tensor::Tensor(uint32_t src_node, std::string name, int precision) {
@@ -108,4 +109,8 @@ void Tensor::allocate_tensor(int precision) {
   }
   _address = allocate_address(size * precision);
   _size = size * precision;
+}
+
+void Tensor::print_tensor() {
+  spdlog::info("Tensor: {} {} {} {}", _name, _src_node, _dims, _size);
 }

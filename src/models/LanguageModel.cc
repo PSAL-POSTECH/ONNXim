@@ -35,7 +35,12 @@ LanguageModel::LanguageModel(json llm_config, SimulationConfig config, std::stri
   //Constructor for weight initialization
   //Not used for actual simulation
   _num_batch = 0;
+  _run_single_layer = false;
+  if(llm_config.contains("run_single_layer")) {
+    _run_single_layer = llm_config["run_single_layer"];
+  }
   _num_layers = llm_config["num_hidden_layers"];
+  _num_sim_layers = _run_single_layer ? 1 : _num_layers;
   _num_kv_heads = llm_config["num_kv_heads"];
   _num_heads = llm_config["num_attention_heads"];
   _intermediate_size = llm_config["intermediate_size"];
@@ -59,9 +64,9 @@ std::unique_ptr<LanguageModel> LanguageModel::generate_model(std::vector<LangInp
   model->_key_cache_tensor_ids.resize(reqs.size());
   model->_value_cache_tensor_ids.resize(reqs.size());
   for(int b = 0; b < reqs.size(); b++) {
-    model->_key_cache_tensor_ids[b].resize(_num_layers);
-    model->_value_cache_tensor_ids[b].resize(_num_layers);
-    for(int l = 0; l < _num_layers; l++) {
+    model->_key_cache_tensor_ids[b].resize(_num_sim_layers);
+    model->_value_cache_tensor_ids[b].resize(_num_sim_layers);
+    for(int l = 0; l < _num_sim_layers; l++) {
       auto key_cache = std::make_unique<Tensor>(*reqs[b].key_cache[l]);
       key_cache->set_produced();
       model->_key_cache_tensor_ids[b][l] = key_cache->get_id();
@@ -100,7 +105,7 @@ uint32_t LanguageModel::load_value_cache(uint32_t layer, uint32_t batch) {
 }
 
 void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table) {
-  for(int l = 0; l < _num_layers; l++) {
+  for(int l = 0; l < _num_sim_layers; l++) {
     auto attn = name_gen(LAYER(l), BlockType::Attention);
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::LayerNorm, ParameterType::Weight), {_hidden_size})));
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::LayerNorm, ParameterType::Bias), {_hidden_size})));
@@ -125,8 +130,8 @@ void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weig
   for (auto& wgt : weight_table) {
     _wgt_size += wgt->get_size();
   }
-
-  spdlog::info("Weight size: {} GB", _wgt_size / (1 GB));
+  _act_size = std::max(_qkv_out_dim, _ffn1_out_dim) * _config.precision;
+  spdlog::info("Weight size: {:2f} GB", (_wgt_size / (1.0 GB)));
 }
 
 void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table) {
@@ -177,7 +182,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     {"weight_shape", dims_to_string({_intermediate_size, _hidden_size})},
     {"output_shape", dims_to_string({num_tokens, _hidden_size})}};
 
-  _input_tensor = create_tensor("input", act_dim);//TODO:: fix this
+  _input_tensor = create_tensor("input", act_dim);
   uint32_t input_id = _input_tensor->get_id();
   _tensor_map[_input_tensor->get_id()] = std::move(_input_tensor);
   for(auto it = weight_table.begin(); it != weight_table.end(); it++) {
@@ -189,7 +194,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
   }
   
   std::map<std::string, std::string> empty_attr;
-  for(int l = 0; l < _num_layers; l++) {
+  for(int l = 0; l < _num_sim_layers; l++) {
     //QKV Proejction
     std::string qkv_name = name_gen(LAYER(l), BlockType::Attention, OperationType::QKVGen);
     uint32_t qkv_weight_id = _wgt_map[name_gen(qkv_name, ParameterType::Weight)];
