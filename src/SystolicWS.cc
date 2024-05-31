@@ -202,20 +202,6 @@ void SystolicWS::cycle() {
     _stat_matmul_cycle++;
   if (!_vector_pipeline.empty()) {
     _stat_vec_compute_cycle++;
-    switch (_vector_pipeline.front()->opcode) {
-      case Opcode::LAYERNORM:
-        _stat_layernorm_cycle++;
-        break;
-      case Opcode::SOFTMAX:
-        _stat_softmax_cycle++;
-        break;
-      case Opcode::ADD:
-        _stat_add_cycle++;
-        break;
-      case Opcode::GELU:
-        _stat_gelu_cycle++;
-        break;
-    }
   }
 
   if (_request_queue.empty())
