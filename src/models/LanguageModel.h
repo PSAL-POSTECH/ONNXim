@@ -49,13 +49,16 @@ class LanguageModel : public Model {
   
   void log_model();
   uint64_t get_weight_size() { return _wgt_size; }
+  uint64_t get_act_size() { return _act_size; }
 
   virtual bool check_language_model() override { return true; }
   virtual void initialize_model(
       std::vector<std::unique_ptr<Tensor>>& weight_table);
   virtual void initialize_weight(
       std::vector<std::unique_ptr<Tensor>>& weight_table);
-
+  virtual bool is_run_single_layer() { return _run_single_layer; }
+  virtual uint32_t get_num_layers() { return _num_layers; }
+  virtual uint32_t get_num_sim_layers() { return _num_sim_layers; }
   protected:
     std::vector<LangInput> _reqs;
     uint32_t _num_batch;
@@ -65,12 +68,14 @@ class LanguageModel : public Model {
     uint32_t _num_kv_heads;
     uint32_t _hidden_size;
     uint32_t _intermediate_size;
+    uint32_t _num_sim_layers;
     uint32_t _num_layers;
     uint32_t _qkv_out_dim;
     uint32_t _ffn1_out_dim;
     bool _llama_mlp;
-
+    bool _run_single_layer;
     uint64_t _wgt_size;  // in bytes
+    uint64_t _act_size; // in bytes
 
     std::unique_ptr<Tensor> _input_tensor;
 

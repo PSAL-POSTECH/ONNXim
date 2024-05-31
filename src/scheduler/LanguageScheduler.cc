@@ -28,16 +28,22 @@ LangScheduler::LangScheduler(std::string name, std::string path, std::unique_ptr
   _scheduler_config = _scheduler_config;
   _language_model = std::move(model);
   json model_config = _language_model->get_model_config();
+  _run_single_layer = _language_model->is_run_single_layer();
   _num_layers = model_config["num_hidden_layers"];
+  _num_sim_layers = _run_single_layer ? 1 : _num_layers;
   _num_attention_heads = model_config["num_attention_heads"];
   _num_kv_heads = model_config["num_kv_heads"];
   _hidden_size = model_config["hidden_size"];
   _cache_dim = _hidden_size / _num_attention_heads * _num_kv_heads;
   _max_seq_length = model_config["max_seq_length"];
-  _max_batch_size = _scheduler_config["max_batch_size"];
+  if(_scheduler_config.contains("max_batch_size"))
+    _max_batch_size = _scheduler_config["max_batch_size"];
+  else 
+    _max_batch_size = 0;
   _cycle = 0;
   _max_dims = {_max_seq_length, _cache_dim};
   parse_request_trace(path); 
+  spdlog::info("num layer {} num sim layer {}", _num_layers, _num_sim_layers);
 }
 
 bool LangScheduler::can_schedule_model() {
@@ -87,7 +93,7 @@ void LangScheduler::finish_model(uint32_t model_id) {
       _active_requests[req_id]->current_length += 1;
     }
     new_cache_dim = {_active_requests[req_id]->current_length, _cache_dim};
-    for(uint32_t i = 0; i < _num_layers; i++) {
+    for(uint32_t i = 0; i < _num_sim_layers; i++) {
         _active_requests[req_id]->key_cache[i]->resize_tensor(new_cache_dim);
         _active_requests[req_id]->value_cache[i]->resize_tensor(new_cache_dim);
     }
@@ -103,6 +109,27 @@ void LangScheduler::finish_model(uint32_t model_id) {
 
 bool LangScheduler::busy() {
   return !_model_queue.empty() || !_active_requests.empty() || !_request_queue.empty();
+}
+
+uint64_t LangScheduler::get_weight_memory_size() {
+  if(_run_single_layer) {
+    return _language_model->get_weight_size() * _num_layers;
+  }
+  else {
+    return _language_model->get_weight_size();
+  }
+}
+
+uint64_t LangScheduler::get_kv_memory_size() {
+  uint32_t kv_size = 0;
+  for(auto iter = _active_requests.begin(); iter != _active_requests.end(); iter++) {
+    for(uint32_t i = 0; i < _num_sim_layers; i++) {
+      kv_size += iter->second->key_cache[i]->get_size() + iter->second->value_cache[i]->get_size();
+    }
+  }
+  if(_run_single_layer)
+    kv_size *= _num_layers;
+  return kv_size;
 }
 
 void LangScheduler::parse_request_trace(std::string path) {
@@ -141,10 +168,10 @@ void LangScheduler::init_request(std::unique_ptr<LangRequest>& request) {
   request->start_time = _cycle;
   request->gen_phase = false;
   request->running = false;
-  request->key_cache.resize(_num_layers);
-  request->value_cache.resize(_num_layers);
+  request->key_cache.resize(_num_sim_layers);
+  request->value_cache.resize(_num_sim_layers);
   std::vector<uint32_t> first_dims = { request->current_length, _cache_dim};
-  for(uint32_t i = 0; i < _num_layers; i++) {
+  for(uint32_t i = 0; i < _num_sim_layers; i++) {
     //Allocate max_seq_length x cache_dim tensor and redefine to 0 x cache_dim
     request->key_cache[i] = 
         std::make_unique<Tensor>(_language_model->get_root_node_id(), name_gen(LAYER(i), "KeyCache"),  _max_dims, _config.precision, true);
@@ -158,6 +185,7 @@ void LangScheduler::init_request(std::unique_ptr<LangRequest>& request) {
 void LangScheduler::init_inputs_and_model() {
   //Init inputs
   std::vector<LangInput> inputs;
+  uint32_t num_tokens = 0;
   for(auto it = _active_requests.begin(); it != _active_requests.end(); it++) {
     if(it->second->running == false) {
       LangInput input;
@@ -170,10 +198,11 @@ void LangScheduler::init_inputs_and_model() {
         input.seq_length = it->second->prompt_length;
         input.context_length = it->second->current_length;
       }
-      for(uint32_t i = 0; i < _num_layers; i++) {
+      for(uint32_t i = 0; i < _num_sim_layers; i++) {
         input.key_cache.push_back(it->second->key_cache[i].get());
         input.value_cache.push_back(it->second->value_cache[i].get());
       }
+      num_tokens += input.seq_length;
       inputs.push_back(input);
     }
     if(_max_batch_size > 0 && inputs.size() >= _max_batch_size) {
@@ -189,4 +218,12 @@ void LangScheduler::init_inputs_and_model() {
     }
     _model_queue.push(std::move(infer_model));
   }
+  float weight_size = get_weight_memory_size() /(1.0 GB);
+  float kv_size = get_kv_memory_size() /(1.0 GB);
+  float act_size = _language_model->get_act_size() /(1.0 GB) * num_tokens;
+  float tot_mem = weight_size + kv_size + act_size;
+  spdlog::info("Total Memory Usage: {:.2f} GB", tot_mem);
+  spdlog::info("Weight Memory Usage: {:.2f} GB", weight_size);
+  spdlog::info("KV Memory Usage: {:.2f} GB", kv_size);
+  spdlog::info("Activation Memory Usage: {:.2f} GB", act_size);
 }
