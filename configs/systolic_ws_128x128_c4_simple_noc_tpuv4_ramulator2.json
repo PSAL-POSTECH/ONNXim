@@ -1,9 +1,10 @@
 {
   "num_cores" : 4,  
   "core_type" : "systolic_ws",
-  "core_freq" : 1000,
+  "core_freq" : 1050,
   "core_width" : 128,
   "core_height" : 128,
+  "core_print_interval" : 10000,
 
   "spad_size" : 65536,
   "accum_spad_size" : 8192,
@@ -24,15 +25,18 @@
   "dram_channels": 16,
   "dram_req_size": 32,
   "dram_latency" : 10,
-  "dram_print_interval": 1000000,
+  "dram_size" : 16,
+  "dram_print_interval": 10000,
   "dram_config_path" : "../configs/ramulator2_configs/HBM2.yaml",
 
   "icnt_type" : "simple",
   "icnt_latency" : 1,
-  "icnt_freq" : 8000,
+  "icnt_freq" : 8400,
   "icnt_config_path" : "../configs/booksim2_configs/fly_c4_m32.icnt",
 
   "precision" : 2,
   "layout" : "NHWC",
-  "scheduler" : "simple"
+  "scheduler" : "simple",
+
+  "single_core_sim" : true
 }

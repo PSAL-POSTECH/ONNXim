@@ -36,21 +36,37 @@ LanguageModel::LanguageModel(json llm_config, SimulationConfig config, std::stri
   //Not used for actual simulation
   _num_batch = 0;
   _run_single_layer = false;
+  _tensor_parallel_size = 1;
+  _pipeline_parallel_size = 1;
   if(llm_config.contains("run_single_layer")) {
     _run_single_layer = llm_config["run_single_layer"];
   }
+  if(_model_config.contains("tensor_parallel_size")) {
+    _tensor_parallel_size = _model_config["tensor_parallel_size"];
+  }
+  if(_model_config.contains("pipeline_parallel_size")) {
+    _pipeline_parallel_size = _model_config["pipeline_parallel_size"];
+  }
   _num_layers = llm_config["num_hidden_layers"];
+  _num_layers /= _pipeline_parallel_size;
   _num_sim_layers = _run_single_layer ? 1 : _num_layers;
+  _hidden_size = llm_config["hidden_size"];
   _num_kv_heads = llm_config["num_kv_heads"];
   _num_heads = llm_config["num_attention_heads"];
+  _qkv_out_dim = _hidden_size / _num_heads * _num_kv_heads * 2 + _hidden_size;
+  _qkv_out_dim /= _tensor_parallel_size;
+  _num_kv_heads /= _tensor_parallel_size;
+  _num_heads /= _tensor_parallel_size;
+  _proj_in_dim = _hidden_size;
+  _proj_in_dim /= _tensor_parallel_size;
   _intermediate_size = llm_config["intermediate_size"];
-  _hidden_size = llm_config["hidden_size"];
+  _intermediate_size /= _tensor_parallel_size;
+
   _ffn1_out_dim = _intermediate_size;
   _llama_mlp = _model_config["ffn_type"] == "llama";
   if(_llama_mlp) {
     _ffn1_out_dim *= 2;
   }
-  _qkv_out_dim = _hidden_size / _num_heads * _num_kv_heads * 2 + _hidden_size;
 }
 
 std::unique_ptr<LanguageModel> LanguageModel::generate_model(std::vector<LangInput>& reqs) {
@@ -111,7 +127,7 @@ void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weig
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::LayerNorm, ParameterType::Bias), {_hidden_size})));
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::QKVGen, ParameterType::Weight), {_hidden_size, _qkv_out_dim})));
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::QKVGen, ParameterType::Bias), {_qkv_out_dim})));
-    weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::Projection, ParameterType::Weight), {_hidden_size, _hidden_size})));
+    weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::Projection, ParameterType::Weight), {_proj_in_dim, _hidden_size})));
     weight_table.push_back(std::move(create_weight(name_gen(attn, OperationType::Projection, ParameterType::Bias), {_hidden_size})));
 
     auto ffn = name_gen(LAYER(l), BlockType::FeedForward);
@@ -128,10 +144,16 @@ void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weig
   
   _wgt_size = 0;
   for (auto& wgt : weight_table) {
-    _wgt_size += wgt->get_size();
+    if(_run_single_layer && wgt->get_name() != name_gen(OperationType::LmHead, ParameterType::Weight)) {
+      _wgt_size += ((uint64_t)wgt->get_size()) * _num_layers;
+    } 
+    else {
+      _wgt_size += wgt->get_size();
+    }
   }
   _act_size = std::max(_qkv_out_dim, _ffn1_out_dim) * _config.precision;
-  spdlog::info("Weight size: {:2f} GB", (_wgt_size / (1.0 GB)));
+  spdlog::info("Tensor Parallelsim {}, Pipeline Parallelism {}", _tensor_parallel_size, _pipeline_parallel_size);
+  spdlog::info("Weight size: {:.2f} GB", (_wgt_size / (1.0 GB)));
 }
 
 void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table) {
@@ -143,12 +165,11 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     input_lengthes.push_back(req.seq_length);
   }
   std::vector<uint32_t> act_dim = {num_tokens, _hidden_size};
-  uint32_t kv_out_dim = _hidden_size / _num_heads * _num_kv_heads * 2 + _hidden_size;
   std::map<std::string, std::string> qkv_attr  = {
     {"has_bias", "1"}, 
     {"input_shape", dims_to_string(act_dim)},
-    {"weight_shape", dims_to_string({_hidden_size, kv_out_dim})},
-    {"output_shape", dims_to_string({num_tokens, kv_out_dim})}};
+    {"weight_shape", dims_to_string({_hidden_size,_qkv_out_dim})},
+    {"output_shape", dims_to_string({num_tokens, _qkv_out_dim})}};
   std::map<std::string, std::string> kv_concat_attr = {
     {"input_token_lengths", dims_to_string(input_lengthes)},
     {"num_kv_heads", std::to_string(_num_kv_heads)},
@@ -163,8 +184,8 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     {"axis", std::to_string(0)}};
   std::map<std::string, std::string> proj_attr = {
     {"has_bias", "1"},
-    {"input_shape", dims_to_string(act_dim)},
-    {"weight_shape", dims_to_string({_hidden_size, _hidden_size})},
+    {"input_shape", dims_to_string({num_tokens, _proj_in_dim})},
+    {"weight_shape", dims_to_string({_proj_in_dim, _hidden_size})},
     {"output_shape", dims_to_string(act_dim)}};
   std::map<std::string, std::string> ffn1_attr = {
     {"has_bias", "0"},
