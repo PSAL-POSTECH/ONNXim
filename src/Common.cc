@@ -77,6 +77,10 @@ SimulationConfig initialize_config(json config) {
     parsed_config.dram_req_size = config["dram_req_size"];
   if (config.contains("dram_print_interval"))
     parsed_config.dram_print_interval = config["dram_print_interval"];
+  if (config.contains("dram_size"))
+    parsed_config.dram_size = config["dram_size"];
+  else
+    parsed_config.dram_size = 0;
 
   /* Icnt config */
   if ((std::string)config["icnt_type"] == "simple")

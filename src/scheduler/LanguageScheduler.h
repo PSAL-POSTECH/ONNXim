@@ -34,8 +34,6 @@ class LangScheduler {
     virtual void finish_model(uint32_t model_id);
     virtual void cycle();
     virtual bool busy();
-    virtual uint64_t get_weight_memory_size();
-    // virtual uint32_t get_activation_memory_size();
     virtual uint64_t get_kv_memory_size();
   protected:
     SimulationConfig _config;
@@ -57,6 +55,7 @@ class LangScheduler {
     uint32_t _max_seq_length;
     uint32_t _max_batch_size; 
     bool _run_single_layer;
+    bool _check_mem_size;
 
 
 

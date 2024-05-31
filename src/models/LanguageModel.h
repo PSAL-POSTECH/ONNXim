@@ -71,11 +71,14 @@ class LanguageModel : public Model {
     uint32_t _num_sim_layers;
     uint32_t _num_layers;
     uint32_t _qkv_out_dim;
+    uint32_t _proj_in_dim;
     uint32_t _ffn1_out_dim;
     bool _llama_mlp;
     bool _run_single_layer;
     uint64_t _wgt_size;  // in bytes
     uint64_t _act_size; // in bytes
+    uint64_t _tensor_parallel_size;
+    uint64_t _pipeline_parallel_size;
 
     std::unique_ptr<Tensor> _input_tensor;
 

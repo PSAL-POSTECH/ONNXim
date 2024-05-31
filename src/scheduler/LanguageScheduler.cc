@@ -40,6 +40,10 @@ LangScheduler::LangScheduler(std::string name, std::string path, std::unique_ptr
     _max_batch_size = _scheduler_config["max_batch_size"];
   else 
     _max_batch_size = 0;
+  if(_scheduler_config.contains("check_mem_size"))
+    _check_mem_size = _scheduler_config["check_mem_size"];
+  else
+    _check_mem_size = true;
   _cycle = 0;
   _max_dims = {_max_seq_length, _cache_dim};
   parse_request_trace(path); 
@@ -109,15 +113,6 @@ void LangScheduler::finish_model(uint32_t model_id) {
 
 bool LangScheduler::busy() {
   return !_model_queue.empty() || !_active_requests.empty() || !_request_queue.empty();
-}
-
-uint64_t LangScheduler::get_weight_memory_size() {
-  if(_run_single_layer) {
-    return _language_model->get_weight_size() * _num_layers;
-  }
-  else {
-    return _language_model->get_weight_size();
-  }
 }
 
 uint64_t LangScheduler::get_kv_memory_size() {
@@ -217,13 +212,22 @@ void LangScheduler::init_inputs_and_model() {
       _requests_in_model[infer_model->get_id()].push_back(input.request_id);
     }
     _model_queue.push(std::move(infer_model));
+    float weight_size = _language_model->get_weight_size() /(1.0 GB);
+    float kv_size = get_kv_memory_size() /(1.0 GB);
+    float act_size = _language_model->get_act_size() /(1.0 GB) * num_tokens;
+    float tot_mem = weight_size + kv_size + act_size;
+    spdlog::info("Total Memory Usage: {:.2f} GB", tot_mem);
+    spdlog::info("Weight Memory Usage: {:.2f} GB", weight_size);
+    spdlog::info("KV Memory Usage: {:.2f} GB", kv_size);
+    spdlog::info("Activation Memory Usage: {:.2f} GB", act_size);
+    if(_config.dram_size < tot_mem && _config.dram_size > 0) {
+      if(_check_mem_size) {
+        spdlog::error("Memory Usage exceeds the memory size limit {} GB/{} GB", tot_mem, _config.dram_size);
+        throw std::runtime_error("Memory Usage exceeds the memory size limit");
+      }
+      else {
+        spdlog::warn("Memory Usage exceeds the memory size limit {} GB/{} GB", tot_mem, _config.dram_size);
+      }
+    }
   }
-  float weight_size = get_weight_memory_size() /(1.0 GB);
-  float kv_size = get_kv_memory_size() /(1.0 GB);
-  float act_size = _language_model->get_act_size() /(1.0 GB) * num_tokens;
-  float tot_mem = weight_size + kv_size + act_size;
-  spdlog::info("Total Memory Usage: {:.2f} GB", tot_mem);
-  spdlog::info("Weight Memory Usage: {:.2f} GB", weight_size);
-  spdlog::info("KV Memory Usage: {:.2f} GB", kv_size);
-  spdlog::info("Activation Memory Usage: {:.2f} GB", act_size);
 }
