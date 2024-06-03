@@ -36,7 +36,5 @@
 
   "precision" : 2,
   "layout" : "NHWC",
-  "scheduler" : "simple",
-
-  "single_core_sim" : true
+  "scheduler" : "simple"
 }
