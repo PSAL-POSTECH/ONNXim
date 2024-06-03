@@ -67,6 +67,16 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   tile_I = std::min(dim_I_padded/_dim, ceil_div(dim_I, db_max_tile_i_j*_dim));
   tile_J = std::min(dim_J_padded/_dim, ceil_div(dim_J, db_max_tile_i_j*_dim));
   tile_K = std::min(dim_K_padded/_dim, ceil_div(dim_K, db_max_tile_k*_dim));
+  
+  uint32_t num_tiles = tile_I * tile_J; //Skip C dim that needs accum
+  if(num_tiles < _config.num_cores) {
+    int increase_tile = ceil_div(_config.num_cores, num_tiles);
+    if(dim_J > dim_I && dim_J > _config.num_cores) {
+      tile_J *= increase_tile;
+    } else if(dim_I > dim_J && dim_I > _config.num_cores) {
+      tile_I *= increase_tile;
+    }
+  }
 
   inner_I = ceil_div(dim_I_padded, tile_I);
   inner_J = ceil_div(dim_J_padded, tile_J);

@@ -21,6 +21,8 @@ int main(int argc, char** argv) {
       "log_level", "Set for log level [trace, debug, info], default = info");
   cmd_parser.add_command_line_option<std::string>(
       "mode", "choose default or language mode, default = default");
+  cmd_parser.add_command_line_option<std::string>(
+      "trace_file", "input trace file for language mode, default = input.csv");
 
   try {
     cmd_parser.parse(argc, argv);
@@ -95,6 +97,9 @@ int main(int argc, char** argv) {
         spdlog::error("Error opening file: {}", model_path);
         exit(EXIT_FAILURE);
       }
+      std::string input_trace = "input.csv";
+      cmd_parser.set_if_defined("trace_file", &input_trace);
+      model_config["trace_file"] = input_trace;
 
       json model_json = json::parse(model_file);
       auto model = std::make_unique<LanguageModel>(model_json, config, model_name);
