@@ -116,7 +116,7 @@ bool LangScheduler::busy() {
 }
 
 uint64_t LangScheduler::get_kv_memory_size() {
-  uint32_t kv_size = 0;
+  uint64_t kv_size = 0;
   for(auto iter = _active_requests.begin(); iter != _active_requests.end(); iter++) {
     for(uint32_t i = 0; i < _num_sim_layers; i++) {
       kv_size += iter->second->key_cache[i]->get_size() + iter->second->value_cache[i]->get_size();
