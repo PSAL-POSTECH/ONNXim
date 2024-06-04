@@ -36,18 +36,27 @@ class Attention : public Operation {
     uint32_t _query_projection_id;
     uint32_t _value_projection_id;
     /* For kv cache */
+    bool onnx = false;
     bool has_kv_cache = false;
     bool use_fused = true;
+    bool need_scale = false;
 
     std::vector<uint32_t> _heads_per_tile;
+    std::vector<uint32_t> _tiles_per_head;
+    std::vector<uint32_t> _scale_tiles_per_head;
 
     void calculate_loops();
+    void calculate_loops(Mapping& mapping);
+
     //void initialize_tiles();
     //void initialize_instructions(Tile &tile, int req_idx, int head_idx, int num_heads);
     void initialize_tiles(MappingTable& mapping_table) override;
     void initialize_onnx_tiles(MappingTable& mapping_table);
     void initialize_non_fused_tiles(MappingTable& mapping_table);
     void initialize_instructions(Tile* tile, Mapping mapping, int head_idx, int num_heads);
+    void initialize_instructions(Tile* tile, int head_idx, int num_heads);
+
+    void initialize_scale_instructions(Tile* tile, Mapping mapping, int head_idx, int num_tiles, int query_idx, int num_queries);
    protected:
     uint32_t sram_size_needed();
     addr_type make_address(std::vector<uint32_t> index, std::vector<uint32_t> dims);

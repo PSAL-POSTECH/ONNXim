@@ -63,6 +63,7 @@ struct Mapping {
   uint32_t spatial_R = 0;
   uint32_t spatial_S = 0;
   std::vector<LoopName> tile_out_loop_order;
+  std::string to_string();
 };
 
 class MappingTable {

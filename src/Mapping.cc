@@ -5,6 +5,17 @@
 #include <string>
 // #include "Common.h"
 
+std::string Mapping::to_string() {
+  std::stringstream ss;
+  ss << "Total Loop: N" << total_loop.N << " C" << total_loop.C << " M" << total_loop.M
+     << " S" << total_loop.S << " R" << total_loop.R << " Q" << total_loop.Q << " P" << total_loop.P
+     << " Tile Out Loop: N" << tile_out_loop.N << " C" << tile_out_loop.C << " M" << tile_out_loop.M
+     << " S" << tile_out_loop.S << " R" << tile_out_loop.R << " Q" << tile_out_loop.Q << " P" << tile_out_loop.P
+     << " Tile In Loop: N" << tile_in_loop.N << " C" << tile_in_loop.C << " M" << tile_in_loop.M
+     << " S" << tile_in_loop.S << " R" << tile_in_loop.R << " Q" << tile_in_loop.Q << " P" << tile_in_loop.P;
+  return ss.str();
+}
+
 MappingTable::MappingTable () {}
 MappingTable::MappingTable (SimulationConfig config) {
   _mapping_table = _MappingTable();

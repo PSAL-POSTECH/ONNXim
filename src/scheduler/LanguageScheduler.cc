@@ -223,7 +223,7 @@ void LangScheduler::init_inputs_and_model() {
     if(_config.dram_size < tot_mem && _config.dram_size > 0) {
       if(_check_mem_size) {
         spdlog::error("Memory Usage exceeds the memory size limit {} GB/{} GB", tot_mem, _config.dram_size);
-        throw std::runtime_error("Memory Usage exceeds the memory size limit");
+        exit(EXIT_FAILURE);
       }
       else {
         spdlog::warn("Memory Usage exceeds the memory size limit {} GB/{} GB", tot_mem, _config.dram_size);

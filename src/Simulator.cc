@@ -114,7 +114,7 @@ void Simulator::handle_model() {
 
     launch_model->initialize_model(_weight_table[launch_model->get_name()]);
     launch_model->set_request_time(_core_time);
-    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (1000000));
+    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (_config.core_freq));
     _scheduler->schedule_model(std::move(launch_model), 1);
   }
 }
@@ -211,7 +211,7 @@ void Simulator::cycle() {
       _icnt->cycle();
     }
   }
-  spdlog::info("Simulation Finished");
+  spdlog::info("Simulation Finished at {} cycle {} us", _core_cycles, _core_time / (_config.core_freq) );
   /* Print simulation stats */
   for (int core_id = 0; core_id < _n_cores; core_id++) {
     _cores[core_id]->print_stats();

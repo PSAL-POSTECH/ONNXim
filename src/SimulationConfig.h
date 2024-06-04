@@ -22,16 +22,18 @@ struct SimulationConfig {
 
   /* Vector config*/
   uint32_t vector_process_bit;
-  uint32_t layernorm_latency;
-  uint32_t softmax_latency;
-  uint32_t add_latency;
-  uint32_t mul_latency;
-  uint32_t exp_latency;
-  uint32_t gelu_latency;
-  uint32_t add_tree_latency;
-  uint32_t scalar_sqrt_latency;
-  uint32_t scalar_add_latency;
-  uint32_t scalar_mul_latency;
+  uint32_t layernorm_latency = 1;
+  uint32_t softmax_latency = 1;
+  uint32_t add_latency = 1;
+  uint32_t mul_latency = 1;
+  uint32_t mac_latency = 1;
+  uint32_t div_latency = 1;
+  uint32_t exp_latency = 1;
+  uint32_t gelu_latency = 1;
+  uint32_t add_tree_latency = 1;
+  uint32_t scalar_sqrt_latency = 1;
+  uint32_t scalar_add_latency = 1;
+  uint32_t scalar_mul_latency = 1;
 
   /* SRAM config */
   uint32_t sram_width;
