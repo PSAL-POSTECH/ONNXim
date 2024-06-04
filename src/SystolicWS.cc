@@ -137,10 +137,7 @@ void SystolicWS::cycle() {
       front->finish_cycle = front->start_cycle + get_inst_compute_cycles(front);
       _compute_pipeline.push(std::move(front));
       _stat_systolic_inst_issue_count++;
-    } else if (front->opcode == Opcode::COMP || front->opcode == Opcode::SOFTMAX ||
-               front->opcode == Opcode::IM2COL || front->opcode == Opcode::LAYERNORM ||
-               front->opcode == Opcode::ADD || front->opcode == Opcode::MUL ||
-               front->opcode == Opcode::GELU || front->opcode == Opcode::SWISH) {  // vector unit compute
+    } else {  // vector unit compute
       if (!_vector_pipeline.empty()) {
         front->start_cycle =
             _vector_pipeline.back()->start_cycle + _vector_pipeline.back()->size;
@@ -259,11 +256,19 @@ cycle_type SystolicWS::get_vector_compute_cycles(std::unique_ptr<Instruction>& i
       return vec_op_iter * _config.add_latency;
     case Opcode::MUL:
       return vec_op_iter * _config.mul_latency;
+    case Opcode::MAC:
+      return vec_op_iter * _config.mac_latency;
     case Opcode::SWISH: //TODO: Implement SWISH
     case Opcode::GELU:
       return vec_op_iter * _config.gelu_latency;
     case Opcode::COMP:
       return vec_op_iter * 1;
+    case Opcode::ADDTREE:
+      return add_tree_iter * _config.add_tree_latency * inst->tile_m;
+    case Opcode::DIV:
+      return vec_op_iter * _config.div_latency;
+    case Opcode::EXP:
+      return vec_op_iter * _config.exp_latency;
     
   }
   spdlog::info("not configured operation. {}", inst->id);

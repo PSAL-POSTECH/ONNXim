@@ -51,6 +51,8 @@ SimulationConfig initialize_config(json config) {
   parsed_config.scalar_sqrt_latency = config["scalar_sqrt_latency"];
   parsed_config.scalar_add_latency = config["scalar_add_latency"];
   parsed_config.scalar_mul_latency = config["scalar_mul_latency"];
+  parsed_config.mac_latency = config["mac_latency"];
+  parsed_config.div_latency = config["div_latency"];
 
   /* SRAM configs */
   parsed_config.sram_width = config["sram_width"];

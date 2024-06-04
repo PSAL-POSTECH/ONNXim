@@ -59,6 +59,10 @@ enum class Opcode {
   LAYERNORM,
   ADD,
   MUL,
+  MAC,
+  DIV,
+  ADDTREE,
+  EXP,
   GELU,
   SWISH,
   BAR
@@ -88,6 +92,7 @@ typedef struct {
   bool zero_init = false;
   bool last_inst = false;
   Tile* my_tile;
+  std::string to_string();
 } Instruction;
 
 struct Tile {
