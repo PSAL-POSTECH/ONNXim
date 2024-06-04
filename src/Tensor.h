@@ -28,7 +28,7 @@ class Tensor {
 
   void allocate_tensor(int precision);
   addr_type get_address() { return _address; }
-  uint32_t get_size() { return _size; }
+  uint64_t get_size() { return _size; }
   void print_tensor();
 
  private:
@@ -41,6 +41,6 @@ class Tensor {
   uint32_t _src_node;
   std::vector<uint32_t> _child_nodes;
   addr_type _address;
-  uint32_t _size;
+  uint64_t _size;
   friend Model;
 };
