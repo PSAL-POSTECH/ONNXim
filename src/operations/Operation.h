@@ -39,11 +39,8 @@ class Operation {
 
  protected:
   virtual void initialize_instructions(Tile* tile, Mapping mapping) {}
+  addr_type make_address(std::vector<uint32_t> index, std::vector<uint32_t> dims);
   addr_type get_operand_addr(uint32_t operand_id);
-  addr_type make_activation_address(uint32_t N, uint32_t H, uint32_t W,
-                                    uint32_t C, std::vector<uint32_t> shape);
-  addr_type make_weight_address(uint32_t S, uint32_t R, uint32_t M, uint32_t C,
-                                std::vector<uint32_t> shape);
   std::string get_attribute(std::string key);
  protected:
   static const uint32_t _NO_OPERAND = 0;

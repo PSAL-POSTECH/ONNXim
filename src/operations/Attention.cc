@@ -391,17 +391,20 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         }));
         // -- compute --
         // GEMM (q*k -> l)
-        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-            .opcode = Opcode::GEMM_PRELOAD,
-            .dest_addr = sram_l_ofs,
-            .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size = ceil_div(q_len, _config.core_height) * seq_len,
-            .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
-
-            .tile_m = seq_len,
-            .tile_k = _dk,
-            .tile_n = q_len,
-        }));
+        for(int qitr = 0; qitr < ceil_div(q_len, _config.core_height); qitr++) {
+            for(int kitr = 0; kitr < ceil_div(_dk, _config.core_height); kitr++) {
+                tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+                    .opcode = Opcode::GEMM_PRELOAD,
+                    .dest_addr = sram_l_ofs,
+                    .size =  seq_len * _config.precision / _config.dram_req_size,
+                    .compute_size = seq_len,
+                    .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
+                    .tile_m = seq_len,
+                    .tile_k = _dk,
+                    .tile_n = q_len,
+                }));
+            }
+        }
         // Softmax (l -> l)
 
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
@@ -469,17 +472,19 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         })); // diag(exp(m(j-1) - m(j))-1) * O(j-1)
         // [ ] change output offset
         // GEMM (l*v -> acc)
-        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-            .opcode = Opcode::GEMM_PRELOAD,
-            .dest_addr = sram_l_ofs,
-            .size = q_len * _dk * _config.precision / _config.dram_req_size,
-            .compute_size = ceil_div(q_len, _config.core_height) * _dk,
-            .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
-            .tile_m = _dk,
-            .tile_k = seq_len,
-            .tile_n = q_len,
-            .src_from_accum = true,
-        }));
+        for(int sitr = 0; sitr < ceil_div(seq_len, _config.core_height); sitr++) {
+            for(int kitr = 0; kitr < ceil_div(_dk, _config.core_height); kitr++) {
+                tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+                    .opcode = Opcode::GEMM_PRELOAD,
+                    .dest_addr = sram_l_ofs,
+                    .size = q_len * _config.precision / _config.dram_req_size,
+                    .compute_size = q_len,
+                    .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
+                    .src_from_accum = true,
+                }));
+            }
+        }
+        
         if(tile->M == mapping.tile_out_loop.M -1) {
             tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
                 .opcode = Opcode::DIV,
@@ -698,28 +703,6 @@ void Attention::calculate_loops(Mapping& mapping) {
         }
         _heads_per_tile.push_back(heads_per_tile);
     }
-}
-
-addr_type Attention::make_address(std::vector<uint32_t> index, std::vector<uint32_t> dims) {
-    
-    addr_type address;
-    if(dims.size() == 4) {
-        address = index[0] * (dims[1] * dims[2] * dims[3]) + index[1] * (dims[2] * dims[3]) + index[2] * dims[3] + index[3];
-        address = _config.align_address(address * _config.precision);
-    }
-    else if(dims.size() == 3) {
-        address  = index[0] * (dims[1] * dims[2]) + index[1] * (dims[2]) + index[2];
-        address = _config.align_address(address * _config.precision);
-    }
-    else if(dims.size() == 2) {
-        address = index[0] * dims[1] + index[1];
-        address = _config.align_address(address * _config.precision);
-    }
-    else {
-        spdlog::error("Attention: make_address: dims size is not 2 or 3 ({})", dims.size());
-        throw std::runtime_error("Attention: make_address: dims size is not 2 or 3");
-    }
-    return address;
 }
 
 uint32_t Attention::sram_size_needed() { return 0; }
