@@ -179,7 +179,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     {"num_tokens", std::to_string(0)}, // define for each batch
     {"num_heads", std::to_string(_num_heads)},
     {"num_kv_heads", std::to_string(_num_kv_heads)},
-    {"hidden_size", std::to_string(_hidden_size)}};
+    {"hidden_size", std::to_string(_hidden_size/_tensor_parallel_size)}};
   std::map<std::string, std::string> concat_attr = {
     {"axis", std::to_string(0)}};
   std::map<std::string, std::string> proj_attr = {

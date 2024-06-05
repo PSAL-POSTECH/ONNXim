@@ -30,6 +30,7 @@ LangScheduler::LangScheduler(std::string name, std::string path, std::unique_ptr
   json model_config = _language_model->get_model_config();
   _run_single_layer = _language_model->is_run_single_layer();
   _num_layers = model_config["num_hidden_layers"];
+  _num_layers = _num_layers / (uint64_t) model_config["pipeline_parallel_size"];
   _num_sim_layers = _run_single_layer ? 1 : _num_layers;
   _num_attention_heads = model_config["num_attention_heads"];
   _num_kv_heads = model_config["num_kv_heads"];
