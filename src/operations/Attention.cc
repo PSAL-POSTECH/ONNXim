@@ -338,6 +338,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
     std::set<addr_type> dram_kv_addrs;    // = _key[req_idx]->get_all_addrs();
     for(int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
         int kv_seq_index = tile->M * seq_len + seq_idx;
+        if(kv_seq_index >= _seq) break;
         for(int i = 0; i <_dk; i++) {
             std::vector<uint32_t> idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
             dram_kv_addrs.insert(make_address(idx, _key_shape));
@@ -374,6 +375,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             for (int i = 0; i < _dk; i++) {
                 // key:  h, d_k, seq_len
                 int q_index = tile->M * q_len + seq_idx;
+                if(q_index >= _q_len) break;
                 std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)q_index, (uint32_t)i};
                 std::vector<uint32_t> output_idx = {(uint32_t)q_index, (uint32_t)(h_idx), (uint32_t)i};
                 dram_query_addrs.insert(query_addr + make_address(query_idx, _query_shape));
