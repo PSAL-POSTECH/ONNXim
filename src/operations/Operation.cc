@@ -185,46 +185,41 @@ addr_type Operation::get_operand_addr(uint32_t operand_id) {
   }
 }
 
-addr_type Operation::make_activation_address(uint32_t N, uint32_t H, uint32_t W,
-                                             uint32_t C,
-                                             std::vector<uint32_t> shape) {
-  addr_type address;
-  if (_config.layout == "NCHW") {
-    address = (N * shape[Cdim] * shape[Hdim] * shape[Wdim] +
-               C * shape[Hdim] * shape[Wdim] + H * shape[Wdim] + W) *
-              _config.precision;
-  } else if (_config.layout == "NHWC") {
-    address = (N * shape[Hdim] * shape[Wdim] * shape[Cdim] +
-               H * shape[Wdim] * shape[Cdim] + W * shape[Cdim] + C) *
-              _config.precision;
-  }
-  return _config.align_address(address);
-}
-
-addr_type Operation::make_weight_address(uint32_t S, uint32_t R, uint32_t M,
-                                         uint32_t C,
-                                         std::vector<uint32_t> shape) {
-  addr_type address;
-  int padded_C =
-      shape[Cdim_w] + (_config.core_width - shape[Cdim_w] % _config.core_width);
-  // int padded_S = shape[Cdim] + (_config.core_width - shape[Cdim] %
-  // _config.core_width);
-  if (_config.layout == "NCHW") {
-    address = (M * shape[Cdim_w] * shape[Sdim] * shape[Rdim] +
-               C * shape[Sdim] * shape[Rdim] + S * shape[Rdim] + R) *
-              _config.precision;
-  } else if (_config.layout == "NHWC") {
-    address = ((M / _config.core_width) * shape[Sdim] * shape[Rdim] * padded_C +
-               S * shape[Rdim] * padded_C + R * padded_C + C) *
-              _config.precision * _config.core_width;
-  }
-  return _config.align_address(address);
-}
-
 std::string Operation::get_attribute(std::string key) {
   if (_attributes.find(key) == _attributes.end()) {
     spdlog::error("{}: Attribute {} not found", _name, key.c_str());
     exit(EXIT_FAILURE);
   }
   return _attributes[key];
+}
+
+addr_type Operation::make_address(std::vector<uint32_t> index, std::vector<uint32_t> dims) {
+    addr_type address;
+    if(index.size() != dims.size()) {
+        spdlog::error("Operation: make_address: index size is not equal to dims size ({}, {})", index.size(), dims.size());
+        throw std::runtime_error("Attention: make_address: index size is not equal to dims size");
+    }
+    for(int i = 0; i < index.size(); i++) {
+        if(index[i] >= dims[i]) {
+            spdlog::error("Operation: make_address: index is out of bound ({}, {})", index[i], dims[i]);
+            throw std::runtime_error("Attention: make_address: index is out of bound");
+        }
+    }
+    if(dims.size() == 4) {
+        address = index[0] * (dims[1] * dims[2] * dims[3]) + index[1] * (dims[2] * dims[3]) + index[2] * dims[3] + index[3];
+        address = _config.align_address(address * _config.precision);
+    }
+    else if(dims.size() == 3) {
+        address  = index[0] * (dims[1] * dims[2]) + index[1] * (dims[2]) + index[2];
+        address = _config.align_address(address * _config.precision);
+    }
+    else if(dims.size() == 2) {
+        address = index[0] * dims[1] + index[1];
+        address = _config.align_address(address * _config.precision);
+    }
+    else {
+        spdlog::error("Operation: make_address: dims size is not 2, 3, or 4 ({})", dims.size());
+        throw std::runtime_error("Attention: make_address: dims size is not 2, 3, or 4");
+    }
+    return address;
 }

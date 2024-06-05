@@ -592,3 +592,39 @@ void ConvWS::initialize_matmul_instructions(Tile* tile) {
     }
   }
 }
+
+addr_type ConvWS::make_activation_address(uint32_t N, uint32_t H, uint32_t W,
+                                             uint32_t C,
+                                             std::vector<uint32_t> shape) {
+  addr_type address;
+  if (_config.layout == "NCHW") {
+    address = (N * shape[Cdim] * shape[Hdim] * shape[Wdim] +
+               C * shape[Hdim] * shape[Wdim] + H * shape[Wdim] + W) *
+              _config.precision;
+  } else if (_config.layout == "NHWC") {
+    address = (N * shape[Hdim] * shape[Wdim] * shape[Cdim] +
+               H * shape[Wdim] * shape[Cdim] + W * shape[Cdim] + C) *
+              _config.precision;
+  }
+  return _config.align_address(address);
+}
+
+addr_type ConvWS::make_weight_address(uint32_t S, uint32_t R, uint32_t M,
+                                         uint32_t C,
+                                         std::vector<uint32_t> shape) {
+  addr_type address;
+  int padded_C =
+      shape[Cdim_w] + (_config.core_width - shape[Cdim_w] % _config.core_width);
+  // int padded_S = shape[Cdim] + (_config.core_width - shape[Cdim] %
+  // _config.core_width);
+  if (_config.layout == "NCHW") {
+    address = (M * shape[Cdim_w] * shape[Sdim] * shape[Rdim] +
+               C * shape[Sdim] * shape[Rdim] + S * shape[Rdim] + R) *
+              _config.precision;
+  } else if (_config.layout == "NHWC") {
+    address = ((M / _config.core_width) * shape[Sdim] * shape[Rdim] * padded_C +
+               S * shape[Rdim] * padded_C + R * padded_C + C) *
+              _config.precision * _config.core_width;
+  }
+  return _config.align_address(address);
+}
