@@ -59,5 +59,4 @@ class Attention : public Operation {
     void initialize_scale_instructions(Tile* tile, Mapping mapping, int head_idx, int num_tiles, int query_idx, int num_queries);
    protected:
     uint32_t sram_size_needed();
-    addr_type make_address(std::vector<uint32_t> index, std::vector<uint32_t> dims);
 };
