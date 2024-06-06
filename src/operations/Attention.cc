@@ -205,6 +205,8 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
     std::set<addr_type> dram_kv_addrs;    // = _key[req_idx]->get_all_addrs();
 
     for(int seq_idx = 0; seq_idx < seq_len; seq_idx++) {
+        int kv_seq_index = tile->M * seq_len + seq_idx;
+        if(kv_seq_index >= _seq) break;
         for(int i = 0; i <_dk; i++) {
             std::vector<uint32_t> idx = {(uint32_t)(kv_head_idx), (uint32_t)seq_idx, (uint32_t)i};
             dram_kv_addrs.insert(make_address(idx, _key_shape));
@@ -238,6 +240,8 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         for (int i = 0; i < _dk; i++) {
             for (int seq_idx = 0; seq_idx < q_len; seq_idx++) {
                 // key:  h, d_k, seq_len
+                int q_index = tile->M * q_len + seq_idx;
+                if(q_index >= _q_len) break;
                 std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
                 std::vector<uint32_t> output_idx = {(uint32_t)(h_idx), (uint32_t)seq_idx, (uint32_t)i};
                 dram_query_addrs.insert(query_addr + make_address(query_idx, _query_shape));
@@ -280,18 +284,18 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
 
         // [ ] change output offset
         // GEMM (l*v -> acc)
-        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-            .opcode = Opcode::GEMM,
-            .dest_addr = sram_l_ofs,
-            .size = q_len * _dk * _config.precision / _config.dram_req_size,
-            .compute_size = q_len * _dk,
-            .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
-
-            .tile_m = _dk,
-            .tile_k = seq_len,
-            .tile_n = q_len,
-            .src_from_accum = true,
-        }));
+        for(int sitr = 0; sitr < ceil_div(seq_len, _config.core_height); sitr++) {
+            for(int kitr = 0; kitr < ceil_div(_dk, _config.core_height); kitr++) {
+                tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+                    .opcode = Opcode::GEMM_PRELOAD,
+                    .dest_addr = sram_l_ofs,
+                    .size = q_len * _config.precision / _config.dram_req_size,
+                    .compute_size = q_len,
+                    .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
+                    .src_from_accum = true,
+                }));
+            }
+        }
 
         // MOVOUT
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
