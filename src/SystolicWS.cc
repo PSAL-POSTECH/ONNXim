@@ -138,17 +138,11 @@ void SystolicWS::cycle() {
       _compute_pipeline.push(std::move(front));
       _stat_systolic_inst_issue_count++;
     } else {  // vector unit compute
-      if (!_vector_pipeline.empty()) {
-        front->start_cycle =
-            _vector_pipeline.back()->start_cycle + _vector_pipeline.back()->size;
-      } else {
-        front->start_cycle = _core_cycle;
-      }
+      front->start_cycle = _core_cycle;
       front->finish_cycle =
           front->start_cycle +
           get_vector_compute_cycles(front);  // Setting IC as 1 (Might need to modify)
       _vector_pipeline.push(std::move(front));
-
     }
     _ex_inst_queue.pop();
   }
@@ -207,6 +201,21 @@ void SystolicWS::cycle() {
   if (!is_running)
     _stat_idle_cycle++;
   Core::cycle();
+}
+
+bool SystolicWS::can_issue_compute(std::unique_ptr<Instruction>& inst) {
+  if(Core::can_issue_compute(inst) == false)
+    return false;
+  if (inst->opcode == Opcode::GEMM || inst->opcode == Opcode::GEMM_PRELOAD) {
+    if (_compute_pipeline.size() >= _config.core_height) {
+      return false;
+    }
+  } else {
+    if(!_vector_pipeline.empty()) {
+      return false;
+    }
+  }
+  return true;
 }
 
 cycle_type SystolicWS::get_inst_compute_cycles(std::unique_ptr<Instruction>& inst) {

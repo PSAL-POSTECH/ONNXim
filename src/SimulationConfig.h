@@ -62,6 +62,7 @@ struct SimulationConfig {
 
   /* Other configs */
   uint32_t precision;
+  uint32_t full_precision = 4;
   std::string layout;
 
   /*
