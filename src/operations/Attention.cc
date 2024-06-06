@@ -408,7 +408,6 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             }
         }
         // Softmax (l -> l)
-
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::ADDTREE,
             .dest_addr = sram_logits_offset,
@@ -422,7 +421,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .opcode = Opcode::ADD,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size = q_len * seq_len * _config.precision,
+            .compute_size = q_len * (seq_len + 1) * _config.precision, // 1 for prior max
             .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_logits_offset},
             .tile_m = q_len,
             .src_from_accum = true,
@@ -431,16 +430,16 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .opcode = Opcode::EXP,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size = q_len * (seq_len + 1) * _config.precision, // 1 for prior max
+            .compute_size = q_len * (seq_len + 1) * _config.full_precision, // 1 for prior max
             .src_addrs = std::vector<addr_type>{sram_l_ofs},
             .tile_m = q_len,
             .src_from_accum = true,
-        })); // P(j) = exp(S(𝑗) −𝑚(𝑗))
+        })); // P(j) = exp(S(𝑗) −𝑚(𝑗)) , exp(m(j-1) - m(j))
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::ADDTREE,
             .dest_addr = sram_logits_offset,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size = seq_len * _config.precision,
+            .compute_size = seq_len * _config.full_precision,
             .src_addrs = std::vector<addr_type>{sram_l_ofs},
             .tile_m = q_len,
             .src_from_accum = true,
@@ -449,16 +448,16 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .opcode = Opcode::MAC,
             .dest_addr = sram_logits_offset,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size = q_len * seq_len * _config.precision,
+            .compute_size = q_len * seq_len * _config.full_precision,
             .src_addrs = std::vector<addr_type>{sram_logits_offset},
             .tile_m = q_len,
             .src_from_accum = true,
-        })); 
+        }));  // 𝑒^(𝑖m^(j-1) -m^(j))  +rowsum(P )∈R 
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::DIV,
             .dest_addr = sram_l_ofs,
             .size = q_len * _config.precision / _config.dram_req_size,
-            .compute_size = q_len  * _config.precision,
+            .compute_size = q_len  * _config.full_precision,
             .src_addrs = std::vector<addr_type>{sram_logits_offset},
             .tile_m = q_len,
             .src_from_accum = true,
@@ -467,7 +466,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .opcode = Opcode::MUL,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len* _config.precision / _config.dram_req_size,
-            .compute_size = q_len * seq_len * _config.precision,
+            .compute_size = q_len * seq_len * _config.full_precision,
             .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_logits_offset},
             .tile_m = q_len,
             .src_from_accum = true,
@@ -492,7 +491,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
                 .opcode = Opcode::DIV,
                 .dest_addr = sram_l_ofs,
                 .size = _q_len * _config.precision / _config.dram_req_size,
-                .compute_size = _q_len  * _config.precision,
+                .compute_size = _q_len  * _config.full_precision,
                 .src_addrs = std::vector<addr_type>{sram_logits_offset},
                 .tile_m = q_len,
                 .src_from_accum = true,
@@ -501,7 +500,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
                 .opcode = Opcode::MUL,
                 .dest_addr = sram_l_ofs,
                 .size = _q_len * _dk * _config.precision / _config.dram_req_size,
-                .compute_size = _q_len * _dk * _config.precision,
+                .compute_size = _q_len * _dk * _config.full_precision,
                 .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_logits_offset},
                 .tile_m = q_len,
                 .src_from_accum = true,
