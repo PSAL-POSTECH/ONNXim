@@ -615,9 +615,7 @@ void Attention::calculate_loops() {
             break;
         }
         if (heads_per_tile > heads_per_kv) heads_per_tile = heads_per_kv;
-        if (_nh / heads_per_tile < _config.num_cores * 2)
-            heads_per_tile = ceil_div(_nh, _config.num_cores * 2);
-        if(heads_per_tile % heads_per_kv != 0) heads_per_tile = 1;
+        if (heads_per_kv % heads_per_tile != 0) heads_per_tile = 1;
  
 
         spdlog::info("[Fused Attention] ({}) heads_per_tile: {}", i, heads_per_tile);
@@ -682,10 +680,7 @@ void Attention::calculate_loops(Mapping& mapping) {
         }
         else {
             if (heads_per_tile > heads_per_kv) heads_per_tile = heads_per_kv;
-            if (_nh / heads_per_tile < _config.num_cores * 2)
-                heads_per_tile = ceil_div(_nh, _config.num_cores * 2);
-            if(heads_per_tile % heads_per_kv != 0) heads_per_tile = 1;
-            _tiles_per_head.push_back(1);
+            if(heads_per_kv % heads_per_tile != 0) heads_per_tile = 1;
             int out_tiles = ceil_div(_nh,heads_per_tile);
             mapping.tile_out_loop.N = out_tiles;
             mapping.tile_in_loop.N = heads_per_tile * q_len;
