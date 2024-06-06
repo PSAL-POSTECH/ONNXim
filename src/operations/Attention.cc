@@ -406,8 +406,8 @@ void Attention::calculate_loops() {
             break;
         }
         if (heads_per_tile > heads_per_kv) heads_per_tile = heads_per_kv;
-        if (_nh / heads_per_tile < _config.num_cores * 2)
-            heads_per_tile = ceil_div(_nh, _config.num_cores * 2);
+        if (_nh / heads_per_tile < _config.num_cores)
+            heads_per_tile = ceil_div(_nh, _config.num_cores);
         if(heads_per_tile % heads_per_kv != 0) heads_per_tile = 1;
  
 
