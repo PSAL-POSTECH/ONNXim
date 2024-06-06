@@ -4,12 +4,12 @@
   "core_freq" : 1000,
   "core_width" : 128,
   "core_height" : 128,
-
+  "core_print_interval": 4000,
   "spad_size" : 32768,
   "accum_spad_size" : 4096,
   "sram_width" : 32,
 
-  "vector_process_bit" : 65536,
+  "vector_process_bit" : 16384,
   "add_latency" : 1,
   "mul_latency" : 1,
   "exp_latency" : 1,
@@ -24,8 +24,8 @@
   "dram_channels": 16,
   "dram_req_size": 32,
   "dram_latency" : 10,
-  "dram_print_interval": 100000,
-  "dram_config_path" : "../configs/ramulator_configs/HBM-config.cfg",
+  "dram_print_interval": 4800,
+  "dram_config_path" :  "../configs/ramulator_configs/HBM-config.cfg",
 
   "icnt_type" : "booksim2",
   "icnt_latency" : 1,
