@@ -164,7 +164,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
             uint32_t C = tout_c_offset + iter_c;         
             std::vector<uint32_t> index = {N, C};
             input_set.insert(
-                first_addr + make_address(index, _input_shape));
+                first_addr + make_address(index, _input_shape_2d));
           }
         }
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
@@ -210,13 +210,14 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
       addr_type out_sp_addr =
           ACCUM_SPAD_BASE +
           (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
+
       std::set<addr_type> output_set;
       for (int iter_n = 0; iter_n < n_loop; iter_n++) {
         for (int iter_m = 0; iter_m < m_loop; iter_m+=elems_per_access) {
           uint32_t N = N_offset + iter_n;
           uint32_t M = M_offset + iter_m;
           std::vector<uint32_t> index = {N, M};
-          output_set.insert(output_addr + make_address(index, _output_shape));
+          output_set.insert(output_addr + make_address(index, _output_shape_2d));
         }
       }
         /*MOVOUT result at the last loop*/

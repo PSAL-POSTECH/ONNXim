@@ -40,6 +40,12 @@ Gemm::Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
   for (int i=0; i<_input_shape.size()-2;i++)
     _batch_size *= _input_shape.at(i);
 
+  _input_shape_2d.push_back(_input_shape.at(_input_shape.size()-2)*_batch_size);
+  _input_shape_2d.push_back(_input_shape.at(_input_shape.size()-1));
+
+  _output_shape_2d.push_back(_output_shape.at(_output_shape.size()-2)*_batch_size);
+  _output_shape_2d.push_back(_output_shape.at(_output_shape.size()-1));
+
   spdlog::trace("GemmWS: input_shape: {}", _input_shape);
   spdlog::trace("GemmWS: output_shape : {}", _output_shape);
 
@@ -76,6 +82,12 @@ Gemm::Gemm(SimulationConfig config, MappingTable& mapping_table,
   _batch_size = 1;
   for (int i=0; i<_input_shape.size()-2;i++)
     _batch_size *= _input_shape.at(i);
+
+  _input_shape_2d.push_back(_input_shape.at(_input_shape.size()-2)*_batch_size);
+  _input_shape_2d.push_back(_input_shape.at(_input_shape.size()-1));
+
+  _output_shape_2d.push_back(_output_shape.at(_output_shape.size()-2)*_batch_size);
+  _output_shape_2d.push_back(_output_shape.at(_output_shape.size()-1));
 
   spdlog::debug("[Gemm] input_shape: {}", _input_shape);
   spdlog::debug("[Gemm] output_shape : {}", _output_shape);
