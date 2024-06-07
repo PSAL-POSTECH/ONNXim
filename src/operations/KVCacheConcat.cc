@@ -71,7 +71,7 @@ void KVCacheConcat::initialize_tiles(MappingTable& mapping_table) {
     _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::INITIALIZED,
                       .optype = "KVCacheConcat",
                       .layer_id = _id,
-                      .skip = false}));
+                      .skip = true}));
     initialize_instructions(_tiles.back().get(), outter);
   }
 }
