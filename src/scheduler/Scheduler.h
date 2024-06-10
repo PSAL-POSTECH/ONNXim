@@ -11,6 +11,7 @@ typedef struct {
 
 class Scheduler {
   public:
+    static std::unique_ptr<Scheduler> create(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator);
     Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator);
     virtual void schedule_model(std::unique_ptr<Model> model, uint32_t sampe_size);
     virtual std::unique_ptr<Tile> get_tile(uint32_t core_id);
