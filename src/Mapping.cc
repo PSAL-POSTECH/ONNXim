@@ -87,6 +87,15 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
     } else if(dim_I > dim_J && dim_I > _config.num_cores) {
       tile_I *= increase_tile;
     }
+    num_tiles = tile_I * tile_J;
+  }
+  if(num_tiles % _config.num_cores != 0) {
+    int increase_tile = num_tiles % _config.num_cores;
+    if(dim_J > dim_I && dim_J > _config.num_cores) {
+      tile_J += increase_tile;
+    } else if(dim_I > dim_J && dim_I > _config.num_cores) {
+      tile_I += increase_tile;
+    }
   }
 
   inner_I = ceil_div(dim_I_padded, tile_I);
