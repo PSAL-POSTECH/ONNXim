@@ -1,6 +1,24 @@
 #include "Scheduler.h"
 #include "../Simulator.h"
 
+std::unique_ptr<Scheduler> Scheduler::create(SimulationConfig config,
+                                             const cycle_type* core_cycle, const uint64_t* core_time, void* simulator) {
+  if (config.scheduler_type == "simple") {
+    return std::make_unique<Scheduler>(config, core_cycle, core_time, simulator);
+  } else if (config.scheduler_type == "partition_cpu") {
+    return 
+        std::make_unique<DedicatedCPUScheduler>(config, core_cycle, core_time, simulator);
+  } else if (config.scheduler_type == "time_multiplex") {
+    return 
+        std::make_unique<TimeMultiplexScheduler>(config, core_cycle, core_time, simulator);
+  } else if (config.scheduler_type == "spatial_split") {
+    return std::make_unique<HalfSplitScheduler>(config, core_cycle, core_time, simulator);
+  } else {
+    spdlog::error("[Configuration] {} is invalid scheduler type...!", config.scheduler_type);
+    exit(EXIT_FAILURE);
+  }
+}
+
 Scheduler::Scheduler(SimulationConfig config, const cycle_type* core_cycle, const uint64_t* core_time, void* simulator)
     : _config(config), _core_cycle(core_cycle), _core_time(core_time) {
   //_core_executable_tile_queue.resize(_config.num_cores);

@@ -11,6 +11,7 @@
 
 class Core {
  public:
+  static std::unique_ptr<Core> create(uint32_t id, SimulationConfig config);
   Core(uint32_t id, SimulationConfig config);
   virtual ~Core() = default;
   virtual bool running();
@@ -33,6 +34,12 @@ class Core {
   virtual bool can_issue_compute(std::unique_ptr<Instruction>& inst);
   virtual cycle_type get_inst_compute_cycles(std::unique_ptr<Instruction>& inst) = 0;
   virtual void update_stats();
+  virtual void finish_compute_pipeline();
+  virtual void finish_vector_pipeline();
+  virtual void handle_ld_inst_queue();
+  virtual void handle_st_inst_queue();
+  virtual cycle_type calculate_add_tree_iterations(uint32_t vector_size);
+  virtual cycle_type calculate_vector_op_iterations(uint32_t vector_size);
 
   const uint32_t _id;
   const SimulationConfig _config;

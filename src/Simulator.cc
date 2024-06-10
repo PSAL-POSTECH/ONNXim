@@ -63,33 +63,12 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
   _n_memories = config.dram_channels;
   _memory_req_size = config.dram_req_size;
   for (int core_index = 0; core_index < _n_cores; core_index++) {
-    if (config.core_type == CoreType::SYSTOLIC_OS)
-      _cores[core_index] = std::make_unique<SystolicOS>(core_index, _config);
-    else if (config.core_type == CoreType::SYSTOLIC_WS)
-      _cores[core_index] = std::make_unique<SystolicWS>(core_index, _config);
-    else {
-      spdlog::error("[Configuration] Invalid core type...!");
-      exit(EXIT_FAILURE);
-    }
+    _cores[core_index] = Core::create(core_index, config);
   }
-  
+
   //Configure Hardware Scheduler
-  if (config.scheduler_type == "simple") {
-    _scheduler = std::make_unique<Scheduler>(_config, &_core_cycles, &_core_time, this);
-  } else if (config.scheduler_type == "partition_cpu") {
-    _scheduler =
-        std::make_unique<DedicatedCPUScheduler>(_config, &_core_cycles, &_core_time, this);
-  } else if (config.scheduler_type == "time_multiplex") {
-    _scheduler =
-        std::make_unique<TimeMultiplexScheduler>(_config, &_core_cycles, &_core_time, this);
-  } else if (config.scheduler_type == "spatial_split") {
-    _scheduler = std::make_unique<HalfSplitScheduler>(_config, &_core_cycles, &_core_time, this);
-  } else {
-    spdlog::error("[Configuration] {} is invalid scheduler type...!", config.scheduler_type);
-    exit(EXIT_FAILURE);
-  }
-
-
+  _scheduler = Scheduler::create(_config, &_core_cycles, &_core_time, this);
+  
   /* Create heap */
   std::make_heap(_models.begin(), _models.end(), CompareModel());
 }
@@ -114,7 +93,7 @@ void Simulator::handle_model() {
 
     launch_model->initialize_model(_weight_table[launch_model->get_name()]);
     launch_model->set_request_time(_core_time);
-    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time / (_config.core_freq));
+    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time);
     _scheduler->schedule_model(std::move(launch_model), 1);
   }
 }
@@ -211,7 +190,7 @@ void Simulator::cycle() {
       _icnt->cycle();
     }
   }
-  spdlog::info("Simulation Finished at {} cycle {} us", _core_cycles, _core_time / (_config.core_freq) );
+  spdlog::info("Simulation Finished at {} cycle {} us", _core_cycles, _core_cycles / (_config.core_freq) );
   /* Print simulation stats */
   for (int core_id = 0; core_id < _n_cores; core_id++) {
     _cores[core_id]->print_stats();

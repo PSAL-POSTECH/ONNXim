@@ -1,6 +1,19 @@
 #include "Core.h"
+#include "SystolicWS.h"
+#include "SystolicOS.h"
 
 #include "helper/HelperFunctions.h"
+
+std::unique_ptr<Core> Core::create(uint32_t id, SimulationConfig config) {
+  if (config.core_type == CoreType::SYSTOLIC_WS) {
+    return std::make_unique<SystolicWS>(id, config);
+  } else if (config.core_type == CoreType::SYSTOLIC_OS) {
+    return std::make_unique<SystolicOS>(id, config);
+  } else {
+      spdlog::error("[Configuration] Invalid core type...!");
+    exit(EXIT_FAILURE);
+  }
+}
 
 Core::Core(uint32_t id, SimulationConfig config)
     : _id(id),
@@ -247,4 +260,148 @@ void Core::update_stats() {
   _stat_idle_cycle = 0;
   _stat_vec_compute_cycle = 0;
   _stat_matmul_cycle = 0;
+}
+
+void Core::finish_compute_pipeline(){
+  if (!_compute_pipeline.empty() &&
+      _compute_pipeline.front()->finish_cycle <= _core_cycle) {
+    std::unique_ptr<Instruction> inst = std::move(_compute_pipeline.front());
+    if (inst->dest_addr >= ACCUM_SPAD_BASE)
+      _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
+    else
+      _spad.fill(inst->dest_addr, inst->spad_id);
+    if(inst->last_inst)
+      inst->my_tile->inst_finished = true;
+    _compute_pipeline.pop();
+  }
+}
+
+void Core::finish_vector_pipeline() {
+  if (!_vector_pipeline.empty() &&
+      _vector_pipeline.front()->finish_cycle <= _core_cycle) {
+    std::unique_ptr<Instruction> inst = std::move(_vector_pipeline.front());
+    if (inst->dest_addr >= ACCUM_SPAD_BASE) {
+      if(!_acc_spad.check_allocated(inst->dest_addr, inst->accum_spad_id)) {
+        spdlog::error("Vector pipeline -> accum");
+        spdlog::error("Destination not allocated {}", inst->dest_addr);
+      }
+      _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
+    }
+    else {
+      if(!_spad.check_allocated(inst->dest_addr, inst->accum_spad_id)) {
+        spdlog::error("Vector pipeline -> spad");
+        spdlog::error("Destination not allocated {}", inst->dest_addr);
+      }
+      _spad.fill(inst->dest_addr, inst->spad_id);
+    }
+      
+    if(inst->last_inst)
+      inst->my_tile->inst_finished = true;
+    _vector_pipeline.pop();
+  }
+}
+
+void Core::handle_ld_inst_queue() {
+  if (!_ld_inst_queue.empty()) {
+    std::unique_ptr<Instruction> front = std::move(_ld_inst_queue.front());
+    if (front->opcode == Opcode::MOVIN) {
+      bool prefetched = false;
+      Sram *buffer;
+      int buffer_id;
+      if (front->dest_addr >= ACCUM_SPAD_BASE) {
+        buffer = &_acc_spad;
+        buffer_id = front->accum_spad_id;
+      } else {
+        buffer = &_spad;
+        buffer_id = front->spad_id;
+      }
+      if (front->size==0) {
+        spdlog::error("Destination size is 0! opcode: {}, addr: 0x{:x}", (int)front->opcode, front->dest_addr);
+      }
+      int ret = buffer->prefetch(front->dest_addr, buffer_id, front->size, front->size);
+      if (!ret) {
+        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(front->dest_addr, buffer_id), buffer->check_allocated(front->dest_addr, buffer_id));
+        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front->opcode, front->dest_addr, front->size);
+        std::exit(EXIT_FAILURE);
+      }
+      for (addr_type addr : front->src_addrs) {
+        assert(front->base_addr != GARBEGE_ADDR);
+        MemoryAccess *access =
+            new MemoryAccess({.id = generate_mem_access_id(),
+                              .dram_address = addr + front->base_addr,
+                              .spad_address = front->dest_addr,
+                              .size = _config.dram_req_size,
+                              .write = false,
+                              .request = true,
+                              .core_id = _id,
+                              .start_cycle = _core_cycle,
+                              .buffer_id = buffer_id});
+        _request_queue.push(access);
+      }
+      _ld_inst_queue.pop();
+    } else {
+      assert(0);
+    }
+  }
+}
+
+void Core::handle_st_inst_queue() {
+  if (!_st_inst_queue.empty()) {
+    std::unique_ptr<Instruction> front = std::move(_st_inst_queue.front());
+    if (front->opcode == Opcode::MOVOUT || front->opcode == Opcode::MOVOUT_POOL) {
+      Sram *buffer;
+      int buffer_id;
+      if (front->dest_addr >= ACCUM_SPAD_BASE) {
+        buffer = &_acc_spad;
+        buffer_id = front->accum_spad_id;
+      } else {
+        buffer = &_spad;
+        buffer_id = front->spad_id;
+      }
+      if(buffer->check_hit(front->dest_addr, buffer_id)) {
+        for (addr_type addr : front->src_addrs) {
+          assert(front->base_addr != GARBEGE_ADDR);
+          MemoryAccess *access =
+              new MemoryAccess{.id = generate_mem_access_id(),
+                              .dram_address = addr + front->base_addr,
+                              .spad_address = front->dest_addr,
+                              .size = _config.dram_req_size,
+                              .write = true,
+                              .request = true,
+                              .core_id = _id,
+                              .start_cycle = _core_cycle,
+                              .buffer_id = buffer_id};
+          _waiting_write_reqs++;
+          _request_queue.push(access);
+        }
+        if(front->last_inst) 
+          front->my_tile->inst_finished = true;
+        _st_inst_queue.pop();
+      }
+    } else {
+      assert(0);
+    }
+  }
+}
+
+cycle_type Core::calculate_add_tree_iterations(uint32_t vector_size) {
+  uint32_t calculation_unit = _config.vector_process_bit >> 3;
+  if (vector_size <= calculation_unit) {
+    return 1;
+  }
+
+  uint32_t ret = vector_size / calculation_unit;
+  if (vector_size % calculation_unit != 0) {
+    ret++;
+  }
+  return ret + calculate_add_tree_iterations(ret);
+}
+
+cycle_type Core::calculate_vector_op_iterations(uint32_t vector_size) {
+  uint32_t calculation_unit = _config.vector_process_bit >> 3;
+  uint32_t ret = vector_size / calculation_unit;
+  if (vector_size % calculation_unit != 0) {
+    ret++;
+  }
+  return ret;
 }
