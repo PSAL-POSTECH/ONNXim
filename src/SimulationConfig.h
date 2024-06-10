@@ -47,6 +47,7 @@ struct SimulationConfig {
   uint32_t dram_req_size;
   uint32_t dram_latency;
   uint32_t dram_size; // in GB
+  uint32_t dram_nbl = 1; // busrt length in clock cycles (bust_length 8 in DDR -> 4 nbl)
   uint32_t dram_print_interval;
   std::string dram_config_path;
 
@@ -76,4 +77,17 @@ struct SimulationConfig {
   uint64_t align_address(uint64_t addr) {
     return addr - (addr % dram_req_size);
   }
+
+  float max_systolic_flops() {
+    return core_width * core_height * core_freq * 2 * num_cores / 1000; // GFLOPS
+  }
+
+  float max_vector_flops() {
+    return (vector_process_bit >> 3) / precision * 2 * core_freq / 1000; // GFLOPS
+  }
+
+  float max_dram_bandwidth() {
+    return dram_freq * dram_channels * dram_req_size / dram_nbl / 1000; // GB/s
+  }
+
 };
