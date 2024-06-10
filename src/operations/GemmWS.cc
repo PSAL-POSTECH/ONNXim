@@ -31,6 +31,14 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
                           .R = 1,
                           .Q = 1,
                           .P = 1};
+  float total_flops = key.M * key.N * key.C * 2;
+  float total_memory = (key.M * key.C + key.N * key.C + key.N * key.M) * _config.precision;
+  float theoretical_compute_cycles = total_flops / _config.max_systolic_flops();
+  float theoretical_memory_cycles = total_memory / _config.max_dram_bandwidth();
+  float theoretical_cycles = std::max(theoretical_compute_cycles, theoretical_memory_cycles);
+  spdlog::info("GemmWS: Theoretical cycles: {} Compute cycles: {} Memory cycles: {}",
+               theoretical_cycles, theoretical_compute_cycles, theoretical_memory_cycles);
+
   Mapping mapping;
   try {
     mapping = mapping_table.at(key);
