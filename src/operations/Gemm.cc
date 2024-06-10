@@ -109,6 +109,12 @@ Gemm::Gemm(SimulationConfig config, Model* model, std::string name,
         _id, name_gen(_name, "out"), _output_shape, _config.precision, false);
   _outputs.push_back(output_tensor.get()->get_id());
   _model->add_tensor(std::move(output_tensor));
+
+  _input_shape_2d.push_back(_input_shape.at(_input_shape.size()-2)*_batch_size);
+  _input_shape_2d.push_back(_input_shape.at(_input_shape.size()-1));
+
+  _output_shape_2d.push_back(_output_shape.at(_output_shape.size()-2)*_batch_size);
+  _output_shape_2d.push_back(_output_shape.at(_output_shape.size()-1));
   spdlog::debug("[Gemm] input_shape: {}", _input_shape);
   spdlog::debug("[Gemm] output_shape : {}", _output_shape);
 }
