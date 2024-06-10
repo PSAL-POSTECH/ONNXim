@@ -11,6 +11,9 @@ namespace fs = std::filesystem;
 Simulator::Simulator(SimulationConfig config, bool language_mode)
     : _config(config), _core_cycles(0), _language_mode(language_mode) {
   // Create dram object
+  spdlog::info("Simulator Configuration:");
+  spdlog::info("Systolic Array Throughput: {} GFLOPS", config.max_systolic_flops());
+  spdlog::info("DRAM Bandwidth {} GB/s", config.max_dram_bandwidth());
   _core_period = 1000000 / (config.core_freq);
   _icnt_period = 1000000 / (config.icnt_freq);
   _dram_period = 1000000 / (config.dram_freq);

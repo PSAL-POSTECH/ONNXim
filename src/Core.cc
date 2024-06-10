@@ -87,7 +87,8 @@ void Core::cycle() {
   _core_cycle++;
   _spad.cycle();
   _acc_spad.cycle();
-  for (int i = 0; i < _tiles.size(); i++) {
+  for (int tile_iter = 0; tile_iter < _tiles.size(); tile_iter++) {
+    int i = (tile_iter + tile_rr) % _tiles.size();
     if(_tiles[i]->instructions.empty()) 
       continue;
     std::unique_ptr<Instruction>& inst = _tiles[i]->instructions.front();
@@ -142,6 +143,7 @@ void Core::cycle() {
     }
     if (issued) {
       _tiles[i]->instructions.pop_front();
+      tile_rr = i;
       break;
     }
   }

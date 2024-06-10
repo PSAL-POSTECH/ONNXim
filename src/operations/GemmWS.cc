@@ -31,13 +31,6 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
                           .R = 1,
                           .Q = 1,
                           .P = 1};
-  float total_flops = key.M * key.N * key.C * 2;
-  float total_memory = (key.M * key.C + key.N * key.C + key.N * key.M) * _config.precision;
-  float theoretical_compute_cycles = total_flops / _config.max_systolic_flops();
-  float theoretical_memory_cycles = total_memory / _config.max_dram_bandwidth();
-  float theoretical_cycles = std::max(theoretical_compute_cycles, theoretical_memory_cycles);
-  spdlog::info("GemmWS: Theoretical cycles: {} Compute cycles: {} Memory cycles: {}",
-               theoretical_cycles, theoretical_compute_cycles, theoretical_memory_cycles);
 
   Mapping mapping;
   try {
@@ -75,6 +68,23 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
       }
     }
   }
+  float total_flops = key.M / ((float) 1e3) * key.N / ((float) 1e3) * key.C / ((float) 1e3) * 2;
+  float bias_flops = key.M / ((float) 1e3) * key.N / ((float) 1e3) / ((float) 1e3);
+  if (has_bias) {
+    total_flops += bias_flops;
+  }
+  spdlog::info("[GemmWs] Keys K = {}, N = {}, M = {}", key.C, key.N, key.M);
+  float total_memory = (key.M * key.C + key.N * key.C + key.N * key.M) * _config.precision / ((float) 1e9);
+  float bias_memory = key.M *_config.precision / ((float) 1e9);
+  if (has_bias) {
+    total_memory += bias_memory;
+  }
+  spdlog::info("[GemmWS]: total {} GFLOPs, {} GB", total_flops, total_memory);
+  float theoretical_compute_time = total_flops / _config.max_systolic_flops();
+  float theoretical_mem_time = total_memory / _config.max_dram_bandwidth();
+  float theoretical_time = std::max(theoretical_compute_time, theoretical_mem_time);
+  spdlog::info("[GemmWS]: Theoretical time(ms): {} Compute time: {} Memory time: {}",
+               theoretical_time * 1e3, theoretical_compute_time * 1e3, theoretical_mem_time * 1e3);
 }
 
 void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
@@ -96,9 +106,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
   output_addr = get_operand_addr(_OUTPUT_OPERAND);
 
   int loop_size = _config.core_height;
-  int c_in_loop = c_in_loop = tout_c_offset + mapping.tile_in_loop.C > mapping.total_loop.C
-                  ? mapping.total_loop.C - tout_c_offset
-                  : mapping.tile_in_loop.C;
+  int cloop_size = mapping.tile_in_loop.C;
   for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
     int M_offset = tout_m_offset + Ms;
     int m_loop = M_offset + loop_size > mapping.total_loop.M
@@ -120,115 +128,145 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               .src_addrs = std::vector<addr_type>(bias_addrs.begin(), bias_addrs.end()),
               .operand_id = _INPUT_OPERAND + 2}));
     }
-    /* MOVIN Weights */
-    addr_type weight_sp_addr =
-          weight_sp_base_addr +
-          (Ms * mapping.tile_in_loop.C) * _config.precision;
-    std::set<addr_type> weight_set;
-    for (int iter_m = 0; iter_m < m_loop; iter_m+=1) {
-      for (int iter_c = 0; iter_c < c_in_loop; iter_c+=elems_per_access) {
-        int C = tout_c_offset + iter_c;
-        int M = M_offset + iter_m;
-        std::vector<uint32_t> weight_shape_2d;
-        std::vector<uint32_t> index;
-        weight_shape_2d.resize(2);
-        index.resize(2);
-        weight_shape_2d[1] = _weight_shape[Cdim_w];
-        weight_shape_2d[0] = _weight_shape[Mdim]; 
-        index[1] = C;
-        index[0] = M;
-        weight_set.insert(
-            second_addr + make_address(index, weight_shape_2d));
-      }
-    }
-    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-        .opcode = Opcode::MOVIN,
-        .dest_addr = weight_sp_addr,
-        .size = (uint32_t)weight_set.size(),
-        .src_addrs = std::vector<addr_type>(weight_set.begin(), weight_set.end()),
-        .operand_id = _INPUT_OPERAND + 1,
-        .tile_m = mapping.tile_in_loop.M,
-        .tile_k = mapping.tile_in_loop.C}));
-
-    for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
-      int N_offset = tout_n_offset + Ns;
-      int n_loop = N_offset + loop_size > mapping.total_loop.N
-                        ? mapping.total_loop.N - N_offset
-                        : loop_size;
-      if(n_loop <= 0) break;
-      addr_type act_sp_addr =
-          act_sp_base_addr +
-          (Ns * mapping.tile_in_loop.C) * _config.precision;
-      addr_type out_sp_addr =
-          ACCUM_SPAD_BASE +
-          (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
-
-      /* MOVIN Activation */
-      if (Ms == 0) {
-        std::set<addr_type> input_set;
-        for (int iter_n = 0; iter_n < n_loop; iter_n++) {
-          for (int iter_c = 0; iter_c < c_in_loop; iter_c+=elems_per_access) {
-            uint32_t N = N_offset + iter_n;
-            uint32_t C = tout_c_offset + iter_c;         
-            std::vector<uint32_t> index = {N, C};
-            input_set.insert(
-                first_addr + make_address(index, _input_shape));
-          }
+    for (int Cs = 0; Cs < mapping.tile_in_loop.C; Cs+= cloop_size) {
+      int C_offset = tout_c_offset + Cs;
+      int c_in_loop = C_offset + cloop_size > mapping.total_loop.C
+                      ? mapping.total_loop.C - C_offset
+                      : cloop_size;
+      /* MOVIN Weights */
+      addr_type weight_sp_addr =
+            weight_sp_base_addr +
+            (Ms * mapping.tile_in_loop.C + Cs) * _config.precision;
+      std::set<addr_type> weight_set;
+      for (int iter_m = 0; iter_m < m_loop; iter_m+=1) {
+        for (int iter_c = 0; iter_c < c_in_loop; iter_c+=elems_per_access) {
+          int C = C_offset + iter_c;
+          int M = M_offset + iter_m;
+          std::vector<uint32_t> weight_shape_2d;
+          std::vector<uint32_t> index;
+          weight_shape_2d.resize(2);
+          index.resize(2);
+          weight_shape_2d[1] = _weight_shape[Cdim_w];
+          weight_shape_2d[0] = _weight_shape[Mdim]; 
+          index[1] = C;
+          index[0] = M;
+          weight_set.insert(
+              second_addr + make_address(index, weight_shape_2d));
         }
-        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-            .opcode = Opcode::MOVIN,
-            .dest_addr = act_sp_addr,
-            .size = (uint32_t)input_set.size(),
-            .src_addrs = std::vector<addr_type>(input_set.begin(), input_set.end()),
-            .operand_id = _INPUT_OPERAND,
-            .tile_k = mapping.tile_in_loop.C,
-            .tile_n = mapping.tile_in_loop.N}));
       }
+      tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+          .opcode = Opcode::MOVIN,
+          .dest_addr = weight_sp_addr,
+          .size = (uint32_t)weight_set.size(),
+          .src_addrs = std::vector<addr_type>(weight_set.begin(), weight_set.end()),
+          .operand_id = _INPUT_OPERAND + 1,
+          .tile_m = mapping.tile_in_loop.M,
+          .tile_k = mapping.tile_in_loop.C}));
 
-      /*Compute */
-      for(int c_iter = 0; c_iter < c_in_loop; c_iter+=_config.core_height) {
-        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-            .opcode = Opcode::GEMM_PRELOAD,
-            .dest_addr = out_sp_addr,
-            // Accumulat buffer already allocated
-            .size = (uint32_t)n_loop,
-            .compute_size = (uint32_t)n_loop,
-            .src_addrs =
-                std::vector<addr_type>{act_sp_addr, weight_sp_addr}}));
+      for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
+        int N_offset = tout_n_offset + Ns;
+        int n_loop = N_offset + loop_size > mapping.total_loop.N
+                          ? mapping.total_loop.N - N_offset
+                          : loop_size;
+        if(n_loop <= 0) break;
+        addr_type act_sp_addr =
+            act_sp_base_addr +
+            (Ns * mapping.tile_in_loop.C + Cs) * _config.precision;
+        addr_type out_sp_addr =
+            ACCUM_SPAD_BASE +
+            (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
+
+        /* MOVIN Activation */
+        if (Ms == 0) {
+          std::set<addr_type> input_set;
+          for (int iter_n = 0; iter_n < n_loop; iter_n++) {
+            for (int iter_c = 0; iter_c < c_in_loop; iter_c+=elems_per_access) {
+              uint32_t N = N_offset + iter_n;
+              uint32_t C = C_offset + iter_c;         
+              std::vector<uint32_t> index = {N, C};
+              input_set.insert(
+                  first_addr + make_address(index, _input_shape));
+            }
+          }
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+              .opcode = Opcode::MOVIN,
+              .dest_addr = act_sp_addr,
+              .size = (uint32_t)input_set.size(),
+              .src_addrs = std::vector<addr_type>(input_set.begin(), input_set.end()),
+              .operand_id = _INPUT_OPERAND,
+              .tile_k = mapping.tile_in_loop.C,
+              .tile_n = mapping.tile_in_loop.N}));
+        }
       }
     }
   }
-
-  /* MOVOUT */
-  for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
+  /* Compute */
+  for(int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
     int M_offset = tout_m_offset + Ms;
     int m_loop = M_offset + loop_size > mapping.total_loop.M
                      ? mapping.total_loop.M - M_offset
                      : loop_size;
     if(m_loop <= 0) break;
-      int c_in_loop = tout_c_offset + c_in_loop > mapping.total_loop.C
-                       ? mapping.total_loop.C - tout_c_offset
-                       : c_in_loop;
-    for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
-      int N_offset = tout_n_offset + Ns;
-      int n_loop = N_offset + loop_size > mapping.total_loop.N
-                        ? mapping.total_loop.N - N_offset
-                        : loop_size;
-      if(n_loop <= 0) break;
-      addr_type out_sp_addr =
-          ACCUM_SPAD_BASE +
-          (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
-      std::set<addr_type> output_set;
-      for (int iter_n = 0; iter_n < n_loop; iter_n++) {
-        for (int iter_m = 0; iter_m < m_loop; iter_m+=elems_per_access) {
-          uint32_t N = N_offset + iter_n;
-          uint32_t M = M_offset + iter_m;
-          std::vector<uint32_t> index = {N, M};
-          output_set.insert(output_addr + make_address(index, _output_shape));
+    for (int Cs = 0; Cs < mapping.tile_in_loop.C; Cs+= cloop_size) {
+      int C_offset = tout_c_offset + Cs;
+      int c_in_loop = C_offset + cloop_size > mapping.total_loop.C
+                      ? mapping.total_loop.C - C_offset
+                      : cloop_size;
+      addr_type weight_sp_addr =
+            weight_sp_base_addr +
+            (Ms * mapping.tile_in_loop.C + Cs) * _config.precision;
+      for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
+        int N_offset = tout_n_offset + Ns;
+        int n_loop = N_offset + loop_size > mapping.total_loop.N
+                          ? mapping.total_loop.N - N_offset
+                          : loop_size;
+        if(n_loop <= 0) break;
+        addr_type act_sp_addr =
+            act_sp_base_addr +
+            (Ns * mapping.tile_in_loop.C + Cs) * _config.precision;
+        addr_type out_sp_addr =
+            ACCUM_SPAD_BASE +
+            (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
+        for(int c_iter = 0; c_iter < c_in_loop; c_iter+=_config.core_height) {
+          tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+              .opcode = Opcode::GEMM_PRELOAD,
+              .dest_addr = out_sp_addr,
+              .size = (uint32_t)n_loop,
+              .compute_size = (uint32_t)n_loop,
+              .src_addrs =
+                  std::vector<addr_type>{act_sp_addr, weight_sp_addr}}));
         }
       }
-        /*MOVOUT result at the last loop*/
-      if (tout_c_offset + c_in_loop >= mapping.total_loop.C){
+    }
+  }
+
+  /* MOVOUT */
+  if (tout_c_offset + mapping.tile_in_loop.C >= mapping.total_loop.C){
+    for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
+      int M_offset = tout_m_offset + Ms;
+      int m_loop = M_offset + loop_size > mapping.total_loop.M
+                      ? mapping.total_loop.M - M_offset
+                      : loop_size;
+      if(m_loop <= 0) break;
+      for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns += loop_size) {
+        int N_offset = tout_n_offset + Ns;
+        int n_loop = N_offset + loop_size > mapping.total_loop.N
+                          ? mapping.total_loop.N - N_offset
+                          : loop_size;
+        if(n_loop <= 0) break;
+        addr_type out_sp_addr =
+            ACCUM_SPAD_BASE +
+            (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
+        std::set<addr_type> output_set;
+        for (int iter_n = 0; iter_n < n_loop; iter_n++) {
+          for (int iter_m = 0; iter_m < m_loop; iter_m+=elems_per_access) {
+            uint32_t N = N_offset + iter_n;
+            uint32_t M = M_offset + iter_m;
+            std::vector<uint32_t> index = {N, M};
+            output_set.insert(output_addr + make_address(index, _output_shape));
+          }
+        }
+          /*MOVOUT result at the last loop*/
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::MOVOUT,
             .dest_addr = out_sp_addr,

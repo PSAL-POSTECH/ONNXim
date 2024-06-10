@@ -65,6 +65,7 @@ class Core {
   cycle_type _stat_tot_matmul_cycle = 0;
 
   int _running_layer;
+  uint32_t tile_rr = 0;
   std::deque<std::unique_ptr<Tile>> _tiles;
   std::queue<std::unique_ptr<Tile>> _finished_tiles;
 
