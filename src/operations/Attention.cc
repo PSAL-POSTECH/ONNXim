@@ -100,9 +100,10 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
 
     spdlog::info("Mapping info {}", mapping.to_string());
     int core_id = -1;
-    for (int N = 0; N < mapping.tile_out_loop.N; N++) {
-        int head_off = N * mapping.tile_in_loop.N / _q_len;
-        int heads_per_tile = ceil_div(mapping.tile_in_loop.N, _q_len);
+    for (uint32_t N = 0; N < mapping.tile_out_loop.N; N++) {
+        int heads_per_kv = _nh / _nkvh;
+        int qlen_offset = mapping.tile_out_loop.N / _nkvh;
+        int head_off = N / qlen_offset * heads_per_kv;
         for(int M = 0; M < mapping.tile_out_loop.M; M++) {
             if (M == 0) {
                 core_id = (core_id + 1) % _config.num_cores;
@@ -112,6 +113,7 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
                 .optype = get_name(),
                 .layer_id = _id,
                 .fused_op_id = fused_op_id++,
+                .batch = N,
                 .Q = 1,
                 .P = 1, 
                 .M = (uint32_t) M,
@@ -123,7 +125,7 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
             });
             /* dummy mapping */
             _tiles.push_back(std::move(tile));
-            initialize_instructions(_tiles.back().get(), mapping, head_off, heads_per_tile);
+            initialize_instructions(_tiles.back().get(), mapping, head_off, heads_per_kv);
         }
     }
     float qk_flops = (2.0f * _q_len * _seq * _nh * _dk) / (float) 1e9;
@@ -336,7 +338,9 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
 void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_idx, int num_heads) {
     // head_idx # start idx
     // num_heads
-    uint32_t q_len = mapping.tile_in_loop.N;
+    int qlen_offset = mapping.tile_out_loop.N / _nkvh;
+    int q_ffset = tile->batch % qlen_offset;
+    uint32_t q_len = mapping.tile_in_loop.N / num_heads;
     uint32_t seq_len = mapping.tile_in_loop.M;
     uint32_t value_offset = ceil_div(num_heads, _nkvh);
     addr_type sram_query_base = SPAD_BASE;
@@ -391,7 +395,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         for (int seq_idx = 0; seq_idx < q_len; seq_idx++) {
             for (int i = 0; i < _dk; i++) {
                 // key:  h, d_k, seq_len
-                int q_index = tile->M * q_len + seq_idx;
+                int q_index = q_ffset * q_len + seq_idx;
                 if(q_index >= _q_len) break;
                 std::vector<uint32_t> query_idx = {(uint32_t)(h_idx), (uint32_t)q_index, (uint32_t)i};
                 dram_query_addrs.insert(query_addr + make_address(query_idx, _query_shape));
@@ -658,15 +662,18 @@ void Attention::calculate_loops(Mapping& mapping) {
         uint32_t tiles_per_head = std::max(ceil_div(seq_len * _config.precision, acc_spad_capacity),
                                           ceil_div(2 * seq_len * _dk * _config.precision, 
                                                     spad_capacity - per_query_size));
+        int tile_out_loop = _nkvh;
         if(tiles_per_head > 1) {
             q_len = 1;
             seq_len = ceil_div(_seq, tiles_per_head);
+            tile_out_loop = _q_len * _nkvh;
         } else {
             int max_q_acc = acc_spad_capacity / ((seq_len * _config.precision + 2 * 4) * heads_per_kv);
             int max_q_spad = (spad_capacity - 2* seq_len * _dk * _config.precision)
                             / per_query_size;
             q_len = std::min(q_len, (uint32_t)max_q_acc);
             q_len = std::min(q_len, (uint32_t)max_q_spad);
+            tile_out_loop = ceil_div(_q_len, q_len) * _nkvh;
         }
 
         uint32_t total_spad_size_per_head = 2 * seq_len * _dk +  heads_per_kv * q_len * _dk;
@@ -678,14 +685,14 @@ void Attention::calculate_loops(Mapping& mapping) {
         spdlog::info("[Attention] q_len: {}, seq_len: {}, dk: {}, heads per tile {}", q_len, seq_len, _dk, heads_per_kv);
         spdlog::info("[Attention] Spad size {}", _config.spad_size KB / 2);
         spdlog::info("[Attention] Accum spad size {}", _config.accum_spad_size KB / 2);
-        mapping.total_loop.N = _q_len * _nh;
         mapping.total_loop.C = _dk;
         mapping.total_loop.M = _seq;
         mapping.tile_out_loop.C = 1;
         mapping.tile_in_loop.C = _dk;
         mapping.tile_in_loop.N = q_len * heads_per_kv;
         mapping.tile_in_loop.M = seq_len;
-        mapping.tile_out_loop.N = ceil_div(mapping.total_loop.N, mapping.tile_in_loop.N);
+        mapping.tile_out_loop.N = tile_out_loop;
+        mapping.total_loop.N = mapping.tile_in_loop.N * tile_out_loop;
         mapping.tile_out_loop.M = ceil_div(mapping.total_loop.M, mapping.tile_in_loop.M);
     }
 }
