@@ -54,8 +54,8 @@ class Core {
   cycle_type _stat_vec_compute_cycle;
   cycle_type _stat_tot_vec_compute_cycle = 0;
 
-  cycle_type _stat_matmul_cycle;
-  cycle_type _stat_tot_matmul_cycle = 0;
+  double _stat_matmul_cycle;
+  double _stat_tot_matmul_cycle = 0;
 
   int _running_layer;
   std::deque<std::unique_ptr<Tile>> _tiles;

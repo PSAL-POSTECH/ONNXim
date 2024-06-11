@@ -88,6 +88,7 @@ typedef struct {
   bool zero_init = false;
   bool last_inst = false;
   Tile* my_tile;
+  int occupancy = 0;
 } Instruction;
 
 struct Tile {

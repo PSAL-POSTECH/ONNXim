@@ -259,17 +259,19 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         }));
         // -- compute --
         // GEMM (q*k -> l)
-        tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-            .opcode = Opcode::GEMM,
-            .dest_addr = sram_l_ofs,
-            .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size = std::min((int(q_len/_config.core_height)), 1) * seq_len,
-            .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
-
-            .tile_m = seq_len,
-            .tile_k = _dk,
-            .tile_n = q_len,
-        }));
+        for(int sitr = 0; sitr < _dk; sitr+=_config.core_height) {
+            for(int kitr = 0; kitr < q_len; kitr+=_config.core_height) {
+                tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+                    .opcode = Opcode::GEMM,
+                    .dest_addr = sram_l_ofs,
+                    .size = q_len * _dk * _config.precision / _config.dram_req_size,
+                    .compute_size = std::min(q_len-kitr, _config.core_height),
+                    .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
+                    .occupancy = std::min(int(_dk-sitr), (int)_config.core_height) * \
+                                std::min(int(q_len-kitr), (int)_config.core_height)
+                }));
+            }
+        }
         // Softmax (l -> l)
 
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
@@ -284,15 +286,17 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
 
         // [ ] change output offset
         // GEMM (l*v -> acc)
-        for(int sitr = 0; sitr < ceil_div(seq_len, _config.core_height); sitr++) {
-            for(int kitr = 0; kitr < ceil_div(_dk, _config.core_height); kitr++) {
+        for(int sitr = 0; sitr < seq_len; sitr+=_config.core_height) {
+            for(int kitr = 0; kitr < q_len; kitr+=_config.core_height) {
                 tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
                     .opcode = Opcode::GEMM_PRELOAD,
                     .dest_addr = sram_l_ofs,
                     .size = q_len * _config.precision / _config.dram_req_size,
-                    .compute_size = q_len,
+                    .compute_size = std::min(q_len-kitr, _config.core_height),
                     .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
                     .src_from_accum = true,
+                    .occupancy = std::min(int(seq_len-sitr), (int)_config.core_height) * \
+                                std::min(int(q_len-kitr), (int)_config.core_height)
                 }));
             }
         }

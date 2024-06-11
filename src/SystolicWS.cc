@@ -190,7 +190,11 @@ void SystolicWS::cycle() {
   bool is_running = running();
 
   if (!_compute_pipeline.empty())
-    _stat_matmul_cycle++;
+    if (!_compute_pipeline.front()->occupancy) {
+      _stat_matmul_cycle++;
+    } else {
+      _stat_matmul_cycle += float(_compute_pipeline.front()->occupancy) / (_config.core_width * _config.core_height);
+    }
   if (!_vector_pipeline.empty()) {
     _stat_vec_compute_cycle++;
   }
