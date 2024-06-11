@@ -47,7 +47,7 @@ void SystolicWS::cycle() {
         offset = MAX(offset, 4);
         if (front->opcode == Opcode::GEMM_PRELOAD) {
           // State mul-pre
-          offset = _config.core_height;
+          offset = MAX(offset, _config.core_height);
           _stat_systolic_preload_issue_count++;
         }
         front->start_cycle = _compute_pipeline.back()->start_cycle + offset;
@@ -81,9 +81,10 @@ void SystolicWS::cycle() {
   bool is_idle = _compute_pipeline.empty() && _vector_pipeline.empty();
   bool is_running = running();
 
-  if (!_compute_pipeline.empty())
-    _stat_matmul_cycle++;
-  if (!_vector_pipeline.empty()) {
+  if (!_compute_pipeline.empty() && _compute_pipeline.front()->start_cycle <= _core_cycle) {
+    _stat_systolic_active_cycle++;
+  }
+  if (!_vector_pipeline.empty() && _vector_pipeline.front()->start_cycle <= _core_cycle) {
     _stat_vec_compute_cycle++;
   }
 

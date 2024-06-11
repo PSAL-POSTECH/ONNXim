@@ -228,13 +228,17 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
             ACCUM_SPAD_BASE +
             (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
         for(int c_iter = 0; c_iter < c_in_loop; c_iter+=_config.core_height) {
+          int c_iter_size = c_in_loop - c_iter > _config.core_height ? _config.core_height : c_in_loop - c_iter;
           tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::GEMM_PRELOAD,
               .dest_addr = out_sp_addr,
               .size = (uint32_t)n_loop,
               .compute_size = (uint32_t)n_loop,
               .src_addrs =
-                  std::vector<addr_type>{act_sp_addr, weight_sp_addr}}));
+                  std::vector<addr_type>{act_sp_addr, weight_sp_addr},
+              .tile_m = m_loop,
+              .tile_k = c_iter_size,
+              .tile_n = n_loop}));
         }
       }
     }

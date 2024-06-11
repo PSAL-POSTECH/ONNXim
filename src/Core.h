@@ -61,8 +61,10 @@ class Core {
   cycle_type _stat_vec_compute_cycle;
   cycle_type _stat_tot_vec_compute_cycle = 0;
 
-  cycle_type _stat_matmul_cycle;
-  cycle_type _stat_tot_matmul_cycle = 0;
+  cycle_type _stat_systolic_active_cycle = 0;
+  cycle_type _stat_tot_systolic_active_cycle = 0;
+  double _stat_matmul_cycle = 0;
+  double _stat_tot_matmul_cycle = 0;
 
   int _running_layer;
   uint32_t tile_rr = 0;

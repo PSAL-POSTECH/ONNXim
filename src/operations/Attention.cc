@@ -131,10 +131,11 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
     float qk_flops = (2.0f * _q_len * _seq * _nh * _dk) / (float) 1e9;
     spdlog::info("[Attention] QK {} GFLOPs", qk_flops);
     float kv_flops = (2.0f * _q_len * _seq * _nh * _dk) / (float) 1e9;
-    float softmax_flops = 5 * _q_len * _seq * _nh / (float) 1e9;// 5: exp, sum, div, mul, sum
+    float softmax_flops = 5 * _q_len * _seq * _nh / (float) 1e9 * _config.full_precision / _config.precision;
+        // 5: max, sub, exp, sum, div
     float tot_flops = qk_flops + softmax_flops + kv_flops;
-    float kv_mem = _seq * _dk * _nkvh * 2 / (float) 1e9; //GB
-    float q_mem = _q_len * _dk * _nh * 2 / (float) 1e9; //GB
+    float kv_mem = _seq * _dk * _nkvh * 2  * _config.precision / (float) 1e9; //GB
+    float q_mem = _q_len * _dk * _nh * 2 * _config.precision / (float) 1e9; //GB
     float total_mem = kv_mem + q_mem;
     float compute_time = (qk_flops + kv_flops) / _config.max_systolic_flops() * 1e3;
     compute_time += softmax_flops / _config.max_vector_flops() * 1e3;
@@ -379,13 +380,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
         .src_addrs = key_addrs,
         .operand_id = _INPUT_OPERAND + 1,  // key
     }));
-    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-        .opcode = Opcode::MOVIN,
-        .dest_addr = sram_v_ofs,
-        .size = (uint32_t)value_addrs.size(),
-        .src_addrs = value_addrs,
-        .operand_id = _INPUT_OPERAND + 2,  // value
-    }));
+
     for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
         int h_idx = head_idx + h_ofs;
         addr_type sram_q_ofs = sram_query_base + h_ofs * (q_len * _dk) * _config.precision;
@@ -411,28 +406,44 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .operand_id = _INPUT_OPERAND,  // query
         }));
     }
-     // -- compute -- //
+    tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+        .opcode = Opcode::MOVIN,
+        .dest_addr = sram_v_ofs,
+        .size = (uint32_t)value_addrs.size(),
+        .src_addrs = value_addrs,
+        .operand_id = _INPUT_OPERAND + 2,  // value
+    }));
+     // -- compute -- //     
+    // GEMM (q*k -> l)
+    for(int sitr = 0; sitr < seq_len; sitr+=_config.core_height) {
+        int s_loop = std::min(seq_len - sitr, _config.core_height);
+        for(int kitr = 0; kitr < _dk; kitr+=_config.core_height) {
+            int k_loop = std::min(_dk - kitr, _config.core_height);
+                for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
+                Opcode op = h_ofs == 0 ? Opcode::GEMM_PRELOAD : Opcode::GEMM;
+                int h_idx = head_idx + h_ofs;
+                addr_type sram_q_ofs = sram_query_base + h_ofs * (q_len * _dk) * _config.precision;
+                addr_type sram_l_ofs = sram_logit_base + h_ofs * (q_len * seq_len) * _config.precision;
+                addr_type sram_logits_offset = sram_l_ofs + num_heads * (q_len * seq_len) * _config.precision;
+                tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+                    .opcode = op,
+                    .dest_addr = sram_l_ofs,
+                    .size =  q_len * _config.precision / _config.dram_req_size,
+                    .compute_size = q_len,
+                    .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
+                    .tile_m = s_loop,
+                    .tile_k = k_loop,
+                    .tile_n = q_len
+                }));
+            }
+        }
+    }
+
     for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
         int h_idx = head_idx + h_ofs;
         addr_type sram_q_ofs = sram_query_base + h_ofs * (q_len * _dk) * _config.precision;
         addr_type sram_l_ofs = sram_logit_base + h_ofs * (q_len * seq_len) * _config.precision;
         addr_type sram_logits_offset = sram_l_ofs + num_heads * (q_len * seq_len) * _config.precision;
-        
-        // GEMM (q*k -> l)
-        for(int qitr = 0; qitr < ceil_div(q_len, _config.core_height); qitr++) {
-            for(int kitr = 0; kitr < ceil_div(_dk, _config.core_height); kitr++) {
-                tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-                    .opcode = Opcode::GEMM_PRELOAD,
-                    .dest_addr = sram_l_ofs,
-                    .size =  seq_len * _config.precision / _config.dram_req_size,
-                    .compute_size = seq_len,
-                    .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
-                    .tile_m = seq_len,
-                    .tile_k = _dk,
-                    .tile_n = q_len,
-                }));
-            }
-        }
         // Softmax (l -> l)
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::ADDTREE,
@@ -497,21 +508,35 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             .tile_m = q_len,
             .src_from_accum = true,
         })); // diag(exp(m(j-1) - m(j))-1) * O(j-1)
-        // [ ] change output offset
-        // GEMM (l*v -> acc)
-        for(int sitr = 0; sitr < ceil_div(seq_len, _config.core_height); sitr++) {
-            for(int kitr = 0; kitr < ceil_div(_dk, _config.core_height); kitr++) {
+    }
+            // GEMM (l*v -> acc)
+    
+    for(int kitr = 0; kitr < _dk; kitr+=_config.core_height) {
+        int k_loop = std::min(_dk - kitr, _config.core_height);
+        for(int sitr = 0; sitr < seq_len; sitr+=_config.core_height) {
+            int s_loop = std::min(seq_len - sitr, _config.core_height);
+            for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
+                Opcode op = h_ofs == 0 ? Opcode::GEMM_PRELOAD : Opcode::GEMM;
+                addr_type sram_l_ofs = sram_logit_base + h_ofs * (q_len * seq_len) * _config.precision;
                 tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
-                    .opcode = Opcode::GEMM_PRELOAD,
+                    .opcode = op,
                     .dest_addr = sram_l_ofs,
                     .size = q_len * _config.precision / _config.dram_req_size,
                     .compute_size = q_len,
                     .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
-                    .src_from_accum = true,
+                    .tile_m = k_loop,
+                    .tile_k = s_loop,
+                    .tile_n = q_len,
+                    .src_from_accum = true
                 }));
             }
         }
-        
+    }
+
+    for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
+        int h_idx = head_idx + h_ofs;
+        addr_type sram_l_ofs = sram_logit_base + h_ofs * (q_len * seq_len) * _config.precision;
+        addr_type sram_logits_offset = sram_l_ofs + num_heads * (q_len * seq_len) * _config.precision;
         if(tile->M == mapping.tile_out_loop.M -1) {
             std::set<addr_type> dram_output_addrs;
             for (int seq_idx = 0; seq_idx < q_len; seq_idx++) {
