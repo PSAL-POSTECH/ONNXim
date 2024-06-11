@@ -226,8 +226,9 @@ void Core::print_stats() {
       "Core idle cycle {} ",
       _id, _stat_tot_memory_idle_cycle, _stat_tot_idle_cycle);
 
-  spdlog::info("Core [{}] : Systolic Array Utilization(%) {:.2f}, Vector Unit Utilization(%) {:.2f}, Total cycle: {}",
-      _id, static_cast<float>(_stat_tot_matmul_cycle * 100) / _core_cycle,
+  spdlog::info("Core [{}] : Systolic Array Utilization(%) {:.2f} ({:.2f}% PE util), Vector Unit Utilization(%) {:.2f}, Total cycle: {}",
+      _id, static_cast<float>(_stat_tot_systolic_active_cycle * 100) / _core_cycle,
+      static_cast<float>(_stat_tot_matmul_cycle * 100) / _core_cycle,
       static_cast<float>(_stat_tot_vec_compute_cycle * 100) / _core_cycle, _core_cycle);
 }
 
@@ -246,18 +247,20 @@ void Core::print_current_stats() {
       "Core [{}] : Memory unit idle cycle {} "
       "Core idle cycle {} ",
       _id, _stat_memory_idle_cycle, _stat_idle_cycle);
-  spdlog::log(level,"Core [{}] : Systolic Array Utilization(%) {:.2f}, Vector Unit Utilization(%) {:.2f}, Total cycle: {}",
-      _id, static_cast<float>(_stat_matmul_cycle * 100) / _config.core_print_interval,
+  spdlog::log(level,"Core [{}] : Systolic Array Utilization(%) {:.2f} ({:.2f}% PE util), Vector Unit Utilization(%) {:.2f}, Total cycle: {}",
+      _id, static_cast<float>(_stat_systolic_active_cycle * 100) / _config.core_print_interval,
+      static_cast<float>(_stat_matmul_cycle * 100) / _config.core_print_interval,
       static_cast<float>(_stat_vec_compute_cycle * 100) / _config.core_print_interval, _core_cycle);
   update_stats();
 }
 
 void Core::update_stats() {
+  _stat_tot_systolic_active_cycle += _stat_systolic_active_cycle;
   _stat_tot_memory_idle_cycle += _stat_memory_idle_cycle;
   _stat_tot_idle_cycle += _stat_idle_cycle;
   _stat_tot_vec_compute_cycle += _stat_vec_compute_cycle;
   _stat_tot_matmul_cycle += _stat_matmul_cycle;
-
+  _stat_systolic_active_cycle = 0;
   _stat_memory_idle_cycle = 0;
   _stat_idle_cycle = 0;
   _stat_vec_compute_cycle = 0;
@@ -274,6 +277,11 @@ void Core::finish_compute_pipeline(){
       _spad.fill(inst->dest_addr, inst->spad_id);
     if(inst->last_inst)
       inst->my_tile->inst_finished = true;
+    double compute_size = inst->tile_k * inst->tile_m * inst->tile_n 
+                            / (_config.core_height * _config.core_width);
+    spdlog::trace("Compute size {} tile m {} tile k {} tile n {}", inst->compute_size, inst->tile_m, inst->tile_k, inst->tile_n);
+    spdlog::trace("Compute size {} , compute time {}", compute_size, inst->finish_cycle - inst->start_cycle);
+    _stat_matmul_cycle += compute_size;
     _compute_pipeline.pop();
   }
 }
