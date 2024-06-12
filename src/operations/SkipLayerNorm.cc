@@ -79,11 +79,10 @@ void SkipLayerNorm::initialize_instructions(Tile* tile, Mapping mapping, uint32_
     int offset;
     for (offset=0; offset<tokens*_dk*_config.precision; offset+=_config.dram_req_size) {
         dram_addrs.insert(get_operand_addr(_INPUT_OPERAND) + token_offset*_dk*_config.precision + offset);
+        dram_skip_addrs.insert(get_operand_addr(_INPUT_OPERAND+1) + token_offset*_dk*_config.precision + offset);
         dram_output_addrs.insert(get_operand_addr(_OUTPUT_OPERAND) + token_offset*_dk*_config.precision + offset);
     }
-    for (;offset<tokens*_dk*_config.precision*2; offset+=_config.dram_req_size)
-        dram_skip_addrs.insert(get_operand_addr(_INPUT_OPERAND+1) + token_offset*_dk*_config.precision + offset);
-
+    
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVIN,
         .dest_addr = sram_base,
