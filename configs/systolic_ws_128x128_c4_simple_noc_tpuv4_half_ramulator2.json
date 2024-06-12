@@ -6,14 +6,16 @@
   "core_height" : 128,
   "core_print_interval" : 10000,
 
-  "spad_size" : 65536,
-  "accum_spad_size" : 8192,
+  "spad_size" : 16384,
+  "accum_spad_size" : 4096,
   "sram_width" : 32,
 
-  "vector_process_bit" : 65536,
+  "vector_process_bit" : 16384,
   "add_latency" : 1,
   "mul_latency" : 1,
   "exp_latency" : 1,
+  "mac_latency" : 1,
+  "div_latency" : 1,
   "gelu_latency" : 1,
   "add_tree_latency" : 1,
   "scalar_sqrt_latency" : 1,
@@ -26,6 +28,7 @@
   "dram_req_size": 32,
   "dram_latency" : 10,
   "dram_size" : 16,
+  "dram_nbl" : 1,
   "dram_print_interval": 10000,
   "dram_config_path" : "../configs/ramulator2_configs/HBM2.yaml",
 
