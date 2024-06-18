@@ -185,9 +185,11 @@ This current version only supports GEMM, Conv, Attention, GeLU, LayerNorm operat
 
 ## Citation
 If you use ONNXim for your research, please cite the following paper.
+```
 @article{ham2024onnxim,
   title={ONNXim: A Fast, Cycle-level Multi-core NPU Simulator},
   author={Ham, Hyungkyu and Yang, Wonhyuk and Shin, Yunseon and Woo, Okkyun and Heo, Guseul and Lee, Sangyeop and Park, Jongse and Kim, Gwangsun},
   journal={arXiv preprint arXiv:2406.08051},
   year={2024}
 }
+```
