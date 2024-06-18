@@ -8,7 +8,7 @@ ONNXim is a fast cycle-level simulator that can model multi-core NPUs for DNN in
 - Use of ONNX graphs as DNN model specifications, enabling simulation of DNNs implemented in different deep learning frameworks (e.g., PyTorch and TensorFlow).
 - Support language models that do not use ONNX graphs. Additionally, enable auto-regressive generation phases and iteration-level batching.
 
-For more details, please refer to our paper (TBA).
+For more details, please refer to our [paper](https://arxiv.org/abs/2406.08051)!
 
 ![Speedup](/img/speedup.png)
 **Figure description**: we compare the simulation speed of ONNXim to that of [Accel-sim](https://accel-sim.github.io/) (a GPU simulator with Tensor Core model) as GPUs are widely used for deep learning and such a GPU simulator can be used to study systems for deep learning. We also include [SMAUG](https://github.com/harvard-acc/smaug) in the comparison. On the x-axis, we vary the size of each dimension for an NxNxN GEMM operation.
@@ -185,5 +185,9 @@ This current version only supports GEMM, Conv, Attention, GeLU, LayerNorm operat
 
 ## Citation
 If you use ONNXim for your research, please cite the following paper.
-
-TBA
+@article{ham2024onnxim,
+  title={ONNXim: A Fast, Cycle-level Multi-core NPU Simulator},
+  author={Ham, Hyungkyu and Yang, Wonhyuk and Shin, Yunseon and Woo, Okkyun and Heo, Guseul and Lee, Sangyeop and Park, Jongse and Kim, Gwangsun},
+  journal={arXiv preprint arXiv:2406.08051},
+  year={2024}
+}
