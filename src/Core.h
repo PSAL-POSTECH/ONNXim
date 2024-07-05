@@ -47,11 +47,13 @@ class Core {
   cycle_type _core_cycle;
   
   cycle_type _stat_idle_cycle;
-  cycle_type _stat_memory_idle_cycle;
-
-  cycle_type _stat_tot_compute_cycle = 0;
   cycle_type _stat_tot_idle_cycle = 0;
+
+  cycle_type _stat_memory_idle_cycle;
   cycle_type _stat_tot_memory_idle_cycle = 0;
+
+  cycle_type _stat_compute_cycle = 0;
+  cycle_type _stat_tot_compute_cycle = 0;
 
   cycle_type _accum_request_rr_cycle;
   cycle_type _max_request_rr_cycle;

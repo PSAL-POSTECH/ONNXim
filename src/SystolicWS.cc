@@ -80,13 +80,21 @@ void SystolicWS::cycle() {
   // xxx will it work well on double buffered code? no.
   bool is_idle = _compute_pipeline.empty() && _vector_pipeline.empty();
   bool is_running = running();
+  bool is_compute_busy = false;
+  bool is_vector_busy = false;
 
-  if (!_compute_pipeline.empty() && _compute_pipeline.front()->start_cycle <= _core_cycle) {
+  if (!_compute_pipeline.empty() && _compute_pipeline.front()->start_cycle <= _core_cycle)
+    is_compute_busy = true;
+  if (!_vector_pipeline.empty() && _vector_pipeline.front()->start_cycle <= _core_cycle)
+    is_vector_busy = true;
+
+  if (is_compute_busy)
     _stat_systolic_active_cycle++;
-  }
-  if (!_vector_pipeline.empty() && _vector_pipeline.front()->start_cycle <= _core_cycle) {
+  if (is_vector_busy)
     _stat_vec_compute_cycle++;
-  }
+
+  if (is_compute_busy || is_vector_busy)
+    _stat_compute_cycle++;
 
   if (_request_queue.empty())
     _stat_memory_idle_cycle++;
