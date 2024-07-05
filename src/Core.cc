@@ -158,7 +158,7 @@ void Core::cycle() {
       break;
     }
   }
-  if(_core_cycle % _config.core_print_interval == 0) {
+  if(_config.core_print_interval && _core_cycle % _config.core_print_interval == 0) {
     print_current_stats();
   }
 }
@@ -255,11 +255,13 @@ void Core::print_current_stats() {
 }
 
 void Core::update_stats() {
+  _stat_tot_compute_cycle += _stat_compute_cycle;
   _stat_tot_systolic_active_cycle += _stat_systolic_active_cycle;
   _stat_tot_memory_idle_cycle += _stat_memory_idle_cycle;
   _stat_tot_idle_cycle += _stat_idle_cycle;
   _stat_tot_vec_compute_cycle += _stat_vec_compute_cycle;
   _stat_tot_matmul_cycle += _stat_matmul_cycle;
+  _stat_compute_cycle = 0;
   _stat_systolic_active_cycle = 0;
   _stat_memory_idle_cycle = 0;
   _stat_idle_cycle = 0;
