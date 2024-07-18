@@ -16,6 +16,8 @@ struct Mapping {
     uint32_t R = 1;  // Weight width
     uint32_t Q = 1;  // INput height
     uint32_t P = 1;  // Input width
+    uint32_t Padding = 1; // Pading
+    uint32_t Stride = 1;  // Stride
     bool operator==(const LoopCounts &other) const {
       return (N == other.N) && (C == other.C) && (M == other.M) &&
              (S == other.S) && (R == other.R) && (Q == other.Q) &&
@@ -45,6 +47,10 @@ struct Mapping {
       if (Q < other.Q)
         return true;
       else if (Q > other.Q)
+        return false;
+      else if (Padding > other.Padding)
+        return false;
+      else if (Stride > other.Stride)
         return false;
       if (P < other.P) return true;
       return false;

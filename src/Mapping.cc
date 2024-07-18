@@ -403,10 +403,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
   out_dim = key.P;
   kernel_dim = key.S;
 
-  stride = 1;
+  stride = key.Stride;
   input_dilation = 1;
   kernel_dilation = 1;
-  padding = 1;
+  padding = key.Padding;
   trans_input_3120 = false;
   trans_weight_0132 = false;
   pool_stride = 0;
