@@ -182,9 +182,13 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
           for (int iter_n = 0; iter_n < n_loop; iter_n++) {
             for (int iter_c = 0; iter_c < c_in_loop; iter_c+=elems_per_access) {
               uint32_t N = N_offset + iter_n;
-              uint32_t C = C_offset + iter_c;         
-              std::vector<uint32_t> index = {N, C};
-              input_set.insert(
+              uint32_t C = C_offset + iter_c;
+              std::vector<uint32_t> index;
+              if (_input_shape.size()==3)
+                index = {N/_input_shape.at(1), N%_input_shape.at(1), C};
+              else
+                index = {N, C};
+              input_set->insert(
                   first_addr + make_address(index, _input_shape));
             }
           }
@@ -266,8 +270,12 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
           for (int iter_m = 0; iter_m < m_loop; iter_m+=elems_per_access) {
             uint32_t N = N_offset + iter_n;
             uint32_t M = M_offset + iter_m;
-            std::vector<uint32_t> index = {N, M};
-            output_set.insert(output_addr + make_address(index, _output_shape));
+            std::vector<uint32_t> index;
+            if (_output_shape.size()==3)
+                index = {N/_output_shape.at(1), N%_output_shape.at(1), M};
+              else
+                index = {N, M};
+            output_set->insert(output_addr + make_address(index, _output_shape));
           }
         }
           /*MOVOUT result at the last loop*/
