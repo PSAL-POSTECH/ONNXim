@@ -18,7 +18,8 @@ Attention::Attention(SimulationConfig config, Model* model,
     _input_shape = get_input(0)->get_dims();
     _weight_shape = get_input(1)->get_dims();
     _bias_shape = get_input(2)->get_dims();
-    _mask_shape = get_input(3)->get_dims();
+    if (_inputs.size() > 3)
+        _mask_shape = get_input(3)->get_dims();
     if (node_proto.input().size()==5) {
         _kv_cache_shape = get_input(4)->get_dims();
         /* If "past_seq_len" is not 0 */
@@ -37,7 +38,7 @@ Attention::Attention(SimulationConfig config, Model* model,
         _seq = _input_shape.at(1);
 
     _query_shape = std::vector<uint32_t>{_nh, _q_len, _dk};
-    _key_shape = std::vector<uint32_t>{_nh, _dk, _seq};
+    _key_shape = std::vector<uint32_t>{_nh, _seq, _dk};
     _value_shape = std::vector<uint32_t>{_nh, _seq, _dk};
 
     _output_shape = std::vector<uint32_t>{_batch_size, _q_len, _dmodel};
