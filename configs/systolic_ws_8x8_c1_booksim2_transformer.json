@@ -4,6 +4,7 @@
   "core_freq" : 1000,
   "core_width" : 8,
   "core_height" : 8,
+  "core_print_interval" : 10000,
 
   "spad_size" : 64,
   "accum_spad_size" : 16,
@@ -12,8 +13,10 @@
   "vector_process_bit" : 32,
   "add_latency" : 1,
   "mul_latency" : 1,
+  "mac_latency" : 1,
   "exp_latency" : 1,
   "gelu_latency" : 1,
+  "div_latency" : 1,
   "add_tree_latency" : 1,
   "scalar_sqrt_latency" : 1,
   "scalar_add_latency" : 1,

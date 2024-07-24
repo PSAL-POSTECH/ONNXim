@@ -1,9 +1,10 @@
 {
-  "num_cores" : 4,
+  "num_cores" : 4,  
   "core_type" : "systolic_ws",
   "core_freq" : 1000,
   "core_width" : 128,
   "core_height" : 128,
+  "core_print_interval" : 10000,
 
   "spad_size" : 32768,
   "accum_spad_size" : 4096,
@@ -12,8 +13,10 @@
   "vector_process_bit" : 65536,
   "add_latency" : 1,
   "mul_latency" : 1,
+  "mac_latency" : 1,
   "exp_latency" : 1,
   "gelu_latency" : 1,
+  "div_latency" : 1,
   "add_tree_latency" : 1,
   "scalar_sqrt_latency" : 1,
   "scalar_add_latency" : 1,
