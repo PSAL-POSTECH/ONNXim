@@ -188,7 +188,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                 index = {N/_input_shape.at(1), N%_input_shape.at(1), C};
               else
                 index = {N, C};
-              input_set->insert(
+              input_set.insert(
                   first_addr + make_address(index, _input_shape));
             }
           }
@@ -275,7 +275,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
                 index = {N/_output_shape.at(1), N%_output_shape.at(1), M};
               else
                 index = {N, M};
-            output_set->insert(output_addr + make_address(index, _output_shape));
+            output_set.insert(output_addr + make_address(index, _output_shape));
           }
         }
           /*MOVOUT result at the last loop*/
