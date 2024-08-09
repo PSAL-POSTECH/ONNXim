@@ -420,7 +420,7 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 
 	const int pool_out_dim = (out_dim + 2*pool_padding - pool_size) / pool_stride + 1;
 
-	const bool downsample = stride == 2 && kernel_dim == 1 && padding == 0 && no_pool && in_dim % 2 == 0;
+	const bool downsample = stride == 2 && kernel_dim == 1 && padding == 0 && no_pool;
 
 	// Tile convolution params
 
@@ -520,7 +520,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 				stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
 				args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride);
 
-			if (spad_rows <= max_spad_rows && acc_rows <= max_acc_rows) {
+      int weight_tile_size = args[0] * args[3] * args[4] * args[5] * args[6] * _config.precision;
+      int input_tile_size = args[0] * args[1] * args[2] * args[3] * _config.precision;
+			if (spad_rows <= max_spad_rows && acc_rows <= max_acc_rows &&
+        input_tile_size <= _config.spad_size KB && weight_tile_size <= _config.accum_spad_size KB) {
 				args[i] = args_candidate[i];
 				nothing_increased = false;
 			}
