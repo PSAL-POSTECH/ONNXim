@@ -231,8 +231,8 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
   second_addr = get_operand_addr(_INPUT_OPERAND+1);
   output_addr = get_operand_addr(_OUTPUT_OPERAND);
   for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
-    for (int Hs = 0; Hs < input_h_size; Hs++) {
-      for (int Ws = 0; Ws < input_w_size; Ws++) {
+    for (int Hs = 0; Hs < input_h_size; Hs+=_strides[0]) {
+      for (int Ws = 0; Ws < input_w_size; Ws+=_strides[1]) {
         for (int Cs = 0; Cs < mapping.tile_in_loop.C; Cs++) {
           int N = tout_n_offset + Ns;
           int H = input_h_offset + Hs;
@@ -263,9 +263,9 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
   for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
     /* Boundary check */
     int m_loop = std::min(mapping.total_loop.M - tout_m_offset - Ms, static_cast<unsigned int>(loop_size));
+    if(m_loop <= 0) break;
     for (int Ss = 0; Ss < mapping.tile_in_loop.S; Ss++) {
       for (int Rs = 0; Rs < mapping.tile_in_loop.R; Rs++) {
-       if(m_loop <= 0) break;
         for (int Cs = 0; Cs < mapping.tile_in_loop.C; Cs += loop_size, tile_idx++) {
           /* Boundary check */
           int c_loop = std::min(mapping.total_loop.C - tout_c_offset - Cs, static_cast<unsigned int>(loop_size));
@@ -306,7 +306,6 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
       }
     }
   }
-
   /* Compute */
   int q_loop_size = loop_size;
   int p_loop_size = loop_size;
@@ -316,27 +315,27 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
   }
   tile_idx=0;
   for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
-    unsigned int m_loop = Ms + loop_size > mapping.tile_in_loop.M
-                                 ? mapping.tile_in_loop.M - Ms
-                                 : loop_size;
-    if(tout_m_offset + Ms >= mapping.total_loop.M) break;
-    for (int Ss = 0; Ss < mapping.tile_in_loop.S; Ss += 1) {
-      for (int Rs = 0; Rs < mapping.tile_in_loop.R; Rs += 1) {
+    int m_loop = std::min(mapping.total_loop.M - tout_m_offset - Ms, static_cast<unsigned int>(loop_size));
+    if(m_loop <= 0) break;
+    for (int Ss = 0; Ss < mapping.tile_in_loop.S; Ss++) {
+      for (int Rs = 0; Rs < mapping.tile_in_loop.R; Rs++) {
         for (int Cs = 0; Cs < mapping.tile_in_loop.C; Cs += loop_size, tile_idx++) {
-          unsigned int c_loop = Cs + loop_size > mapping.tile_in_loop.C
-                                ? mapping.tile_in_loop.C - Cs
-                                : loop_size;
-          if(tout_c_offset + Cs >= mapping.total_loop.C) break;
+          int c_loop = std::min(mapping.total_loop.C - tout_c_offset - Cs, static_cast<unsigned int>(loop_size));
+          if(c_loop <= 0) break;
+
+          addr_type weight_sp_addr = \
+              weight_sp_base_addr + loop_size * loop_size * \
+              (tile_idx * (mapping.tile_in_loop.S * mapping.tile_in_loop.R) + Ss * mapping.tile_in_loop.R + Rs);
+          weight_sp_addr = _config.align_address(weight_sp_addr);
+
           for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
             for (int Qs = 0; Qs < mapping.tile_in_loop.Q; Qs += q_loop_size) {
-              if(tout_q_offset + Qs >= mapping.total_loop.Q) break;
+              int q_loop = std::min(mapping.total_loop.Q - tout_q_offset - Qs, static_cast<unsigned int>(q_loop_size));
+              if(q_loop <= 0) break;
               for (int Ps = 0; Ps < mapping.tile_in_loop.P; Ps += p_loop_size) {
-                if(tout_p_offset + Ps >= mapping.total_loop.P) break;
+                int p_loop = std::min(mapping.total_loop.P - tout_p_offset - Ps, static_cast<unsigned int>(p_loop_size));
+                if(p_loop <= 0) break;
 
-                addr_type weight_sp_addr = \
-                    weight_sp_base_addr + loop_size * loop_size * \
-                    (tile_idx * (mapping.tile_in_loop.S * mapping.tile_in_loop.R) + Ss * mapping.tile_in_loop.R + Rs);
-                weight_sp_addr = _config.align_address(weight_sp_addr);
                 addr_type out_sp_addr =
                     ACCUM_SPAD_BASE +
                     make_activation_address(
@@ -345,16 +344,6 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
                             mapping.tile_in_loop.N, mapping.tile_in_loop.Q,
                             mapping.tile_in_loop.P, mapping.tile_in_loop.M});
                 out_sp_addr = _config.align_address(out_sp_addr);
-                unsigned int p_loop = Ps + p_loop_size > mapping.tile_in_loop.P
-                                 ? mapping.tile_in_loop.P - Ps
-                                 : p_loop_size;
-                p_loop = tout_p_offset + Ps + p_loop > mapping.total_loop.P
-                                ? mapping.total_loop.P - Ps - tout_p_offset
-                                : p_loop;
-
-                unsigned int q_loop = Qs + q_loop_size > mapping.tile_in_loop.Q
-                                 ? mapping.tile_in_loop.Q - Qs
-                                 : q_loop_size;
 
                 int compute_size = p_loop * q_loop;
                 if (Ns == 0 && Qs == 0 && Ps == 0) {
@@ -365,9 +354,9 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
                                   .compute_size = /*Todo*/ (uint32_t)compute_size,
                                   .src_addrs = std::vector<addr_type>{
                                       act_sp_base_addr, weight_sp_addr},
-                                  .tile_m = m_loop,
-                                  .tile_k = c_loop,
-                                  .tile_n = compute_size
+                                  .tile_m = static_cast<unsigned int>(m_loop),
+                                  .tile_k = static_cast<unsigned int>(c_loop),
+                                  .tile_n = static_cast<unsigned int>(compute_size)
                                   }));
                 } else {
                   tile->instructions.push_back(std::make_unique<Instruction>(
@@ -377,9 +366,9 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
                                   .compute_size = (uint32_t)compute_size,
                                   .src_addrs = std::vector<addr_type>{
                                       act_sp_base_addr, weight_sp_addr},
-                                  .tile_m = m_loop,
-                                  .tile_k = c_loop,
-                                  .tile_n = compute_size
+                                  .tile_m = static_cast<unsigned int>(m_loop),
+                                  .tile_k = static_cast<unsigned int>(c_loop),
+                                  .tile_n = static_cast<unsigned int>(compute_size)
                                   }));
                 }
               }
@@ -389,7 +378,6 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
       }
     }
   }
-
   /* MOVOUT at last iteration */
   if (tile->C == mapping.tile_out_loop.C - 1 &&
       tile->R == mapping.tile_out_loop.R - 1 &&
@@ -398,76 +386,71 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
     for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
       int N = tout_n_offset + Ns;
       for (int Qs = 0; Qs < mapping.tile_in_loop.Q; Qs += q_loop_size) {
-        if(tout_q_offset + Qs >= mapping.total_loop.Q) break;
-        for (int Ps = 0; Ps < mapping.tile_in_loop.P; Ps += p_loop_size) {
-          for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
-            int p_loop = tout_p_offset + Ps + p_loop_size > mapping.total_loop.P
-                             ? mapping.total_loop.P - tout_p_offset - Ps
-                             : p_loop_size;
-            int m_loop = tout_m_offset + Ms + loop_size > mapping.total_loop.M
-                             ? mapping.total_loop.M - tout_m_offset - Ms
-                             : loop_size;
-            if(m_loop <= 0) break;
+        int q_loop = std::min(mapping.total_loop.Q - tout_q_offset - Qs, static_cast<unsigned int>(q_loop_size));
+          if(q_loop <= 0) break;
+          for (int Ps = 0; Ps < mapping.tile_in_loop.P; Ps += p_loop_size) {
+            int p_loop = std::min(mapping.total_loop.P - tout_p_offset - Ps, static_cast<unsigned int>(p_loop_size));
             if(p_loop <= 0) break;
-            int q_loop = tout_q_offset + Qs + loop_size > mapping.total_loop.Q
-                             ? mapping.total_loop.Q - tout_q_offset - Qs
-                             : loop_size;
+            for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
+              int m_loop = std::min(mapping.total_loop.M - tout_m_offset - Ms, static_cast<unsigned int>(loop_size));
+              if(m_loop <= 0) break;
+              addr_type out_sp_addr =
+                  ACCUM_SPAD_BASE +
+                  make_activation_address(
+                      Ns, Qs, Ps, Ms,
+                      std::vector<uint32_t>{
+                          mapping.tile_in_loop.N, mapping.tile_in_loop.Q,
+                          mapping.tile_in_loop.P, mapping.tile_in_loop.M});
+              out_sp_addr = _config.align_address(out_sp_addr);
 
-            addr_type out_sp_addr =
-                ACCUM_SPAD_BASE +
-                make_activation_address(
-                    Ns, Qs, Ps, Ms,
-                    std::vector<uint32_t>{
-                        mapping.tile_in_loop.N, mapping.tile_in_loop.Q,
-                        mapping.tile_in_loop.P, mapping.tile_in_loop.M});
-            out_sp_addr = _config.align_address(out_sp_addr);
-            std::set<addr_type> out_dram_addrs;
-            if (_pool_fused) {
-              q_loop = q_loop / _pool_kernel_shape[0];
-              p_loop = p_loop / _pool_kernel_shape[1];
-            }
-            for (int Q_iter = 0; Q_iter < q_loop; Q_iter++) {
-              int Q = tout_q_offset + Qs + Q_iter;
-              for (int P_iter = 0; P_iter < p_loop; P_iter++) {
-                int P = tout_p_offset + Ps + P_iter;
-                for (int M_iter = 0; M_iter < m_loop; M_iter++) {
-                  int M = tout_m_offset + Ms + M_iter;
-                  if (_pool_fused)
-                    out_dram_addrs.insert(
-                        output_addr + make_activation_address(N, Q, P, M, _pool_out_shape));
-                  else
-                    out_dram_addrs.insert(
-                        output_addr + make_activation_address(N, Q, P, M, _conv_out_shape));
+              std::set<addr_type> out_dram_addrs;
+              if (_pool_fused) {
+                q_loop = q_loop / _pool_kernel_shape[0];
+                p_loop = p_loop / _pool_kernel_shape[1];
+              }
+              for (int Q_iter = 0; Q_iter < q_loop; Q_iter++) {
+                int Q = tout_q_offset + Qs + Q_iter;
+                for (int P_iter = 0; P_iter < p_loop; P_iter++) {
+                  int P = tout_p_offset + Ps + P_iter;
+                  for (int M_iter = 0; M_iter < m_loop; M_iter++) {
+                    int M = tout_m_offset + Ms + M_iter;
+                    if (_pool_fused)
+                      out_dram_addrs.insert(
+                          output_addr + make_activation_address(N, Q, P, M, _pool_out_shape));
+                    else
+                      out_dram_addrs.insert(
+                          output_addr + make_activation_address(N, Q, P, M, _conv_out_shape));
+                  }
                 }
               }
-            }
-            if (_pool_fused) {
-              tile->instructions.push_back(std::make_unique<Instruction>(
-                  Instruction{.opcode = Opcode::MOVOUT_POOL,
-                              .dest_addr = out_sp_addr,
-                              .size = (uint32_t)out_dram_addrs.size(),
-                              .src_addrs = std::vector<addr_type>(
-                                  out_dram_addrs.begin(), out_dram_addrs.end()),
-                              .operand_id = _OUTPUT_OPERAND}));
-            } else {
-              tile->instructions.push_back(std::make_unique<Instruction>(
-                  Instruction{.opcode = Opcode::MOVOUT,
-                              .dest_addr = out_sp_addr,
-                              .size = (uint32_t)out_dram_addrs.size(),
-                              .src_addrs = std::vector<addr_type>(
-                                  out_dram_addrs.begin(), out_dram_addrs.end()),
-                              .operand_id = _OUTPUT_OPERAND}));
-            }
+              tile_idx++;
+              if (_pool_fused) {
+                tile->instructions.push_back(std::make_unique<Instruction>(
+                    Instruction{.opcode = Opcode::MOVOUT_POOL,
+                                .dest_addr = out_sp_addr,
+                                .size = (uint32_t)out_dram_addrs.size(),
+                                .src_addrs = std::vector<addr_type>(
+                                    out_dram_addrs.begin(), out_dram_addrs.end()),
+                                .operand_id = _OUTPUT_OPERAND}));
+              } else {
+                tile->instructions.push_back(std::make_unique<Instruction>(
+                    Instruction{.opcode = Opcode::MOVOUT,
+                                .dest_addr = out_sp_addr,
+                                .size = (uint32_t)out_dram_addrs.size(),
+                                .src_addrs = std::vector<addr_type>(
+                                    out_dram_addrs.begin(), out_dram_addrs.end()),
+                                .operand_id = _OUTPUT_OPERAND}));
+              }
           }
         }
       }
     }
   }
-  spdlog::trace("Layer {} Sram allocation size {} act {} weight {}", _name,
-                sram_allocation, act_allocation,
-                sram_allocation - act_allocation);
-  assert(sram_allocation <= _config.spad_size KB / _config.dram_req_size / 2);
-  assert(act_allocation <= _config.spad_size KB / _config.dram_req_size / 2);
+  spdlog::trace("Layer {} Sram allocation size {} B act {} B weight {} B", _name,
+                sram_allocation * _config.dram_req_size, act_allocation* _config.dram_req_size,
+                (sram_allocation - act_allocation)* _config.dram_req_size);
+  assert(sram_allocation * _config.dram_req_size <= _config.spad_size KB / 2);
+  assert(act_allocation * _config.dram_req_size <= _config.spad_size KB / 2);
 }
 
 void ConvWS::initialize_matmul_instructions(Tile* tile) {
