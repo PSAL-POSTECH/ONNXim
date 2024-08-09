@@ -432,9 +432,9 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
                     .size =  q_len * _config.precision / _config.dram_req_size,
                     .compute_size = q_len,
                     .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
-                    .tile_m = s_loop,
-                    .tile_k = k_loop,
-                    .tile_n = q_len
+                    .tile_m = static_cast<unsigned int>(s_loop),
+                    .tile_k = static_cast<unsigned int>(k_loop),
+                    .tile_n = static_cast<unsigned int>(q_len)
                 }));
             }
         }
@@ -525,9 +525,9 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
                     .size = q_len * _config.precision / _config.dram_req_size,
                     .compute_size = q_len,
                     .src_addrs = std::vector<addr_type>{sram_l_ofs, sram_v_ofs},
-                    .tile_m = k_loop,
-                    .tile_k = s_loop,
-                    .tile_n = q_len,
+                    .tile_m = static_cast<unsigned int>(k_loop),
+                    .tile_k = static_cast<unsigned int>(s_loop),
+                    .tile_n = static_cast<unsigned int>(q_len),
                     .src_from_accum = true
                 }));
             }

@@ -186,6 +186,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               std::vector<uint32_t> index;
               if (_input_shape.size()==3)
                 index = {N/_input_shape.at(1), N%_input_shape.at(1), C};
+              
               else
                 index = {N, C};
               input_set.insert(
@@ -240,9 +241,9 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
               .compute_size = (uint32_t)n_loop,
               .src_addrs =
                   std::vector<addr_type>{act_sp_addr, weight_sp_addr},
-              .tile_m = m_loop,
-              .tile_k = c_iter_size,
-              .tile_n = n_loop}));
+              .tile_m = static_cast<unsigned int>(m_loop),
+              .tile_k = static_cast<unsigned int>(c_iter_size),
+              .tile_n = static_cast<unsigned int>(n_loop)}));
         }
       }
     }
