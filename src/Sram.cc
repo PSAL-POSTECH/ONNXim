@@ -4,9 +4,9 @@
 Sram::Sram(SimulationConfig config, const cycle_type& core_cycle, bool accum)
     : _core_cycle(core_cycle) {
   if (!accum) {
-    _size = config.spad_size;
+    _size = config.spad_size KB / 2;
   } else {
-    _size = config.accum_spad_size;
+    _size = config.accum_spad_size KB / 2;
   }
   _data_width = config.dram_req_size;
   int precision = config.precision;
@@ -23,11 +23,11 @@ bool Sram::check_hit(addr_type address, int buffer_id) {
 }
 
 bool Sram::check_full(int buffer_id) {
-  return _current_size[buffer_id] < _size KB / _data_width / 2;
+  return _current_size[buffer_id] * _data_width < _size;
 }
 
 bool Sram::check_remain(size_t size, int buffer_id) {
-  return _current_size[buffer_id] + size <= _size KB / _data_width / 2;
+  return (_current_size[buffer_id] + size) * _data_width <= _size;
 }
 
 bool Sram::check_allocated(addr_type address, int buffer_id) {
@@ -39,6 +39,7 @@ void Sram::cycle() {}
 void Sram::flush(int buffer_id) {
   _current_size[buffer_id] = 0;
   _cache_table[buffer_id].clear();
+  spdlog::trace("{}SRAM[{}] Flush", _accum? "Acc-": "", buffer_id);
 }
 
 int Sram::prefetch(addr_type address, int buffer_id, size_t allocated_size,
@@ -89,8 +90,8 @@ void Sram::count_up(addr_type address, int buffer_id) {
 
 void Sram::print_all(int buffer_id) {
   for (auto& [key, val] : _cache_table[buffer_id]) {
-    spdlog::info("{:x} : {}", key, val.size);
+    spdlog::info("0x{:x} : {} B", key, val.size * _data_width);
   }
-  spdlog::info("Allocated size: {:x}", _current_size[buffer_id]);
-  spdlog::info("Size: {:x}", _size KB / _data_width / 2);
+  spdlog::info("Allocated size: {} B", _current_size[buffer_id]*_data_width);
+  spdlog::info("Size: {} B", _size);
 }
