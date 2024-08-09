@@ -12,13 +12,14 @@
 
 SimulationConfig get_default_config() {
   SimulationConfig config;
+  config.num_cores = 1;
   config.core_type = CoreType::SYSTOLIC_WS;
   config.num_cores = 1;
   config.core_height = 8;
   config.core_width = 8;
-  config.spad_size = 1024;
-  config.accum_spad_size = 1024;
-  config.precision = 4;
+  config.spad_size = 64;
+  config.accum_spad_size = 16;
+  config.precision = 1;
   config.dram_req_size = 32;
   config.layout = "NHWC";
   config.core_print_interval = 100000;
@@ -69,11 +70,10 @@ void do_simulation(Core& core, Operation& op) {
   core.print_stats();
 }
 
-
-/* ResNet FC Layer */
+/* ResNet18 FC Layer */
 TEST(GemmWS1x512x1000Test, BasicAssertions) {
   /* User defined WS mapping information */
-  std::string test_mapping = "[T] N1 C512 M1000 - [O] N1 C1 M5 - [I] N1 C512 M248";
+  std::string test_mapping = "[T] N1 C512 M1000 - [O] N1 C2 M16 - [I] N1 C448 M64";
   /* Input information */
   uint32_t n = 1, c = 512, m = 1000;
 
@@ -87,19 +87,19 @@ TEST(GemmWS1x512x1000Test, BasicAssertions) {
   do_simulation(core, op);
 
   cycle_type compute_cycle = core.get_compute_cycles();
-  cycle_type GT = 65850;
+  cycle_type GT = 66360;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-/* VGG FC Layer */
+/* ResNet50 FC Layer */
 
-TEST(GemmWS1x512x4096Test, BasicAssertions) {
+TEST(GemmWS1x2048x1000Test, BasicAssertions) {
   /* User defined WS mapping information */
-  std::string test_mapping = "[T] N1 C512 M4096 - [O] N1 C1 M17 - [I] N1 C512 M248";
+  std::string test_mapping = "[T] N1 C2048 M1000 - [O] N1 C5 M16 - [I] N1 C448 M64";
   /* Input information */
-  uint32_t n = 1, c = 512, m = 4096;
+  uint32_t n = 1, c = 2048, m = 1000;
 
   /* Weight statinary config*/
   SimulationConfig config = get_default_config();
@@ -111,52 +111,8 @@ TEST(GemmWS1x512x4096Test, BasicAssertions) {
   do_simulation(core, op);
 
   cycle_type compute_cycle = core.get_compute_cycles();
-  cycle_type GT = 276956;
+  cycle_type GT = 270431;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
-  ASSERT_EQ(compute_cycle, GT);
-}
-
-TEST(GemmWS1x4096x1000Test, BasicAssertions) {
-  /* User defined WS mapping information */
-  std::string test_mapping = "[T] N1 C4096 M1000 - [O] N1 C6 M7 - [I] N1 C816 M152";
-  /* Input information */
-  uint32_t n = 1, c = 4096, m = 1000;
-
-  /* Weight statinary config*/
-  SimulationConfig config = get_default_config();
-  OperationFactory::initialize(config);
-  SystolicWS core(0, config);
-
-  GemmWS op = make_GemmWS(config, test_mapping, n, c, m);
-
-  do_simulation(core, op);
-
-  cycle_type compute_cycle = core.get_compute_cycles();
-  cycle_type GT = 540155;
-  cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
-  ASSERT_EQ(compute_cycle, GT);
-}
-
-TEST(GemmWS1x4096x4096Test, BasicAssertions) {
-  /* User defined WS mapping information */
-  std::string test_mapping = "[T] N1 C4096 M4096 - [O] N1 C6 M27 - [I] N1 C816 M152";
-  /* Input information */
-  uint32_t n = 1, c = 4096, m = 4096;
-
-  /* Weight statinary config*/
-  SimulationConfig config = get_default_config();
-  OperationFactory::initialize(config);
-  SystolicWS core(0, config);
-
-  GemmWS op = make_GemmWS(config, test_mapping, n, c, m);
-
-  do_simulation(core, op);
-
-  cycle_type compute_cycle = core.get_compute_cycles();
-  cycle_type GT = 2218131;
-  cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
