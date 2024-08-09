@@ -10,7 +10,7 @@
   "accum_spad_size" : 16,
   "sram_width" : 32,
 
-  "vector_process_bit" : 32,
+  "vector_process_bit" : 2048,
   "add_latency" : 1,
   "mul_latency" : 1,
   "mac_latency" : 1,
