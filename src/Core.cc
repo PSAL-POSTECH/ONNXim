@@ -119,8 +119,8 @@ void Core::cycle() {
         issued = true;
       } else {
         /*Invalid state */
-        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(inst->dest_addr, buffer_id), buffer->check_allocated(inst->dest_addr, buffer_id));
-        spdlog::error("[Core {}] MVIN issue panic addr: {:x}, size: {:x}", _id, inst->dest_addr, inst->size);
+        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(inst->dest_addr, buffer_id), buffer->check_remain(inst->size, buffer_id));
+        spdlog::error("[Core {}] MVIN issue panic addr: {:x}, size: {} B", _id, inst->dest_addr, inst->size*_config.dram_req_size);
         buffer->print_all(buffer_id);
         exit(EXIT_FAILURE);
       }
@@ -277,8 +277,10 @@ void Core::finish_compute_pipeline(){
       _acc_spad.fill(inst->dest_addr, inst->accum_spad_id);
     else
       _spad.fill(inst->dest_addr, inst->spad_id);
-    if(inst->last_inst)
+    if(inst->last_inst) {
+      spdlog::trace("Finished last GEMM {}", inst->spad_id);
       inst->my_tile->inst_finished = true;
+    }
     double compute_size = inst->tile_k * inst->tile_m * inst->tile_n 
                             / (_config.core_height * _config.core_width);
     spdlog::trace("Compute size {} tile m {} tile k {} tile n {}", inst->compute_size, inst->tile_m, inst->tile_k, inst->tile_n);
@@ -332,8 +334,8 @@ void Core::handle_ld_inst_queue() {
       }
       int ret = buffer->prefetch(front->dest_addr, buffer_id, front->size, front->size);
       if (!ret) {
-        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(front->dest_addr, buffer_id), buffer->check_allocated(front->dest_addr, buffer_id));
-        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front->opcode, front->dest_addr, front->size);
+        spdlog::error("Destination allocated: {} Size remain: {}", buffer->check_allocated(front->dest_addr, buffer_id), buffer->check_remain(front->size, buffer_id));
+        spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {} B", (int)front->opcode, front->dest_addr, front->size*_config.dram_req_size);
         std::exit(EXIT_FAILURE);
       }
       for (addr_type addr : front->src_addrs) {
@@ -386,8 +388,10 @@ void Core::handle_st_inst_queue() {
           _waiting_write_reqs++;
           _request_queue.push(access);
         }
-        if(front->last_inst) 
+        if(front->last_inst) {
+          spdlog::trace("Finished last store {}", front->spad_id);
           front->my_tile->inst_finished = true;
+        }
         _st_inst_queue.pop();
       }
     } else {
