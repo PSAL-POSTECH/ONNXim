@@ -13,6 +13,7 @@
 SimulationConfig get_default_config() {
   SimulationConfig config;
   config.core_type = CoreType::SYSTOLIC_WS;
+  config.num_cores = 1;
   config.core_height = 8;
   config.core_width = 8;
   config.spad_size = 1024;
@@ -20,13 +21,14 @@ SimulationConfig get_default_config() {
   config.precision = 4;
   config.dram_req_size = 32;
   config.layout = "NHWC";
+  config.core_print_interval = 100000;
   return config;
 }
 
 GemmWS make_GemmWS(SimulationConfig config, std::string mapping_str, uint32_t n,
                    uint32_t c, uint32_t m) {
   std::string input_name = "input";
-  std::vector<uint32_t> input_dims = {n, 1, 1, c};
+  std::vector<uint32_t> input_dims = {n, c};
 
   MappingTable mapping_table = MappingTable(config);
   Mapping mapping(mapping_str);
@@ -34,8 +36,8 @@ GemmWS make_GemmWS(SimulationConfig config, std::string mapping_str, uint32_t n,
   Mapping::LoopCounts key{
       .N = n, .C = c, .M = m, .S = 1, .R = 1, .Q = 1, .P = 1};
   mapping_table[key] = mapping;
-  std::vector<uint32_t> output_shape = {n, 1, 1, m};
-  std::vector<uint32_t> weight_shape = {c, m, 1, 1};
+  std::vector<uint32_t> output_shape = {n, m};
+  std::vector<uint32_t> weight_shape = {c, m};
   GemmWS op(config, mapping_table, input_dims, weight_shape, output_shape);
   op.initialize_tiles(mapping_table);
   return op;

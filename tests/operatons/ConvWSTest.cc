@@ -15,6 +15,7 @@ namespace fs = std::filesystem;
 SimulationConfig get_default_conv_config() {
   SimulationConfig config;
   config.core_type = CoreType::SYSTOLIC_WS;
+  config.num_cores = 1;
   config.core_height = 8;
   config.core_width = 8;
   config.spad_size = 1024;
@@ -22,6 +23,7 @@ SimulationConfig get_default_conv_config() {
   config.precision = 4;
   config.dram_req_size = 32;
   config.layout = "NHWC";
+  config.core_print_interval = 100000;
   return config;
 }
 
