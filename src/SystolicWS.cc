@@ -21,8 +21,8 @@ void SystolicWS::cycle() {
       } else {
         int ret = _acc_spad.prefetch(front->dest_addr, front->accum_spad_id, front->size, front->zero_init? front->size : 1);
         if (!ret) {
-          spdlog::error("Destination allocated: {} Size remain: {}", _acc_spad.check_allocated(front->dest_addr, front->accum_spad_id), _acc_spad.check_allocated(front->dest_addr, front->accum_spad_id));
-          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front->opcode, front->dest_addr, front->size*32);
+          spdlog::error("Destination allocated: {} Size remain: {}", _acc_spad.check_allocated(front->dest_addr, front->accum_spad_id), _acc_spad.check_remain(front->size, front->accum_spad_id));
+          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {} B", (int)front->opcode, front->dest_addr, front->size*_config.dram_req_size);
           _acc_spad.print_all(front->accum_spad_id);
           std::exit(EXIT_FAILURE);
         }
@@ -33,8 +33,8 @@ void SystolicWS::cycle() {
       } else {
         int ret = _spad.prefetch(front->dest_addr, front->spad_id, front->size, front->zero_init? front->size : 1);
         if (!ret) {
-          spdlog::error("Destination allocated: {} Size remain: {}", _spad.check_allocated(front->dest_addr, front->spad_id), _spad.check_allocated(front->dest_addr, front->spad_id));
-          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {:x}", (int)front->opcode, front->dest_addr, front->size*32);
+          spdlog::error("Destination allocated: {} Size remain: {}", _spad.check_allocated(front->dest_addr, front->spad_id), _spad.check_remain(front->size, front->spad_id));
+          spdlog::error("instruction panic opcode: {:x}, addr: {:x}, size: {} B", (int)front->opcode, front->dest_addr, front->size*_config.dram_req_size);
           _spad.print_all(front->spad_id);
           std::exit(EXIT_FAILURE);
         }
