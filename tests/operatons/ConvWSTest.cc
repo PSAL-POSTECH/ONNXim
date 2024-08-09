@@ -107,7 +107,7 @@ TEST(ResNet18_Conv1, BasicAssertions) {
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer1.0.Conv1, BasicAssertions) {
+TEST(ResNet18_layer1_0_Conv1, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C64 M64 P56 Q56 S3 R3 - [O] N1 C1 M8 P4 Q4 S1 R1 - [I] N1 C64 M8 P15 Q17 S3 R3";
   /* Input information */
@@ -138,11 +138,11 @@ TEST(ResNet18_layer1.0.Conv1, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 2133641;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer2.0.Conv1, BasicAssertions) {
+TEST(ResNet18_layer2_0_Conv1, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C64 M128 P28 Q28 S3 R3 - [O] N1 C3 M16 P2 Q2 S1 R1 - [I] N1 C24 M8 P15 Q17 S3 R3";
   /* Input information */
@@ -173,11 +173,11 @@ TEST(ResNet18_layer2.0.Conv1, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1052613;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer2.0.downsample.0, BasicAssertions) {
+TEST(ResNet18_layer2_0_downsample_0, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C64 M128 P28 Q28 S1 R1 - [O] N1 C1 M16 P2 Q2 S1 R1 - [I] N1 C64 M8 P15 Q17 S1 R1";
   /* Input information */
@@ -207,11 +207,11 @@ TEST(ResNet18_layer2.0.downsample.0, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 118304;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer2.0.Conv2, BasicAssertions) {
+TEST(ResNet18_layer2_0_Conv2, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C128 M128 P28 Q28 S3 R3 - [O] N1 C2 M16 P2 Q2 S1 R1 - [I] N1 C80 M8 P17 Q15 S3 R3";
   /* Input information */
@@ -242,11 +242,11 @@ TEST(ResNet18_layer2.0.Conv2, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 2103568;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer3.0.Conv1, BasicAssertions) {
+TEST(ResNet18_layer3_0_Conv1, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C128 M256 P14 Q14 S3 R3 - [O] N1 C4 M32 P1 Q1 S1 R1 - [I] N1 C32 M8 P14 Q14 S3 R3";
   /* Input information */
@@ -277,11 +277,11 @@ TEST(ResNet18_layer3.0.Conv1, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 914287;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer3.0.Conv2, BasicAssertions) {
+TEST(ResNet18_layer3_0_Conv2, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C256 M256 P14 Q14 S3 R3 - [O] N1 C3 M32 P1 Q1 S1 R1 - [I] N1 C96 M8 P14 Q14 S3 R3";
   /* Input information */
@@ -311,11 +311,11 @@ TEST(ResNet18_layer3.0.Conv2, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1828936;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer3.0.downsample.0, BasicAssertions) {
+TEST(ResNet18_layer3_0_downsample_0, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C128 M256 P14 Q14 S1 R1 - [O] N1 C1 M32 P1 Q1 S1 R1 - [I] N1 C128 M8 P14 Q14 S1 R1";
   /* Input information */
@@ -345,11 +345,11 @@ TEST(ResNet18_layer3.0.downsample.0, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 101763;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer4.0.Conv1, BasicAssertions) {
+TEST(ResNet18_layer4_0_Conv1, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C256 M512 P7 Q7 S3 R3 - [O] N1 C6 M13 P1 Q1 S1 R1 - [I] N1 C51 M40 P7 Q7 S3 R3";
   /* Input information */
@@ -379,11 +379,11 @@ TEST(ResNet18_layer4.0.Conv1, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 1040621;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer4.0.downsample.0, BasicAssertions) {
+TEST(ResNet18_layer4_0_downsample_0, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C256 M512 P7 Q7 S1 R1 - [O] N1 C1 M13 P1 Q1 S1 R1 - [I] N1 C256 M40 P7 Q7 S1 R1";
   /* Input information */
@@ -413,11 +413,11 @@ TEST(ResNet18_layer4.0.downsample.0, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 102703;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
 
-TEST(ResNet18_layer4.0.Conv2, BasicAssertions) {
+TEST(ResNet18_layer4_0_Conv2, BasicAssertions) {
   /* User defined WS mapping information */
   std::string test_mapping = "[T] N1 C512 M512 P7 Q7 S3 R3 - [O] N1 C8 M13 P1 Q1 S1 R1 - [I] N1 C73 M40 P7 Q7 S3 R3";
   /* Input information */
@@ -447,6 +447,6 @@ TEST(ResNet18_layer4.0.Conv2, BasicAssertions) {
   cycle_type compute_cycle = core.get_compute_cycles();
   cycle_type GT = 2051216;
   cycle_type diff = llabs(GT - compute_cycle);
-  printf("Error Rate: %.2f %\n", float(diff) / GT * 100.0);
+  printf("Error Rate: %.2f %%\n", float(diff) / GT * 100.0);
   ASSERT_EQ(compute_cycle, GT);
 }
