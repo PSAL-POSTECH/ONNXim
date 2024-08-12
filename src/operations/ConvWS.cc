@@ -93,8 +93,11 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
                             S != 0),
                   .core_id = core_id
                 });
+                //spdlog::info("Outer P: {}, Q:{}", P, Q);
                 _tiles.push_back(std::move(tile)); /* Accum input channel data*/
                 initialize_instructions(_tiles.back().get(), mapping);
+                if (!_tiles.back()->instructions.size())
+                  _tiles.pop_back();
               }
             }
           }
