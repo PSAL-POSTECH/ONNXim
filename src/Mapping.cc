@@ -272,7 +272,6 @@ Mapping::Mapping(std::string mapping_line) {
       switch (loop_elem.at(0)) {
         case 'N':
           tile_in_loop.N *= std::stoi(loop_elem.substr(1));
-          total_loop.N *= std::stoi(loop_elem.substr(1));
           break;
         case 'C':
           if (loop_elem.find('Y') != std::string::npos) {
