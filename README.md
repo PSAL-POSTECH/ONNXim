@@ -93,7 +93,7 @@ $ python3 ./scripts/generate_transformer_onnx.py --model bert
 
 # Getting Started
 This section describes how to build and run ONNXim with a container-based method and a manual build method.
-## 1. Container-based Method using Docker (Recommended)
+## 1. Container-based Method using Docker 
 Build a Docker image using the provided Dockerfile.
 ```
 $ git clone https://github.com/PSAL-POSTECH/ONNXim.git 
@@ -109,11 +109,13 @@ $ docker run -it onnxim
 ```
 
 
-## 2. Manual Method
+## 2. Manual Method (Recommended)
 ### Installation
 ```
 $ git clone https://github.com/PSAL-POSTECH/ONNXim.git
 $ cd ONNXim
+$ conda env create -f env.yaml
+$ conda activate onnxim
 $ git submodule update --recursive --init
 ```
 ### Build
