@@ -8,29 +8,33 @@ include(ExternalProject)
 include(GoogleTest)
 externalproject_add(
   GoogleTest
-  URL https://github.com/google/googletest/archive/release-1.8.1.zip
+  URL https://github.com/google/googletest/archive/release-1.12.1.zip
   PREFIX ${CMAKE_CURRENT_BINARY_DIR}/lib
   CMAKE_ARGS -DCMAKE_CXX_FLAGS:STRING="-D_GLIBCXX_USE_CXX11_ABI=0"
   INSTALL_COMMAND ""
 )
 
 externalproject_get_property(GoogleTest source_dir)
+externalproject_get_property(GoogleTest binary_dir)
 include_directories(${source_dir}/googletest/include)
 include_directories(${source_dir}/googlemock/include)
 
-externalproject_get_property(GoogleTest binary_dir)
-set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
+# set(GTEST_LIBRARY_PATH ${binary_dir}/googlemock/gtest/${CMAKE_FIND_LIBRARY_PREFIXES}gtest.a)
+set(GTEST_LIBRARY_PATH ${binary_dir}/lib/libgtest.a)
 set(GTEST_LIBRARY GTest::GTest)
 add_library(${GTEST_LIBRARY} UNKNOWN IMPORTED)
 set_target_properties(${GTEST_LIBRARY} PROPERTIES
-  IMPORTED_LOCATION ${GTEST_LIBRARY_PATH})
+  "IMPORTED_LOCATION" "${GTEST_LIBRARY_PATH}"
+  "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}")
 add_dependencies(${GTEST_LIBRARY} GoogleTest)
 
-set(GMOCK_LIBRARY_PATH ${binary_dir}/googlemock/${CMAKE_FIND_LIBRARY_PREFIXES}gmock.a)
+# set(GMOCK_LIBRARY_PATH ${binary_dir}/googlemock/${CMAKE_FIND_LIBRARY_PREFIXES}gmock.a)
+set(GMOCK_LIBRARY_PATH ${binary_dir}/lib/libgmock.a)
 set(GMOCK_LIBRARY GTest::GMock)
 add_library(${GMOCK_LIBRARY} UNKNOWN IMPORTED)
 set_target_properties(${GMOCK_LIBRARY} PROPERTIES
-  IMPORTED_LOCATION ${GMOCK_LIBRARY_PATH})
+  "IMPORTED_LOCATION" "${GMOCK_LIBRARY_PATH}"
+  "IMPORTED_LINK_INTERFACE_LIBRARIES" "${CMAKE_THREAD_LIBS_INIT}")
 add_dependencies(${GMOCK_LIBRARY} GoogleTest)
 
 file(GLOB_RECURSE TEST_SOURCES LIST_DIRECTORIES false *.h *.cc)

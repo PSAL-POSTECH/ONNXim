@@ -7,7 +7,7 @@ Dummy::Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
   _input_shape = get_input(0)->get_dims();
   _output_shape = _input_shape;
   spdlog::trace("output_shape : {}", _output_shape);
-  spdlog::trace("output name : {} {}", node_proto.output(0).c_str());
+  spdlog::trace("output name : {}", node_proto.output(0).c_str());
 
   for (int i=0;i<node_proto.output().size();i++) {
     Tensor* pre_defind_tensor = _model->find_tensor(node_proto.output(i));
