@@ -132,6 +132,16 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
       SPAD_BASE + mapping.tile_in_loop.N * input_h_size * input_w_size *
                       mapping.tile_in_loop.C * _config.precision;
 
+  if (tout_n_offset >= mapping.total_loop.N ||
+      tout_m_offset >= mapping.total_loop.M ||
+      tout_q_offset >= mapping.total_loop.Q ||
+      tout_p_offset >= mapping.total_loop.P ||
+      tout_c_offset >= mapping.total_loop.C ||
+      tout_s_offset >= mapping.total_loop.S ||
+      tout_r_offset >= mapping.total_loop.R) {
+    return;
+  }
+
   int loop_size = _config.core_width;
   robin_hood::unordered_map<std::string, Instruction> inst_map;
 
@@ -263,15 +273,17 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
   /* MOVIN Weight data */
   int tile_idx=0;
   std::set<addr_type> sp_addr_set;
-  for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
+  for (int Ms = 0; Ms < mapping.tile_in_loop.M && Ms + tout_m_offset < mapping.total_loop.M; Ms += loop_size) {
     /* Boundary check */
     int m_loop = std::min(mapping.total_loop.M - tout_m_offset - Ms, static_cast<unsigned int>(loop_size));
+    m_loop = std::min(static_cast<int>(mapping.tile_in_loop.M) - Ms, m_loop);
     if(m_loop <= 0) break;
     for (int Ss = 0; Ss < mapping.tile_in_loop.S; Ss++) {
       for (int Rs = 0; Rs < mapping.tile_in_loop.R; Rs++) {
-        for (int Cs = 0; Cs < mapping.tile_in_loop.C; Cs += loop_size, tile_idx++) {
+        for (int Cs = 0; Cs < mapping.tile_in_loop.C && Cs + tout_c_offset < mapping.total_loop.C; Cs += loop_size, tile_idx++) {
           /* Boundary check */
           int c_loop = std::min(mapping.total_loop.C - tout_c_offset - Cs, static_cast<unsigned int>(loop_size));
+          c_loop = std::min(static_cast<int>(mapping.tile_in_loop.C) - Cs, c_loop);
           if(c_loop <= 0) break;
 
           addr_type weight_sp_addr = \
@@ -317,13 +329,15 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
     p_loop_size = _pool_kernel_shape[1];
   }
   tile_idx=0;
-  for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
+  for (int Ms = 0; Ms < mapping.tile_in_loop.M && Ms + tout_m_offset < mapping.total_loop.M; Ms += loop_size) {
     int m_loop = std::min(mapping.total_loop.M - tout_m_offset - Ms, static_cast<unsigned int>(loop_size));
+    m_loop = std::min(static_cast<int>(mapping.tile_in_loop.M) - Ms, m_loop);
     if(m_loop <= 0) break;
     for (int Ss = 0; Ss < mapping.tile_in_loop.S; Ss++) {
       for (int Rs = 0; Rs < mapping.tile_in_loop.R; Rs++) {
-        for (int Cs = 0; Cs < mapping.tile_in_loop.C; Cs += loop_size, tile_idx++) {
+        for (int Cs = 0; Cs < mapping.tile_in_loop.C && Cs + tout_c_offset < mapping.total_loop.C; Cs += loop_size, tile_idx++) {
           int c_loop = std::min(mapping.total_loop.C - tout_c_offset - Cs, static_cast<unsigned int>(loop_size));
+          c_loop = std::min(static_cast<int>(mapping.tile_in_loop.C) - Cs, c_loop);
           if(c_loop <= 0) break;
 
           addr_type weight_sp_addr = \
@@ -332,11 +346,13 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
           weight_sp_addr = _config.align_address(weight_sp_addr);
 
           for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
-            for (int Qs = 0; Qs < mapping.tile_in_loop.Q; Qs += q_loop_size) {
+            for (int Qs = 0; Qs < mapping.tile_in_loop.Q && Qs + tout_q_offset < mapping.total_loop.Q; Qs += q_loop_size) {
               int q_loop = std::min(mapping.total_loop.Q - tout_q_offset - Qs, static_cast<unsigned int>(q_loop_size));
+              q_loop = std::min(static_cast<int>(mapping.tile_in_loop.Q) - Qs, q_loop);
               if(q_loop <= 0) break;
-              for (int Ps = 0; Ps < mapping.tile_in_loop.P; Ps += p_loop_size) {
+              for (int Ps = 0; Ps < mapping.tile_in_loop.P && Ps + tout_p_offset < mapping.total_loop.P; Ps += p_loop_size) {
                 int p_loop = std::min(mapping.total_loop.P - tout_p_offset - Ps, static_cast<unsigned int>(p_loop_size));
+                p_loop = std::min(static_cast<int>(mapping.tile_in_loop.P) - Ps, p_loop);
                 if(p_loop <= 0) break;
 
                 addr_type out_sp_addr =
@@ -362,6 +378,7 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
                                   .tile_n = static_cast<unsigned int>(compute_size)
                                   }));
                 } else {
+                  //spdlog::info("GEMM m: {}, c: {}, compute: {}", m_loop, c_loop, compute_size);
                   tile->instructions.push_back(std::make_unique<Instruction>(
                       Instruction{.opcode = Opcode::GEMM,
                                   .dest_addr = out_sp_addr,
@@ -388,13 +405,15 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
     /* Pooling not fused */
     for (int Ns = 0; Ns < mapping.tile_in_loop.N; Ns++) {
       int N = tout_n_offset + Ns;
-      for (int Qs = 0; Qs < mapping.tile_in_loop.Q; Qs += q_loop_size) {
+      for (int Qs = 0; Qs < mapping.tile_in_loop.Q  && Qs + tout_q_offset < mapping.total_loop.Q; Qs += q_loop_size) {
         int q_loop = std::min(mapping.total_loop.Q - tout_q_offset - Qs, static_cast<unsigned int>(q_loop_size));
-          if(q_loop <= 0) break;
-          for (int Ps = 0; Ps < mapping.tile_in_loop.P; Ps += p_loop_size) {
+        q_loop = std::min(static_cast<int>(mapping.tile_in_loop.Q) - Qs, q_loop);
+        if(q_loop <= 0) break;
+          for (int Ps = 0; Ps < mapping.tile_in_loop.P && Ps + tout_p_offset < mapping.total_loop.P; Ps += p_loop_size) {
             int p_loop = std::min(mapping.total_loop.P - tout_p_offset - Ps, static_cast<unsigned int>(p_loop_size));
+            p_loop = std::min(static_cast<int>(mapping.tile_in_loop.P) - Ps, p_loop);
             if(p_loop <= 0) break;
-            for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
+            for (int Ms = 0; Ms < mapping.tile_in_loop.M  && Ms + tout_m_offset < mapping.total_loop.M; Ms += loop_size) {
               int m_loop = std::min(mapping.total_loop.M - tout_m_offset - Ms, static_cast<unsigned int>(loop_size));
               if(m_loop <= 0) break;
               addr_type out_sp_addr =
@@ -626,10 +645,12 @@ addr_type ConvWS::make_weight_address(uint32_t S, uint32_t R, uint32_t M,
                                          uint32_t C,
                                          std::vector<uint32_t> shape) {
   addr_type address;
-  int padded_C =
-      shape[Cdim_w] + (_config.core_width - shape[Cdim_w] % _config.core_width);
-  // int padded_S = shape[Cdim] + (_config.core_width - shape[Cdim] %
-  // _config.core_width);
+  int padded_C;
+  if (shape[Cdim_w] % _config.core_width)
+    padded_C = shape[Cdim_w] + (_config.core_width - shape[Cdim_w] % _config.core_width);
+  else
+    padded_C = shape[Cdim_w];
+
   if (_config.layout == "NCHW") {
     address = (M * shape[Cdim_w] * shape[Sdim] * shape[Rdim] +
                C * shape[Sdim] * shape[Rdim] + S * shape[Rdim] + R) *
@@ -637,7 +658,8 @@ addr_type ConvWS::make_weight_address(uint32_t S, uint32_t R, uint32_t M,
   } else if (_config.layout == "NHWC") {
     address = ((M / _config.core_width) * shape[Sdim] * shape[Rdim] * padded_C +
                S * shape[Rdim] * padded_C + R * padded_C + C) *
-              _config.precision * _config.core_width;
+              _config.precision;
+ 
   }
   return _config.align_address(address);
 }
