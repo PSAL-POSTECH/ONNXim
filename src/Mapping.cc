@@ -22,7 +22,7 @@ MappingTable::MappingTable (SimulationConfig config) {
   _config = config;
   _dim = _config.core_height;
   _max_spad_rows = (_config.spad_size KB) / (_dim * _config.precision * 2);
-  _max_acc_rows = (_config.accum_spad_size KB) / (_dim * _config.precision * 2);
+  _max_acc_rows = (_config.accum_spad_size KB) / (_dim * 4 * 2); // Accumulator is 4 Byte
 }
 
 MappingTable MappingTable::parse_mapping_file(
@@ -507,8 +507,7 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 
 		for (size_t i = 0; i < sizeof(args)/sizeof(args[0]); i++) {
 			int args_candidate[] = {args[0], args[1], args[2], args[3], args[4], args[5], args[6]};
-			args_candidate[i]++;
-
+      args_candidate[i]++;
 			if (args_candidate[i] > max_args[i])
 				continue;
 
@@ -518,11 +517,12 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 			acc_rows = _calc_conv_mapping(true,
 				stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
 				args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride);
-
+      // B * O_ch * K_row * K_col * K_ch
       int weight_tile_size = args[0] * args[3] * args[4] * args[5] * args[6] * _config.precision;
-      int input_tile_size = args[0] * args[1] * args[2] * args[3] * _config.precision;
+      // B * O_row * O_col * O_ch
+      int input_tile_size = args[0] * (args[1]+2*padding) * (args[2]+2*padding) * args[6] * _config.precision;
 			if (spad_rows <= max_spad_rows && acc_rows <= max_acc_rows &&
-        input_tile_size <= _config.spad_size KB && weight_tile_size <= _config.accum_spad_size KB) {
+        ((input_tile_size + weight_tile_size) * 3 >> 1) <= (_config.spad_size KB / 2)) {
 				args[i] = args_candidate[i];
 				nothing_increased = false;
 			}
@@ -536,7 +536,6 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 	const int krows = args[4];
 	const int kcols = args[5];
 	const int kchs = args[6];
-
   batch_size = key.N;
 	Mapping mapping;
 	mapping.total_loop = {(uint32_t)batch_size, (uint32_t)in_channels, (uint32_t)out_channels,
@@ -547,10 +546,9 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 							ceil_div(out_dim, orows)};
 	mapping.tile_in_loop = {(uint32_t)batches, (uint32_t)kchs, (uint32_t)ochs,
                           (uint32_t)krows, (uint32_t)kcols, (uint32_t)ocols, (uint32_t)orows};
-
 	spdlog::info("[Conv] Used gemmini convolution mapping: " \
-		"[T] N{} C{} M{} P{} Q{} S{} R{}, " \
-		"[O] N{} C{} M{} P{} Q{} S{} R{}, " \
+		"[T] N{} C{} M{} P{} Q{} S{} R{} - " \
+		"[O] N{} C{} M{} P{} Q{} S{} R{} - " \
 		"[I] N{} C{} M{} P{} Q{} S{} R{}",
 		batch_size, in_channels, out_channels, out_dim, out_dim, kernel_dim, kernel_dim,
 		ceil_div(batch_size, batches), ceil_div(in_channels, kchs), ceil_div(out_channels, ochs),
