@@ -90,7 +90,7 @@ TEST(GemmWS1x512x1000Test, BasicAssertions) {
   cycle_type GT = 66360;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -115,7 +115,7 @@ TEST(GemmWS1x2048x1000Test, BasicAssertions) {
   cycle_type GT = 270431;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -138,7 +138,7 @@ TEST(Bert_512x512x1024, BasicAssertions) {
   cycle_type GT = 4227300;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -161,7 +161,7 @@ TEST(Bert_512x1024x2, BasicAssertions) {
   cycle_type GT = 67553;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -184,7 +184,7 @@ TEST(Bert_512x1024x512, BasicAssertions) {
   cycle_type GT = 4228207;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -207,7 +207,7 @@ TEST(Bert_512x1024x1024, BasicAssertions) {
   cycle_type GT = 8458619;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -230,7 +230,7 @@ TEST(Bert_512x1024x3072, BasicAssertions) {
   cycle_type GT = 25390266;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -253,7 +253,7 @@ TEST(Bert_512x1024x4096, BasicAssertions) {
   cycle_type GT = 33912072;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -276,7 +276,7 @@ TEST(Bert_512x4096x1024, BasicAssertions) {
   cycle_type GT = 33912533;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -299,7 +299,7 @@ TEST(GPT_512x512x768, BasicAssertions) {
   cycle_type GT = 3171978;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -322,7 +322,7 @@ TEST(GPT_512x768x512, BasicAssertions) {
   cycle_type GT = 3170315;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -345,7 +345,7 @@ TEST(GPT_512x768x768, BasicAssertions) {
   cycle_type GT = 4756894;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -369,6 +369,6 @@ TEST(GPT_512x768x2304, BasicAssertions) {
   cycle_type GT = 14266861;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
