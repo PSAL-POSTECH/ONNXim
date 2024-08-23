@@ -18,7 +18,7 @@ SimulationConfig get_default_conv_config() {
   config.num_cores = 1;
   config.core_height = 8;
   config.core_width = 8;
-  config.spad_size = 64;
+  config.spad_size = 64+16+16;
   config.accum_spad_size = 16;
   config.precision = 1;
   config.dram_req_size = 32;
@@ -104,7 +104,7 @@ TEST(ResNet18_Conv1, BasicAssertions) {
   cycle_type GT = 5887961;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -140,7 +140,7 @@ TEST(ResNet18_layer1_0_Conv1, BasicAssertions) {
   cycle_type GT = 2133641;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -176,7 +176,7 @@ TEST(ResNet18_layer2_0_Conv1, BasicAssertions) {
   cycle_type GT = 1052613;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -211,7 +211,7 @@ TEST(ResNet18_layer2_0_downsample_0, BasicAssertions) {
   cycle_type GT = 118304;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -247,7 +247,7 @@ TEST(ResNet18_layer2_0_Conv2, BasicAssertions) {
   cycle_type GT = 2103568;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -283,7 +283,7 @@ TEST(ResNet18_layer3_0_Conv1, BasicAssertions) {
   cycle_type GT = 914287;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -292,12 +292,12 @@ TEST(ResNet18_layer3_0_Conv2, BasicAssertions) {
   std::string test_mapping = "[T] N1 C256 M256 P14 Q14 S3 R3 - [O] N1 C3 M32 P1 Q1 S1 R1 - [I] N1 C96 M8 P14 Q14 S3 R3";
   /* Input information */
   convInfo info = {
-    .kernel_shape = {1, 1},
+    .kernel_shape = {3, 3},
     .strides = {1, 1},
     .dilations = {1, 1},
     .pads = {1, 1, 1, 1},
     .input_shape = {1, 14, 14, 256},
-    .weight_shape = {256, 256, 1, 1},
+    .weight_shape = {256, 256, 3, 3},
     .conv_out_shape = {1, 14, 14, 256},
     .group = 1,
     .activation_fused = false,
@@ -318,7 +318,7 @@ TEST(ResNet18_layer3_0_Conv2, BasicAssertions) {
   cycle_type GT = 1828936;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -332,7 +332,7 @@ TEST(ResNet18_layer3_0_downsample_0, BasicAssertions) {
     .dilations = {1, 1},
     .pads = {0, 0, 0, 0},
     .input_shape = {1, 28, 28, 128},
-    .weight_shape = {256, 128, 3, 3},
+    .weight_shape = {256, 128, 1, 1},
     .conv_out_shape = {1, 14, 14, 256},
     .group = 1,
     .activation_fused = false,
@@ -353,13 +353,13 @@ TEST(ResNet18_layer3_0_downsample_0, BasicAssertions) {
   cycle_type GT = 101763;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
 TEST(ResNet18_layer4_0_Conv1, BasicAssertions) {
   /* User defined WS mapping information */
-  std::string test_mapping = "[T] N1 C256 M512 P7 Q7 S3 R3 - [O] N1 C6 M13 P1 Q1 S1 R1 - [I] N1 C43 M40 P7 Q7 S3 R3";
+  std::string test_mapping = "[T] N1 C256 M512 P7 Q7 S3 R3 - [O] N1 C6 M13 P1 Q1 S1 R1 - [I] N1 C51 M40 P7 Q7 S3 R3";
   /* Input information */
   convInfo info = {
     .kernel_shape = {3, 3},
@@ -388,7 +388,7 @@ TEST(ResNet18_layer4_0_Conv1, BasicAssertions) {
   cycle_type GT = 1040621;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
@@ -423,13 +423,13 @@ TEST(ResNet18_layer4_0_downsample_0, BasicAssertions) {
   cycle_type GT = 102703;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
 
 TEST(ResNet18_layer4_0_Conv2, BasicAssertions) {
   /* User defined WS mapping information */
-  std::string test_mapping = "[T] N1 C512 M512 P7 Q7 S3 R3 - [O] N1 C8 M13 P1 Q1 S1 R1 - [I] N1 C64 M40 P7 Q7 S3 R3";
+  std::string test_mapping = "[T] N1 C512 M512 P7 Q7 S3 R3 - [O] N1 C8 M13 P1 Q1 S1 R1 - [I] N1 C73 M40 P7 Q7 S3 R3";
   /* Input information */
   convInfo info = {
     .kernel_shape = {3, 3},
@@ -458,6 +458,6 @@ TEST(ResNet18_layer4_0_Conv2, BasicAssertions) {
   cycle_type GT = 2051216;
   cycle_type diff = llabs(GT - compute_cycle);
   float err = float(diff) / GT * 100.0;
-  printf("Error Rate: %.2f %%\n", err);
+  printf("Error Rate: %.2f %%, ONNXim: %ld, Gemmini: %ld\n", err, compute_cycle, GT);
   EXPECT_LT(err, 5.0);
 }
