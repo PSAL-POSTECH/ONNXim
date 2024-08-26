@@ -140,7 +140,7 @@ DramRamulator2::DramRamulator2(SimulationConfig config) {
   _mem.resize(_n_ch);
   for (int ch = 0; ch < _n_ch; ch++) {
     _mem[ch] = std::make_unique<NDPSim::Ramulator2>(
-      ch, _n_ch, config.dram_config_path, "Ramulator2", _config.dram_print_interval);
+      ch, _n_ch, config.dram_config_path, "Ramulator2", _config.dram_print_interval, 1);
   }
   _tx_log2 = log2(_req_size);
   _tx_ch_log2 = log2(_n_ch) + _tx_log2;
