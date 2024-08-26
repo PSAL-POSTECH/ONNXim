@@ -22,13 +22,13 @@
   "scalar_add_latency" : 1,
   "scalar_mul_latency" : 1,
 
-  "dram_type" : "ramulator",
-  "dram_freq" : 1600,
+  "dram_type" : "ramulator2",
+  "dram_freq" : 400,
   "dram_channels": 2,
-  "dram_req_size": 16,
+  "dram_req_size": 32,
   "dram_latency" : 10,
   "dram_print_interval": 10000,
-  "dram_config_path" : "../configs/ramulator_configs/DDR4-config.cfg",
+  "dram_config_path" : "../configs/ramulator2_configs/DDR4.yaml",
 
   "icnt_type" : "booksim2",
   "icnt_latency" : 1,

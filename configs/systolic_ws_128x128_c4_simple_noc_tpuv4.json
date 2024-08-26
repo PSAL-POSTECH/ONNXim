@@ -4,7 +4,7 @@
   "core_freq" : 1000,
   "core_width" : 128,
   "core_height" : 128,
-  "core_print_interval" : 10000,
+  "core_print_interval" : 8000,
 
   "spad_size" : 32768,
   "accum_spad_size" : 4096,
@@ -22,13 +22,15 @@
   "scalar_add_latency" : 1,
   "scalar_mul_latency" : 1,
 
-  "dram_type" : "ramulator",
+  "dram_type" : "ramulator2",
   "dram_freq" :1200,
   "dram_channels": 16,
   "dram_req_size": 32,
   "dram_latency" : 10,
-  "dram_print_interval": 100000,
-  "dram_config_path" : "../configs/ramulator_configs/HBM-config.cfg",
+  "dram_size" : 16,
+  "dram_nbl" : 1,
+  "dram_print_interval": 9600,
+  "dram_config_path" : "../configs/ramulator2_configs/HBM2.yaml",
 
   "icnt_type" : "simple",
   "icnt_latency" : 1,

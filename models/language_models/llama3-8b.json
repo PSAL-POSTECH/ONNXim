@@ -9,6 +9,6 @@
   "ffn_type" : "llama",
   "max_seq_length" : 8192,
   "run_single_layer": true,
-  "tensor_parallel_size" : 2,
+  "tensor_parallel_size" : 1,
   "pipeline_parallel_size" : 1
 }
