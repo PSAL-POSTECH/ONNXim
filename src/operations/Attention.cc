@@ -706,8 +706,8 @@ void Attention::calculate_loops(Mapping& mapping) {
         uint32_t total_acc_size_per_head = seq_len * q_len;
         total_spad_size_per_head *= _config.precision;
         total_acc_size_per_head *= _config.precision;
-        spdlog::info("[Attention] total_spad_size_per_head: {}", total_spad_size_per_head);
-        spdlog::info("[Attention] total_acc_size_per_head: {}", total_acc_size_per_head);
+        spdlog::info("[Attention] total_spad_size_per_head: {} B", total_spad_size_per_head);
+        spdlog::info("[Attention] total_acc_size_per_head: {} B", total_acc_size_per_head);
         spdlog::info("[Attention] q_len: {}, seq_len: {}, dk: {}, heads per tile {}", q_len, seq_len, _dk, heads_per_kv);
         spdlog::info("[Attention] Spad size {}", _config.spad_size KB / 2);
         spdlog::info("[Attention] Accum spad size {}", _config.accum_spad_size KB / 2);
