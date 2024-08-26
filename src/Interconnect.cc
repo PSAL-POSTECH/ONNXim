@@ -33,7 +33,6 @@ void SimpleInterconnect::cycle() {
         _out_buffers[dest].push(_in_buffers[src_node].front().access);  
         _in_buffers[src_node].pop();
         _busy_node[dest] = true;
-        // spdlog::trace("PUSH TO OUTBUFFER {} {}", src_node, dest);
       }
     }
   }
