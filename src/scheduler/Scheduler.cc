@@ -66,7 +66,7 @@ void Scheduler::issue_tile_per_core(std::vector<uint32_t>& allowed_cpu, int offs
       core_id = tile->core_id + _nr_layer;
     }
     core_id = allowed_cpu[core_id % allowed_cpu.size()];
-    spdlog::info("pushed to queue[{}], tile->core_id: {}", core_id, tile->core_id);
+    spdlog::debug("pushed to queue[{}], tile->core_id: {}", core_id, tile->core_id);
     tile->core_id = core_id;
     _core_executable_tile_queue[core_id].push_back(std::move(tile));
     _executable_tile_queue[partition_id].pop_front();
