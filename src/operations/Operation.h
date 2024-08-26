@@ -36,6 +36,7 @@ class Operation {
   virtual void initialize_tiles(MappingTable& mapping_table) = 0;
   virtual bool check_executable();
   bool check_finish() { return _finish; };
+  uint32_t target_core=0; // Targeted core id
 
  protected:
   virtual void initialize_instructions(Tile* tile, Mapping mapping) {}

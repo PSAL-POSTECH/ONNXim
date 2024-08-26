@@ -22,15 +22,15 @@ SimulationConfig OperationFactory::_config = SimulationConfig();
 void OperationFactory::initialize(SimulationConfig config) { _config = config; }
 
 std::unique_ptr<Operation> OperationFactory::create_operation(
-    Model* model, onnx::NodeProto& node_proto) {
+    Model* model, onnx::NodeProto& node_proto, uint32_t target_core=0) {
   if (node_proto.op_type() == "Conv" || node_proto.op_type() == "FusedConv") {
-    if (_config.core_type == CoreType::SYSTOLIC_OS)
+    if (_config.core_config[target_core].core_type == CoreType::SYSTOLIC_OS)
       return std::make_unique<ConvOS>(_config, model, node_proto);
-    else if (_config.core_type == CoreType::SYSTOLIC_WS)
+    else if (_config.core_config[target_core].core_type == CoreType::SYSTOLIC_WS)
       return std::make_unique<ConvWS>(_config, model, node_proto);
   } else if (node_proto.op_type() == "Gemm" ||
              node_proto.op_type() == "FusedGemm") {
-    if (_config.core_type == CoreType::SYSTOLIC_WS)
+    if (_config.core_config[target_core].core_type == CoreType::SYSTOLIC_WS)
       return std::make_unique<GemmWS>(_config, model, node_proto);
   } else if (node_proto.op_type() == "MatMul") {
     return std::make_unique<GemmWS>(_config, model, node_proto, false);
@@ -63,12 +63,12 @@ std::unique_ptr<Operation> OperationFactory::create_operation(
 
 std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {
   if (op->get_optype() == "Conv" || op->get_optype() == "FusedConv") {
-    if (_config.core_type == CoreType::SYSTOLIC_OS)
+    if (_config.core_config[op->target_core].core_type == CoreType::SYSTOLIC_OS)
       return std::make_unique<ConvOS>(*dynamic_cast<ConvOS*>(op));
-    else if (_config.core_type == CoreType::SYSTOLIC_WS)
+    else if (_config.core_config[op->target_core].core_type == CoreType::SYSTOLIC_WS)
       return std::make_unique<ConvWS>(*dynamic_cast<ConvWS*>(op));
   } else if (op->get_optype() == "Gemm" || op->get_optype() == "FusedGemm") {
-    if (_config.core_type == CoreType::SYSTOLIC_WS)
+    if (_config.core_config[op->target_core].core_type == CoreType::SYSTOLIC_WS)
       return std::make_unique<GemmWS>(*dynamic_cast<GemmWS*>(op));
   } else if (op->get_optype() == "MatMul") {
       return std::make_unique<GemmWS>(*dynamic_cast<GemmWS*>(op));

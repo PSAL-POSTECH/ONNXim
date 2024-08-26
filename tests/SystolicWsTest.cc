@@ -9,13 +9,15 @@
 TEST(SystolicWSTileExecutionTest, BasicAssertions) {
   /* Weight statinary config*/
   SimulationConfig config;
-  config.core_type = CoreType::SYSTOLIC_WS;
-  config.core_height = 8;
-  config.core_width = 8;
+  config.num_cores = 1;
+  config.core_config = new struct CoreConfig;
+  config.core_config[0].core_type = CoreType::SYSTOLIC_WS;
+  config.core_config[0].core_height = 8;
+  config.core_config[0].core_width = 8;
+  config.core_config[0].spad_size = 192;
+  config.core_config[0].accum_spad_size = 192;
   config.precision = 4;
   config.dram_req_size = 32;
-  config.spad_size = 192;
-  config.accum_spad_size = 192;
   
   SystolicWS core(0, config);
   std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{
@@ -50,13 +52,15 @@ TEST(SystolicWSTileExecutionTest, BasicAssertions) {
 TEST(SystolicWSTwoGemmExecutionTest, BasicAssertions) {
   /* Weight statinary config*/
   SimulationConfig config;
-  config.core_type = CoreType::SYSTOLIC_WS;
-  config.core_height = 8;
-  config.core_width = 8;
+  config.num_cores = 1;
+  config.core_config = new struct CoreConfig;
+  config.core_config[0].core_type = CoreType::SYSTOLIC_WS;
+  config.core_config[0].core_height = 8;
+  config.core_config[0].core_width = 8;
+  config.core_config[0].spad_size = 192;
+  config.core_config[0].accum_spad_size = 192;
   config.precision = 4;
   config.dram_req_size = 32;
-  config.spad_size = 192;
-  config.accum_spad_size = 192;
 
   SystolicWS core(0, config);
   std::unique_ptr<Tile> tile = std::make_unique<Tile>(Tile{

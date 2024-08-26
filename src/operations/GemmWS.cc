@@ -80,7 +80,7 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
     total_memory += bias_memory;
   }
   spdlog::info("[GemmWS]: total {} GFLOPs, {} GB", total_flops, total_memory);
-  float theoretical_compute_time = total_flops / _config.max_systolic_flops();
+  float theoretical_compute_time = total_flops / _config.max_systolic_flops(0);
   float theoretical_mem_time = total_memory / _config.max_dram_bandwidth();
   float theoretical_time = std::max(theoretical_compute_time, theoretical_mem_time);
   spdlog::info("[GemmWS]: Theoretical time(ms): {} Compute time: {} Memory time: {}",
@@ -105,7 +105,7 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
   third_addr = get_operand_addr(_INPUT_OPERAND+2);
   output_addr = get_operand_addr(_OUTPUT_OPERAND);
 
-  int loop_size = _config.core_height;
+  int loop_size = _config.core_config[target_core].core_height;
   int cloop_size = mapping.tile_in_loop.C;
   for (int Ms = 0; Ms < mapping.tile_in_loop.M; Ms += loop_size) {
     int M_offset = tout_m_offset + Ms;
@@ -232,8 +232,8 @@ void GemmWS::initialize_instructions(Tile* tile, Mapping mapping) {
         addr_type out_sp_addr =
             ACCUM_SPAD_BASE +
             (Ns * mapping.tile_in_loop.M + Ms) * _config.precision;
-        for(int c_iter = 0; c_iter < c_in_loop; c_iter+=_config.core_height) {
-          int c_iter_size = c_in_loop - c_iter > _config.core_height ? _config.core_height : c_in_loop - c_iter;
+        for(int c_iter = 0; c_iter < c_in_loop; c_iter+=_config.core_config[target_core].core_height) {
+          int c_iter_size = c_in_loop - c_iter > _config.core_config[target_core].core_height ? _config.core_config[target_core].core_height : c_in_loop - c_iter;
           tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
               .opcode = Opcode::GEMM_PRELOAD,
               .dest_addr = out_sp_addr,

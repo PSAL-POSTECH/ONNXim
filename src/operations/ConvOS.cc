@@ -14,8 +14,8 @@ ConvOS::ConvOS(const Conv& src) : Conv(src) {}
 /* TODO: handle depthwise convolutoin (Important) */
 /* TODO: handle grouped convolutoin (less important) */
 void ConvOS::initialize_tiles(MappingTable& mapping_table) {
-  int tile_h_size = _config.core_height;
-  int tile_w_size = _config.core_width;
+  int tile_h_size = _config.core_config[target_core].core_height;
+  int tile_w_size = _config.core_config[target_core].core_width;
   int precision = _config.precision;
   spdlog::trace("initialize_tile {} ", _name);
   std::vector<uint32_t> output_shape = get_output(0)->get_dims();

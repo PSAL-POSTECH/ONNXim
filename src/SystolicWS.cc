@@ -47,7 +47,7 @@ void SystolicWS::cycle() {
         offset = MAX(offset, 4);
         if (front->opcode == Opcode::GEMM_PRELOAD) {
           // State mul-pre
-          offset = MAX(offset, _config.core_height);
+          offset = MAX(offset, _config.core_config[_id].core_height);
           _stat_systolic_preload_issue_count++;
         }
         if (_compute_pipeline.back()->start_cycle+offset < _core_cycle)
@@ -59,7 +59,7 @@ void SystolicWS::cycle() {
         /* Preload weight to systolic array*/
         if (front->opcode == Opcode::GEMM_PRELOAD) {
           /* Weight preload  from buffer latecny + WEight preload latency */
-          front->start_cycle += _config.core_height + _config.core_height - 1;
+          front->start_cycle += _config.core_config[_id].core_height + _config.core_config[_id].core_height - 1;
           _stat_systolic_preload_issue_count++;
         }
       }
@@ -110,7 +110,7 @@ bool SystolicWS::can_issue_compute(std::unique_ptr<Instruction>& inst) {
   if(Core::can_issue_compute(inst) == false)
     return false;
   if (inst->opcode == Opcode::GEMM || inst->opcode == Opcode::GEMM_PRELOAD) {
-    if (_compute_pipeline.size() >= _config.core_height) {
+    if (_compute_pipeline.size() >= _config.core_config[_id].core_height) {
       return false;
     }
   } else {
@@ -122,7 +122,7 @@ bool SystolicWS::can_issue_compute(std::unique_ptr<Instruction>& inst) {
 }
 
 cycle_type SystolicWS::get_inst_compute_cycles(std::unique_ptr<Instruction>& inst) {
-  return _config.core_height + _config.core_width - 2 + MAX(inst->compute_size, 4);
+  return _config.core_config[_id].core_height + _config.core_config[_id].core_width - 2 + MAX(inst->compute_size, 4);
 }
 
 cycle_type SystolicWS::get_vector_compute_cycles(std::unique_ptr<Instruction>& inst) {
@@ -131,34 +131,34 @@ cycle_type SystolicWS::get_vector_compute_cycles(std::unique_ptr<Instruction>& i
   cycle_type add_tree, scalar_ops, vector_ops;
   switch (inst->opcode) {
     case Opcode::LAYERNORM:
-      add_tree = 2 * add_tree_iter * _config.add_tree_latency;
-      scalar_ops = 2 * _config.scalar_mul_latency + _config.scalar_sqrt_latency;
+      add_tree = 2 * add_tree_iter * _config.core_config[_id].add_tree_latency;
+      scalar_ops = 2 * _config.core_config[_id].scalar_mul_latency + _config.core_config[_id].scalar_sqrt_latency;
       // 1 addition, 1 subtraction, 1 division, 2 multiplication.
-      vector_ops = vec_op_iter * (2 * _config.add_latency + 3 * _config.mul_latency) * inst->tile_m;
+      vector_ops = vec_op_iter * (2 * _config.core_config[_id].add_latency + 3 * _config.core_config[_id].mul_latency) * inst->tile_m;
       return add_tree + scalar_ops + vector_ops;
     case Opcode::SOFTMAX:
       // 1 add tree, 1 compare tree
-      add_tree = 2 * add_tree_iter * _config.add_tree_latency * inst->tile_m;
+      add_tree = 2 * add_tree_iter * _config.core_config[_id].add_tree_latency * inst->tile_m;
       vector_ops =
-        vec_op_iter * (_config.add_latency + _config.exp_latency + _config.mul_latency);
+        vec_op_iter * (_config.core_config[_id].add_latency + _config.core_config[_id].exp_latency + _config.core_config[_id].mul_latency);
       return add_tree + vector_ops;
     case Opcode::ADD:
-      return vec_op_iter * _config.add_latency;
+      return vec_op_iter * _config.core_config[_id].add_latency;
     case Opcode::MUL:
-      return vec_op_iter * _config.mul_latency;
+      return vec_op_iter * _config.core_config[_id].mul_latency;
     case Opcode::MAC:
-      return vec_op_iter * _config.mac_latency;
+      return vec_op_iter * _config.core_config[_id].mac_latency;
     case Opcode::SWISH: //TODO: Implement SWISH
     case Opcode::GELU:
-      return vec_op_iter * _config.gelu_latency;
+      return vec_op_iter * _config.core_config[_id].gelu_latency;
     case Opcode::COMP:
       return vec_op_iter * 1;
     case Opcode::ADDTREE:
-      return add_tree_iter * _config.add_tree_latency * inst->tile_m;
+      return add_tree_iter * _config.core_config[_id].add_tree_latency * inst->tile_m;
     case Opcode::DIV:
-      return vec_op_iter * _config.div_latency;
+      return vec_op_iter * _config.core_config[_id].div_latency;
     case Opcode::EXP:
-      return vec_op_iter * _config.exp_latency;
+      return vec_op_iter * _config.core_config[_id].exp_latency;
     
   }
   spdlog::info("not configured operation. {}", inst->id);

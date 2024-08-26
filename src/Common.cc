@@ -53,34 +53,40 @@ SimulationConfig initialize_config(json config) {
 
   /* Core configs */
   parsed_config.num_cores = get_config_value<uint32_t>(config, "num_cores");
-  std::string core_type = get_config_value<std::string>(config, "core_type");
-  if (core_type_map.contains(core_type)) {
-    parsed_config.core_type = core_type_map.at(core_type);
-  } else {
-    throw std::runtime_error(fmt::format("Not implemented core type {} ", core_type));
-  }
+  parsed_config.core_config = new struct CoreConfig[parsed_config.num_cores];
   parsed_config.core_freq = get_config_value<uint32_t>(config, "core_freq");
-  parsed_config.core_width = get_config_value<uint32_t>(config, "core_width");
-  parsed_config.core_height = get_config_value<uint32_t>(config, "core_height");
   parsed_config.core_print_interval = get_config_value<uint32_t>(config, "core_print_interval");
 
-  /* Vector configs */
-  parsed_config.vector_process_bit = get_config_value<uint32_t>(config, "vector_process_bit");
-  parsed_config.add_latency = get_config_value<uint32_t>(config, "add_latency");
-  parsed_config.mul_latency = get_config_value<uint32_t>(config, "mul_latency");
-  parsed_config.exp_latency = get_config_value<uint32_t>(config, "exp_latency");
-  parsed_config.gelu_latency = get_config_value<uint32_t>(config, "gelu_latency");
-  parsed_config.add_tree_latency = get_config_value<uint32_t>(config, "add_tree_latency");
-  parsed_config.scalar_sqrt_latency = get_config_value<uint32_t>(config, "scalar_sqrt_latency");
-  parsed_config.scalar_add_latency = get_config_value<uint32_t>(config, "scalar_add_latency");
-  parsed_config.scalar_mul_latency = get_config_value<uint32_t>(config, "scalar_mul_latency");
-  parsed_config.mac_latency = get_config_value<uint32_t>(config, "mac_latency");
-  parsed_config.div_latency = get_config_value<uint32_t>(config, "div_latency");
+  for (int i=0; i<parsed_config.num_cores; i++) {
+    std::string core_id = "core_" + std::to_string(i);
+    auto core_config = config["core_config"][core_id];
+    std::string core_type = core_config["core_type"];
+    if (core_type_map.contains(core_type)) {
+      parsed_config.core_config[i].core_type = core_type_map.at(core_type);
+    } else {
+      throw std::runtime_error(fmt::format("Not implemented core type {} ", core_type));
+    }
+    parsed_config.core_config[i].core_width = core_config["core_width"];
+    parsed_config.core_config[i].core_height = core_config["core_height"];
 
-  /* SRAM configs */
-  parsed_config.sram_width = get_config_value<uint32_t>(config, "sram_width");
-  parsed_config.spad_size = get_config_value<uint32_t>(config, "spad_size");
-  parsed_config.accum_spad_size = get_config_value<uint32_t>(config, "accum_spad_size");
+    /* Vector configs */
+    parsed_config.core_config[i].vector_process_bit = core_config["vector_process_bit"];
+    parsed_config.core_config[i].add_latency = core_config["add_latency"];
+    parsed_config.core_config[i].mul_latency = core_config["mul_latency"];
+    parsed_config.core_config[i].exp_latency = core_config["exp_latency"];
+    parsed_config.core_config[i].gelu_latency = core_config["gelu_latency"];
+    parsed_config.core_config[i].add_tree_latency = core_config["add_tree_latency"];
+    parsed_config.core_config[i].scalar_sqrt_latency = core_config["scalar_sqrt_latency"];
+    parsed_config.core_config[i].scalar_add_latency = core_config["scalar_add_latency"];
+    parsed_config.core_config[i].scalar_mul_latency = core_config["scalar_mul_latency"];
+    parsed_config.core_config[i].mac_latency = core_config["mac_latency"];
+    parsed_config.core_config[i].div_latency = core_config["div_latency"];
+
+    /* SRAM configs */
+    parsed_config.core_config[i].sram_width = core_config["sram_width"];
+    parsed_config.core_config[i].spad_size = core_config["spad_size"];
+    parsed_config.core_config[i].accum_spad_size = core_config["accum_spad_size"];
+  }
 
   /* DRAM config */
   std::string dram_type = get_config_value<std::string>(config, "dram_type");

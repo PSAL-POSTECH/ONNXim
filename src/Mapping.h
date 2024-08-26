@@ -18,6 +18,7 @@ struct Mapping {
     uint32_t P = 1;  // Input width
     uint32_t Padding = 1; // Pading
     uint32_t Stride = 1;  // Stride
+    uint32_t target_core = 0;
     bool operator==(const LoopCounts &other) const {
       return (N == other.N) && (C == other.C) && (M == other.M) &&
              (S == other.S) && (R == other.R) && (Q == other.Q) &&

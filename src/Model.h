@@ -35,7 +35,6 @@ class Model {
 
     virtual void initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table);
     virtual void initialize_weight(std::vector<std::unique_ptr<Tensor>>& weight_table);
-  
   protected:
 
     uint32_t _id;
@@ -50,6 +49,7 @@ class Model {
     std::vector<Operation*> _executable_layer;
     SimulationConfig _config;
     uint32_t _partition_id = 0;
+    uint32_t _target_core = 0;
 
     /* Number of simulating attention block */
     int nr_skip = 0; // NR_SKIP == 2 * NR_ATTEN
