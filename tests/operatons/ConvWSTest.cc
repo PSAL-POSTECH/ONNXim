@@ -14,12 +14,13 @@ namespace fs = std::filesystem;
 
 SimulationConfig get_default_conv_config() {
   SimulationConfig config;
-  config.core_type = CoreType::SYSTOLIC_WS;
   config.num_cores = 1;
-  config.core_height = 8;
-  config.core_width = 8;
-  config.spad_size = 64+16+16;
-  config.accum_spad_size = 16;
+  config.core_config = new struct CoreConfig;
+  config.core_config[0].core_type = CoreType::SYSTOLIC_WS;
+  config.core_config[0].core_height = 8;
+  config.core_config[0].core_width = 8;
+  config.core_config[0].spad_size = 64+16+16;
+  config.core_config[0].accum_spad_size = 16;
   config.precision = 1;
   config.dram_req_size = 32;
   config.layout = "NHWC";

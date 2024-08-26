@@ -20,9 +20,7 @@ MappingTable::MappingTable () {}
 MappingTable::MappingTable (SimulationConfig config) {
   _mapping_table = _MappingTable();
   _config = config;
-  _dim = _config.core_height;
-  _max_spad_rows = (_config.spad_size KB) / (_dim * _config.precision * 2);
-  _max_acc_rows = (_config.accum_spad_size KB) / (_dim * 4 * 2); // Accumulator is 4 Byte
+
 }
 
 MappingTable MappingTable::parse_mapping_file(
@@ -54,8 +52,11 @@ MappingTable MappingTable::parse_mapping_file(
 
 void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   uint32_t dim_I, dim_J, dim_K;
+  uint32_t _dim = _config.core_config[key.target_core].core_height;
+  uint32_t _max_spad_rows = (_config.core_config[key.target_core].spad_size KB) / (_dim * _config.precision * 2);
+  uint32_t _max_acc_rows = (_config.core_config[key.target_core].accum_spad_size KB) / (_dim * 4 * 2);
 
-  assert(_config.core_height==_config.core_width);
+  assert(_config.core_config[key.target_core].core_height==_config.core_config[key.target_core].core_width);
   dim_I = key.N;
   dim_J = key.M;
   dim_K = key.C;
@@ -116,7 +117,7 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   mapping.tile_out_loop = {tile_I, tile_K, tile_J, 1, 1, 1, 1};
   mapping.tile_in_loop = {inner_I, inner_K, inner_J, 1, 1, 1, 1};
   _mapping_table[key] = mapping;
-  spdlog::info("[GEMM] spad_size: {} accum_size: {}", _config.spad_size * 1024, _config.accum_spad_size * 1024);
+  spdlog::info("[GEMM] spad_size: {} accum_size: {}", _config.core_config[key.target_core].spad_size * 1024, _config.core_config[key.target_core].accum_spad_size * 1024);
   spdlog::info("[GEMM] required_sram_size: {} required_accum_size: {}", (inner_I+inner_J)*inner_K*_config.precision, (inner_I*inner_J)*_config.precision);
   spdlog::info("[GEMM] Used gemmini gemm mapping: Total N:{} C:{} M:{}, " \
     "Outer N:{} C:{} M:{}, " \
@@ -396,6 +397,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
   int stride, input_dilation, kernel_dilation, padding, kernel_dim;
   bool trans_input_3120, trans_weight_0132;
   int pool_size, pool_stride, pool_padding;
+  uint32_t _dim = _config.core_config[key.target_core].core_height;
+  uint32_t _max_spad_rows = (_config.core_config[key.target_core].spad_size KB) / (_dim * _config.precision * 2);
+  uint32_t _max_acc_rows = (_config.core_config[key.target_core].accum_spad_size KB) / (_dim * 4 * 2);
+
   batch_size = 1;
   out_channels = key.M;
   in_channels = key.C;
@@ -522,7 +527,7 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
       // B * O_row * O_col * O_ch
       int input_tile_size = args[0] * (args[1]+2*padding) * (args[2]+2*padding) * args[6] * _config.precision;
 			if (spad_rows <= max_spad_rows && acc_rows <= max_acc_rows &&
-        ((input_tile_size + weight_tile_size) * 3 >> 1) <= (_config.spad_size KB / 2)) {
+        ((input_tile_size + weight_tile_size) * 3 >> 1) <= (_config.core_config[key.target_core].spad_size KB / 2)) {
 				args[i] = args_candidate[i];
 				nothing_increased = false;
 			}

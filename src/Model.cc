@@ -19,6 +19,9 @@ Model::Model(std::string onnx_path, json model_config, SimulationConfig config, 
   if (_model_config.contains("partition_id")) {
     _partition_id = uint32_t(_model_config["partition_id"]);
   }
+  if (_model_config.contains("target_core")) {
+    _target_core = uint32_t(_model_config["target_core"]);
+  }
 }
 
 Model::Model(json model_config, SimulationConfig config, std::string name)
@@ -106,7 +109,7 @@ void Model::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table)
 
 
   for(auto node_proto : model_proto.graph().node()) {
-    auto node = OperationFactory::create_operation(this, node_proto);
+    auto node = OperationFactory::create_operation(this, node_proto, _target_core);
     if(node != nullptr) {
       int node_id = node->get_id();
       _operation_map[node->get_id()] = std::move(node);

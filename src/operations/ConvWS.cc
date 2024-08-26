@@ -14,8 +14,8 @@ ConvWS::ConvWS(SimulationConfig config, MappingTable& mapping_table, convInfo in
 /* TODO: handle depthwise convolutoin (Important) */
 /* TODO: handle grouped convolutoin (less important) */
 void ConvWS::initialize_tiles(MappingTable& mapping_table) {
-  int tile_h_size = _config.core_height;
-  int tile_w_size = _config.core_width;
+  int tile_h_size = _config.core_config[target_core].core_height;
+  int tile_w_size = _config.core_config[target_core].core_width;
   int precision = _config.precision;
   spdlog::trace("initialize_tile {} ", _name);
   std::vector<uint32_t> output_shape = _conv_out_shape;
@@ -142,7 +142,7 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
     return;
   }
 
-  int loop_size = _config.core_width;
+  int loop_size = _config.core_config[target_core].core_width;
   robin_hood::unordered_map<std::string, Instruction> inst_map;
 
   /*MOVIN Bias*/
@@ -471,8 +471,8 @@ void ConvWS::initialize_instructions(Tile* tile, Mapping mapping) {
   spdlog::trace("Layer {} Sram allocation size {} B act {} B weight {} B", _name,
                 sram_allocation * _config.dram_req_size, act_allocation* _config.dram_req_size,
                 (sram_allocation - act_allocation)* _config.dram_req_size);
-  assert(sram_allocation * _config.dram_req_size <= _config.spad_size KB / 2);
-  assert(act_allocation * _config.dram_req_size <= _config.spad_size KB / 2);
+  assert(sram_allocation * _config.dram_req_size <= _config.core_config[target_core].spad_size KB / 2);
+  assert(act_allocation * _config.dram_req_size <= _config.core_config[target_core].spad_size KB / 2);
 }
 
 void ConvWS::initialize_matmul_instructions(Tile* tile) {
@@ -482,7 +482,7 @@ void ConvWS::initialize_matmul_instructions(Tile* tile) {
   uint32_t N_dim_size =
       output_shape[Ndim] * output_shape[Hdim] * output_shape[Wdim];
   uint32_t C_dim_size = kernel_size * _weight_shape[Cdim_w] / _group;
-  int loop_size = _config.core_width;
+  int loop_size = _config.core_config[target_core].core_width;
   addr_type weight_offset =
       tile->M * kernel_size * (channels / _group) * _config.precision;
 
@@ -646,8 +646,8 @@ addr_type ConvWS::make_weight_address(uint32_t S, uint32_t R, uint32_t M,
                                          std::vector<uint32_t> shape) {
   addr_type address;
   int padded_C;
-  if (shape[Cdim_w] % _config.core_width)
-    padded_C = shape[Cdim_w] + (_config.core_width - shape[Cdim_w] % _config.core_width);
+  if (shape[Cdim_w] % _config.core_config[target_core].core_width)
+    padded_C = shape[Cdim_w] + (_config.core_config[target_core].core_width - shape[Cdim_w] % _config.core_config[target_core].core_width);
   else
     padded_C = shape[Cdim_w];
 
@@ -656,10 +656,10 @@ addr_type ConvWS::make_weight_address(uint32_t S, uint32_t R, uint32_t M,
                C * shape[Sdim] * shape[Rdim] + S * shape[Rdim] + R) *
               _config.precision;
   } else if (_config.layout == "NHWC") {
-    address = ((M / _config.core_width) * shape[Sdim] * shape[Rdim] * padded_C +
+    address = ((M / _config.core_config[target_core].core_width) * shape[Sdim] * shape[Rdim] * padded_C +
                S * shape[Rdim] * padded_C + R * padded_C + C) *
               _config.precision;
- 
+
   }
   return _config.align_address(address);
 }

@@ -3,7 +3,7 @@
 
 class Sram {
  public:
-  Sram(SimulationConfig config, const cycle_type& core_cycle, bool accum);
+  Sram(SimulationConfig config, const cycle_type& core_cycle, bool accum, uint32_t core_id);
 
   bool check_hit(addr_type address, int buffer_id);
   bool check_full(int buffer_id);

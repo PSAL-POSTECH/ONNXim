@@ -78,8 +78,8 @@ void KVCacheConcat::initialize_tiles(MappingTable& mapping_table) {
 
 void KVCacheConcat::calculate_loops() {
   uint32_t per_token_size = _config.precision * ( _cache_dim * 2 + _hidden_size);
-  _outter_loops =  ceil_div(get_input(0)->get_size() ,(_config.spad_size KB/ 2));
-  _inner_loops = ceil_div(_config.spad_size KB/2, per_token_size);
+  _outter_loops =  ceil_div(get_input(0)->get_size() ,(_config.core_config[target_core].spad_size KB/ 2));
+  _inner_loops = ceil_div(_config.core_config[target_core].spad_size KB/2, per_token_size);
   spdlog::debug("[KVCacheConcat] number of tiles: {}", _outter_loops);
 }
 

@@ -11,14 +11,10 @@ enum class DramType { SIMPLE, RAMULATOR1, RAMULATOR2 };
 
 enum class IcntType { SIMPLE, BOOKSIM2 };
 
-struct SimulationConfig {
-  /* Core config */
-  uint32_t num_cores;
+struct CoreConfig {
   CoreType core_type;
-  uint32_t core_freq;
   uint32_t core_width;
   uint32_t core_height;
-  uint32_t core_print_interval;
 
   /* Vector config*/
   uint32_t vector_process_bit;
@@ -39,6 +35,14 @@ struct SimulationConfig {
   uint32_t sram_width;
   uint32_t spad_size;
   uint32_t accum_spad_size;
+};
+
+struct SimulationConfig {
+  /* Core config */
+  uint32_t num_cores;
+  uint32_t core_freq;
+  uint32_t core_print_interval;
+  struct CoreConfig *core_config;
 
   /* DRAM config */
   DramType dram_type;
@@ -78,12 +82,12 @@ struct SimulationConfig {
     return addr - (addr % dram_req_size);
   }
 
-  float max_systolic_flops() {
-    return core_width * core_height * core_freq * 2 * num_cores / 1000; // GFLOPS
+  float max_systolic_flops(uint32_t id) {
+    return core_config[id].core_width * core_config[id].core_height * core_freq * 2 * num_cores / 1000; // GFLOPS
   }
 
-  float max_vector_flops() {
-    return (vector_process_bit >> 3) / precision * 2 * core_freq / 1000; // GFLOPS
+  float max_vector_flops(uint32_t id) {
+    return (core_config[id].vector_process_bit >> 3) / precision * 2 * core_freq / 1000; // GFLOPS
   }
 
   float max_dram_bandwidth() {

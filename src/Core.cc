@@ -5,9 +5,9 @@
 #include "helper/HelperFunctions.h"
 
 std::unique_ptr<Core> Core::create(uint32_t id, SimulationConfig config) {
-  if (config.core_type == CoreType::SYSTOLIC_WS) {
+  if (config.core_config[id].core_type == CoreType::SYSTOLIC_WS) {
     return std::make_unique<SystolicWS>(id, config);
-  } else if (config.core_type == CoreType::SYSTOLIC_OS) {
+  } else if (config.core_config[id].core_type == CoreType::SYSTOLIC_OS) {
     return std::make_unique<SystolicOS>(id, config);
   } else {
       spdlog::error("[Configuration] Invalid core type...!");
@@ -23,8 +23,8 @@ Core::Core(uint32_t id, SimulationConfig config)
       _stat_memory_idle_cycle(0),
       _stat_vec_compute_cycle(0),
       _stat_matmul_cycle(0),
-      _spad(Sram(config, _core_cycle, false)),
-      _acc_spad(Sram(config, _core_cycle, true)) {
+      _spad(Sram(config, _core_cycle, false, id)),
+      _acc_spad(Sram(config, _core_cycle, true, id)) {
   _waiting_write_reqs = 0;
   _running_layer = -1;
 }
@@ -282,7 +282,7 @@ void Core::finish_compute_pipeline(){
       inst->my_tile->inst_finished = true;
     }
     double compute_size = inst->tile_k * inst->tile_m * inst->tile_n 
-                            / (_config.core_height * _config.core_width);
+                            / (_config.core_config[_id].core_height * _config.core_config[_id].core_width);
     spdlog::trace("Compute size {} tile m {} tile k {} tile n {}", inst->compute_size, inst->tile_m, inst->tile_k, inst->tile_n);
     spdlog::trace("Compute size {} , compute time {}", compute_size, inst->finish_cycle - inst->start_cycle);
     _stat_matmul_cycle += compute_size;
@@ -401,7 +401,7 @@ void Core::handle_st_inst_queue() {
 }
 
 cycle_type Core::calculate_add_tree_iterations(uint32_t vector_size) {
-  uint32_t calculation_unit = _config.vector_process_bit >> 3;
+  uint32_t calculation_unit = _config.core_config[_id].vector_process_bit >> 3;
   if (vector_size <= calculation_unit) {
     return 1;
   }
@@ -414,7 +414,7 @@ cycle_type Core::calculate_add_tree_iterations(uint32_t vector_size) {
 }
 
 cycle_type Core::calculate_vector_op_iterations(uint32_t vector_size) {
-  uint32_t calculation_unit = _config.vector_process_bit >> 3;
+  uint32_t calculation_unit = _config.core_config[_id].vector_process_bit >> 3;
   uint32_t ret = vector_size / calculation_unit;
   if (vector_size % calculation_unit != 0) {
     ret++;

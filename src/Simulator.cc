@@ -12,7 +12,9 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
     : _config(config), _core_cycles(0), _language_mode(language_mode) {
   // Create dram object
   spdlog::info("Simulator Configuration:");
-  spdlog::info("Systolic Array Throughput: {} GFLOPS", config.max_systolic_flops());
+  for (int i=0; i<config.num_cores;i++)
+    spdlog::info("[Core {}] Systolic Array Throughput: {} GFLOPS, Spad size: {} KB, Accumulator size: {} KB",
+      i, config.max_systolic_flops(i), config.core_config[i].spad_size, config.core_config[i].accum_spad_size);
   spdlog::info("DRAM Bandwidth {} GB/s", config.max_dram_bandwidth());
   _core_period = 1000000 / (config.core_freq);
   _icnt_period = 1000000 / (config.icnt_freq);

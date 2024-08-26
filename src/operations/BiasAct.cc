@@ -143,7 +143,7 @@ void BiasAct::initialize_instructions(Tile* tile, Mapping mapping, uint32_t toke
 
 void BiasAct::calculate_loops() {
     uint32_t size_per_token = _dk * _config.precision;
-    uint32_t sram_capacity = _config.spad_size KB / 2;  // unit: byte
+    uint32_t sram_capacity = _config.core_config[target_core].spad_size KB / 2;  // unit: byte
 
     _tokens_per_tile = (sram_capacity / size_per_token) - 1; 
     assert (_tokens_per_tile >= 1);

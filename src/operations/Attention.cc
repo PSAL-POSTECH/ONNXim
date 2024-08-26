@@ -138,17 +138,17 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
     float kv_mem = _seq * _dk * _nkvh * 2  * _config.precision / (float) 1e9; //GB
     float q_mem = _q_len * _dk * _nh * 2 * _config.precision / (float) 1e9; //GB
     float total_mem = kv_mem + q_mem;
-    float compute_time = (qk_flops + kv_flops) / _config.max_systolic_flops() * 1e3;
-    compute_time += softmax_flops / _config.max_vector_flops() * 1e3;
+    float compute_time = (qk_flops + kv_flops) / _config.max_systolic_flops(0) * 1e3;
+    compute_time += softmax_flops / _config.max_vector_flops(target_core) * 1e3;
     float mem_time = total_mem / _config.max_dram_bandwidth() * 1e3;
     float total_time = std::max(compute_time, mem_time);
     spdlog::info("[Attention] total {} GFLOPs, {} GB", tot_flops, total_mem);
     spdlog::info("[Attention] Theoretical time(ms): {} Compute time: {} Memory time: {}",
         total_time, compute_time, mem_time);
     spdlog::info("[Attention] QK compute {:.4f}ms Softmax compute {:.4f}ms SV compute {:.4f}ms",
-        qk_flops / _config.max_systolic_flops() * 1e3,
-        softmax_flops / _config.max_vector_flops() * 1e3,
-        kv_flops / _config.max_systolic_flops() * 1e3);
+        qk_flops / _config.max_systolic_flops(0) * 1e3,
+        softmax_flops / _config.max_vector_flops(target_core) * 1e3,
+        kv_flops / _config.max_systolic_flops(0) * 1e3);
 }
 
 void Attention::initialize_onnx_tiles(MappingTable& mapping_table) {
@@ -292,7 +292,7 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
             .opcode = Opcode::GEMM,
             .dest_addr = sram_l_ofs,
             .size = q_len * seq_len * _config.precision / _config.dram_req_size,
-            .compute_size =  ceil_div(q_len, _config.core_height) * seq_len,
+            .compute_size =  ceil_div(q_len, _config.core_config[target_core].core_height) * seq_len,
             .src_addrs = std::vector<addr_type>{sram_q_ofs, sram_k_ofs},
 
             .tile_m = seq_len,
@@ -416,10 +416,10 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
     }));
      // -- compute -- //     
     // GEMM (q*k -> l)
-    for(int sitr = 0; sitr < seq_len; sitr+=_config.core_height) {
-        int s_loop = std::min(seq_len - sitr, _config.core_height);
-        for(int kitr = 0; kitr < _dk; kitr+=_config.core_height) {
-            int k_loop = std::min(_dk - kitr, _config.core_height);
+    for(int sitr = 0; sitr < seq_len; sitr+=_config.core_config[target_core].core_height) {
+        int s_loop = std::min(seq_len - sitr, _config.core_config[target_core].core_height);
+        for(int kitr = 0; kitr < _dk; kitr+=_config.core_config[target_core].core_height) {
+            int k_loop = std::min(_dk - kitr, _config.core_config[target_core].core_height);
                 for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
                 Opcode op = h_ofs == 0 ? Opcode::GEMM_PRELOAD : Opcode::GEMM;
                 int h_idx = head_idx + h_ofs;
@@ -512,10 +512,10 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
     }
             // GEMM (l*v -> acc)
     
-    for(int kitr = 0; kitr < _dk; kitr+=_config.core_height) {
-        int k_loop = std::min(_dk - kitr, _config.core_height);
-        for(int sitr = 0; sitr < seq_len; sitr+=_config.core_height) {
-            int s_loop = std::min(seq_len - sitr, _config.core_height);
+    for(int kitr = 0; kitr < _dk; kitr+=_config.core_config[target_core].core_height) {
+        int k_loop = std::min(_dk - kitr, _config.core_config[target_core].core_height);
+        for(int sitr = 0; sitr < seq_len; sitr+=_config.core_config[target_core].core_height) {
+            int s_loop = std::min(seq_len - sitr, _config.core_config[target_core].core_height);
             for (int h_ofs = 0; h_ofs < num_heads; h_ofs++) {
                 Opcode op = h_ofs == 0 ? Opcode::GEMM_PRELOAD : Opcode::GEMM;
                 addr_type sram_l_ofs = sram_logit_base + h_ofs * (q_len * seq_len) * _config.precision;
@@ -646,8 +646,8 @@ void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
 
 void Attention::calculate_loops() {
     for (int i = 0; i < _batch_size; i++) {
-        uint32_t spad_capacity = _config.spad_size KB / 2;  // unit: byte
-        uint32_t acc_spad_capacity = _config.accum_spad_size KB / 2;
+        uint32_t spad_capacity = _config.core_config[target_core].spad_size KB / 2;  // unit: byte
+        uint32_t acc_spad_capacity = _config.core_config[target_core].accum_spad_size KB / 2;
         int heads_per_kv = _nh / _nkvh;
         uint32_t q_len = _q_len;
         uint32_t seq_len = _seq;
@@ -672,15 +672,15 @@ void Attention::calculate_loops() {
         spdlog::info("[Attention] total_spad_size_per_head: {}", total_spad_size_per_head);
         spdlog::info("[Attention] total_acc_size_per_head: {}", total_acc_size_per_head);
         spdlog::info("[Attention] q_len: {}, seq_len: {}, dk: {}", q_len, seq_len, _dk);
-        spdlog::info("[Attention] Spad size {}", _config.spad_size KB / 2);
+        spdlog::info("[Attention] Spad size {}", _config.core_config[target_core].spad_size KB / 2);
         _heads_per_tile.push_back(heads_per_kv);
     }
 }
 
 void Attention::calculate_loops(Mapping& mapping) {
     for (int i = 0; i < _batch_size; i++) {
-        uint32_t spad_capacity = _config.spad_size KB / 2;  // unit: byte
-        uint32_t acc_spad_capacity = _config.accum_spad_size KB / 2;
+        uint32_t spad_capacity = _config.core_config[target_core].spad_size KB / 2;  // unit: byte
+        uint32_t acc_spad_capacity = _config.core_config[target_core].accum_spad_size KB / 2;
         int heads_per_kv = _nh / _nkvh;
         uint32_t q_len = _q_len;
         uint32_t seq_len = _seq;
@@ -709,8 +709,8 @@ void Attention::calculate_loops(Mapping& mapping) {
         spdlog::info("[Attention] total_spad_size_per_head: {} B", total_spad_size_per_head);
         spdlog::info("[Attention] total_acc_size_per_head: {} B", total_acc_size_per_head);
         spdlog::info("[Attention] q_len: {}, seq_len: {}, dk: {}, heads per tile {}", q_len, seq_len, _dk, heads_per_kv);
-        spdlog::info("[Attention] Spad size {}", _config.spad_size KB / 2);
-        spdlog::info("[Attention] Accum spad size {}", _config.accum_spad_size KB / 2);
+        spdlog::info("[Attention] Spad size {}", _config.core_config[target_core].spad_size KB / 2);
+        spdlog::info("[Attention] Accum spad size {}", _config.core_config[target_core].accum_spad_size KB / 2);
         mapping.total_loop.C = _dk;
         mapping.total_loop.M = _seq;
         mapping.tile_out_loop.C = 1;

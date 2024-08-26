@@ -7,7 +7,7 @@ class Model;
 class OperationFactory {
   public:
     static void initialize(SimulationConfig config);
-    static std::unique_ptr<Operation> create_operation(Model* model, onnx::NodeProto& node_proto);
+    static std::unique_ptr<Operation> create_operation(Model* model, onnx::NodeProto& node_proto, uint32_t target_core);
     static std::unique_ptr<Operation> copy_operation(Operation* op);
 
   private:
