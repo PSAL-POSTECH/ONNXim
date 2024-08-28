@@ -5,10 +5,10 @@
 class KVCacheConcat : public Operation {
   public:
     KVCacheConcat(SimulationConfig config, Model* model,
-                  onnx::NodeProto& node_proto);
+                  onnx::NodeProto& node_proto, uint32_t target_core=0);
     KVCacheConcat(const KVCacheConcat& src);
     KVCacheConcat(SimulationConfig config, Model* model, std::string name,
-                  std::map<std::string, std::string>& attributes);
+                  std::map<std::string, std::string>& attributes, uint32_t target_core=0);
     void initialize_tiles(MappingTable& mapping_table) override;
   private:
     void calculate_loops();

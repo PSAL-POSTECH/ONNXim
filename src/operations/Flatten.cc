@@ -5,8 +5,8 @@
 #include "../Tensor.h"
 
 Flatten::Flatten(SimulationConfig config, Model* model,
-                 onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+                 onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
   for (auto attribute : node_proto.attribute()) {
     if (attribute.name() == "axis") {
       spdlog::trace("flatten axis {}", attribute.i());

@@ -4,7 +4,7 @@
 
 class EmbedLayerNorm: public Operation {
    public:
-    EmbedLayerNorm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+    EmbedLayerNorm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core=0);
 
     std::vector<uint32_t> _input_shape;
     std::vector<uint32_t> _output_shape;

@@ -3,8 +3,8 @@
 #include "../Model.h"
 #include "../Tensor.h"
 
-Gemm::Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+Gemm::Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
   Mdim = 1;
   Cdim_w = 0;
   Cdim = 1;
@@ -63,8 +63,8 @@ Gemm::Gemm(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
 Gemm::Gemm(SimulationConfig config, MappingTable& mapping_table,
            std::vector<uint32_t> input_shape,
            std::vector<uint32_t> weight_shape,
-           std::vector<uint32_t> output_shape)
-    : Operation(config, mapping_table) {
+           std::vector<uint32_t> output_shape, uint32_t target_core)
+    : Operation(config, mapping_table, target_core) {
   Mdim = 1;
   Cdim_w = 0;
   Cdim = 1;
@@ -82,8 +82,8 @@ Gemm::Gemm(SimulationConfig config, MappingTable& mapping_table,
 }
 
 Gemm::Gemm(SimulationConfig config, Model* model, std::string name,
-            std::map<std::string, std::string> &attributes) 
-    :Operation(config, model, name, attributes) {
+            std::map<std::string, std::string> &attributes, uint32_t target_core) 
+    :Operation(config, model, name, attributes, target_core) {
   Mdim = 1;
   Cdim_w = 0;
   Cdim = 1;

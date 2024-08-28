@@ -25,13 +25,13 @@ struct convInfo{
 
 class Conv : public Operation {
   public:
-    Conv(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+    Conv(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core=0);
     Conv(const Conv& src);
-    Conv(SimulationConfig config, MappingTable& mapping_table, convInfo info);
+    Conv(SimulationConfig config, MappingTable& mapping_table, convInfo info, uint32_t target_core=0);
     // virtual void initialize_tiles(MappingTable& mapping_table) override;
   protected:
     virtual void im2col_nhwc();
-    // void init(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+    // void init(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core=0);
 
   protected:
     std::vector<uint32_t> _kernel_shape;

@@ -3,9 +3,9 @@
 
 class BiasAct : public Operation {
  public:
-  BiasAct(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+  BiasAct(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core=0);
   BiasAct(SimulationConfig config, Model* model, std::string name,
-          std::map<std::string, std::string>& attributes);
+          std::map<std::string, std::string>& attributes, uint32_t target_core=0);
 
   void initialize_tiles(MappingTable& mapping_table) override;
 

@@ -2,8 +2,8 @@
 #include "../Model.h"
 
 Softmax::Softmax(SimulationConfig config, Model* model,
-               onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+               onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
 
     /* Load weight info from node */
     _input_shape = get_input(0)->get_dims();
@@ -31,8 +31,8 @@ Softmax::Softmax(SimulationConfig config, Model* model,
 }
 
 Softmax::Softmax(SimulationConfig config, MappingTable& mapping_table,
-           std::vector<uint32_t> input_shape)
-    : Operation(config, mapping_table) {
+           std::vector<uint32_t> input_shape, uint32_t target_core)
+    : Operation(config, mapping_table, target_core) {
     _input_shape = input_shape;
     _output_shape = input_shape;
 

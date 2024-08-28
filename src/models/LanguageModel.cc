@@ -141,12 +141,12 @@ void LanguageModel::initialize_weight(std::vector<std::unique_ptr<Tensor>>& weig
   }
 
   weight_table.push_back(std::move(create_weight(name_gen(OperationType::LmHead, ParameterType::Weight), {_hidden_size, _model_config["vocab_size"]})));
-  
+
   _wgt_size = 0;
   for (auto& wgt : weight_table) {
     if(_run_single_layer && wgt->get_name() != name_gen(OperationType::LmHead, ParameterType::Weight)) {
       _wgt_size += ((uint64_t)wgt->get_size()) * _num_layers;
-    } 
+    }
     else {
       _wgt_size += wgt->get_size();
     }
@@ -166,7 +166,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
   }
   std::vector<uint32_t> act_dim = {num_tokens, _hidden_size};
   std::map<std::string, std::string> qkv_attr  = {
-    {"has_bias", "1"}, 
+    {"has_bias", "1"},
     {"input_shape", dims_to_string(act_dim)},
     {"weight_shape", dims_to_string({_hidden_size,_qkv_out_dim})},
     {"output_shape", dims_to_string({num_tokens, _qkv_out_dim})}};
@@ -213,14 +213,14 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     uint32_t id = tensor->get_id();
     _tensor_map[id] = std::move(tensor);
   }
-  
+
   std::map<std::string, std::string> empty_attr;
   for(int l = 0; l < _num_sim_layers; l++) {
     //QKV Proejction
     std::string qkv_name = name_gen(LAYER(l), BlockType::Attention, OperationType::QKVGen);
     uint32_t qkv_weight_id = _wgt_map[name_gen(qkv_name, ParameterType::Weight)];
     uint32_t qkv_bias_id = _wgt_map[name_gen(qkv_name, ParameterType::Bias)];
-    auto qkv_op = std::make_unique<GemmWS>(_config, (Model*) this, qkv_name, qkv_attr);
+    auto qkv_op = std::make_unique<GemmWS>(_config, (Model*) this, qkv_name, qkv_attr, _target_core);
     qkv_op->add_input(input_id);
     qkv_op->add_input(qkv_weight_id);
     qkv_op->add_input(qkv_bias_id);
@@ -229,7 +229,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     register_operation(std::move(qkv_op));
     //KV Cache
     auto kv_cache_op = std::make_unique<KVCacheConcat>(
-      _config, (Model*) this, name_gen(LAYER(l), BlockType::Attention, OperationType::KVCacheConcat), kv_concat_attr);
+      _config, (Model*) this, name_gen(LAYER(l), BlockType::Attention, OperationType::KVCacheConcat), kv_concat_attr, _target_core);
     kv_cache_op->add_input(qkv_output_id);
     for(int b = 0; b < _num_batch; b++) {
       uint32_t key_cache_id = load_key_cache(l, b);
@@ -252,7 +252,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     for(int b = 0; b < _num_batch; b++) {
       std::string attn_name = name_gen(LAYER(l), BlockType::Attention, OperationType::Attention, std::to_string(b));
       attention_attr["num_tokens"] = std::to_string(input_lengthes[b]);
-      auto attn_op = std::make_unique<Attention>(_config, (Model*) this, attn_name, attention_attr); 
+      auto attn_op = std::make_unique<Attention>(_config, (Model*) this, attn_name, attention_attr, _target_core);
       attn_op->add_input(queries[b]);
       attn_op->add_input(keys[b]);
       attn_op->add_input(values[b]);
@@ -263,7 +263,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     }
     //Concatenate attention outputs
     std::string attn_concat_name = name_gen(LAYER(l), BlockType::Attention, OperationType::AttentionConcat);
-    auto attn_concat_op = std::make_unique<Concat>(_config, (Model*) this, attn_concat_name, concat_attr);
+    auto attn_concat_op = std::make_unique<Concat>(_config, (Model*) this, attn_concat_name, concat_attr, _target_core);
     for(int b = 0; b < _num_batch; b++) {
       attn_concat_op->add_input(attention_outs[b]);
     }
@@ -274,7 +274,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     std::string proj_name = name_gen(LAYER(l), BlockType::Attention, OperationType::Projection);
     uint32_t proj_weight_id = _wgt_map[name_gen(proj_name, ParameterType::Weight)];
     uint32_t proj_bias_id = _wgt_map[name_gen(proj_name, ParameterType::Bias)];
-    auto proj_op = std::make_unique<GemmWS>(_config, (Model*) this, proj_name, proj_attr);
+    auto proj_op = std::make_unique<GemmWS>(_config, (Model*) this, proj_name, proj_attr, _target_core);
     proj_op->add_input(attn_concat_output_id);
     proj_op->add_input(proj_weight_id);
     proj_op->add_input(proj_bias_id);
@@ -285,7 +285,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     std::string ln_name = name_gen(LAYER(l), BlockType::Attention, OperationType::LayerNorm);
     uint32_t ln_weight_id = _wgt_map[name_gen(ln_name, ParameterType::Weight)];
     uint32_t ln_bias_id = _wgt_map[name_gen(ln_name, ParameterType::Bias)];
-    auto ln_op = std::make_unique<SkipLayerNorm>(_config, (Model*) this, ln_name, empty_attr);
+    auto ln_op = std::make_unique<SkipLayerNorm>(_config, (Model*) this, ln_name, empty_attr, _target_core);
     ln_op->add_input(input_id);
     ln_op->add_input(proj_output_id);
     ln_op->add_input(ln_weight_id);
@@ -298,7 +298,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     uint32_t ffn1_weight_id = _wgt_map[name_gen(ffn_name, OperationType::FullyConnected1, ParameterType::Weight)];
     uint32_t ffn1_bias_id = _wgt_map[name_gen(ffn_name, OperationType::FullyConnected1, ParameterType::Bias)];
     auto ffn1_op = std::make_unique<GemmWS>(
-      _config, (Model*) this, name_gen(ffn_name, OperationType::FullyConnected1), ffn1_attr);
+      _config, (Model*) this, name_gen(ffn_name, OperationType::FullyConnected1), ffn1_attr, _target_core);
     ffn1_op->add_input(ln_output_id);
     ffn1_op->add_input(ffn1_weight_id);
     ffn1_op->initialize_tiles(_mapping_table);
@@ -306,7 +306,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     register_operation(std::move(ffn1_op));
     //Gelu
     std::string act_name = name_gen(LAYER(l), BlockType::FeedForward, OperationType::Act);
-    auto act_op = std::make_unique<BiasAct>(_config, (Model*) this, act_name, bias_act_attr);
+    auto act_op = std::make_unique<BiasAct>(_config, (Model*) this, act_name, bias_act_attr, _target_core);
     act_op->add_input(ffn1_output_id);
     act_op->add_input(ffn1_bias_id);
     act_op->initialize_tiles(_mapping_table);
@@ -316,7 +316,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     uint32_t ffn2_weight_id = _wgt_map[name_gen(ffn_name, OperationType::FullyConnected2, ParameterType::Weight)];
     uint32_t ffn2_bias_id = _wgt_map[name_gen(ffn_name, OperationType::FullyConnected2, ParameterType::Bias)];
     auto ffn2_op = std::make_unique<GemmWS>(
-      _config, (Model*) this, name_gen(ffn_name, OperationType::FullyConnected2), ffn2_attr);
+      _config, (Model*) this, name_gen(ffn_name, OperationType::FullyConnected2), ffn2_attr, _target_core);
     ffn2_op->add_input(act_output_id);
     ffn2_op->add_input(ffn2_weight_id);
     ffn2_op->add_input(ffn2_bias_id);
@@ -327,7 +327,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     std::string ff_ln_name = name_gen(LAYER(l), BlockType::FeedForward, OperationType::LayerNorm);
     uint32_t ff_ln_weight_id = _wgt_map[name_gen(ff_ln_name, ParameterType::Weight)];
     uint32_t ff_ln_bias_id = _wgt_map[name_gen(ff_ln_name, ParameterType::Bias)];
-    auto ff_ln_op = std::make_unique<SkipLayerNorm>(_config, (Model*) this, ff_ln_name, empty_attr);
+    auto ff_ln_op = std::make_unique<SkipLayerNorm>(_config, (Model*) this, ff_ln_name, empty_attr, _target_core);
     ff_ln_op->add_input(ln_output_id);
     ff_ln_op->add_input(ffn2_output_id);
     ff_ln_op->add_input(ff_ln_weight_id);
@@ -342,7 +342,7 @@ void LanguageModel::initialize_model(std::vector<std::unique_ptr<Tensor>>& weigh
     if(val->check_executable()) {
       spdlog::debug("runnable op, {}", val->get_optype());
       _executable_layer.push_back(val.get());
-    } 
+    }
   }
   /* Model initialization time measurement */
   auto end = std::chrono::high_resolution_clock::now();

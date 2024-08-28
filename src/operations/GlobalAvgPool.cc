@@ -3,8 +3,8 @@
 #include "../Model.h"
 
 
-GlobalAvgPool::GlobalAvgPool(SimulationConfig config, Model* model, onnx::NodeProto& node_proto) 
-  : Operation(config, model, node_proto) {
+GlobalAvgPool::GlobalAvgPool(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core) 
+  : Operation(config, model, node_proto, target_core) {
 
   /* We assume conv2d */
   std::vector<uint32_t> input_shape = get_input(0)->get_dims();

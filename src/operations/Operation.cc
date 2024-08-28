@@ -3,7 +3,7 @@
 #include "../Model.h"
 
 Operation::Operation(SimulationConfig config, Model* model,
-                     onnx::NodeProto& node_proto) {
+                     onnx::NodeProto& node_proto, uint32_t target_core) {
   _id = generate_id();
   _model = model;
   _optype = node_proto.op_type();
@@ -11,6 +11,7 @@ Operation::Operation(SimulationConfig config, Model* model,
   _proto = node_proto;
   _finish = false;
   _config = config;
+  this->target_core = target_core;
   spdlog::trace("Node {} op_type {}", _name.c_str(), _optype.c_str());
   for (std::string input_proto : node_proto.input()) {
     /* Skip none input */
@@ -44,10 +45,11 @@ Operation::Operation(SimulationConfig config, Model* model,
   Rdim = 3;
 }
 
-Operation::Operation(SimulationConfig config, MappingTable& mapping_table) {
+Operation::Operation(SimulationConfig config, MappingTable& mapping_table, uint32_t target_core) {
   _id = generate_id();
   _finish = false;
   _config = config;
+  this->target_core = target_core;
   spdlog::trace("Node {} op_type {}", _name.c_str(), _optype.c_str());
   if (_config.layout == "NCHW") {
     Ndim = 0;
@@ -67,7 +69,7 @@ Operation::Operation(SimulationConfig config, MappingTable& mapping_table) {
 }
 
 Operation::Operation(SimulationConfig config, Model* model,
-                     onnx::NodeProto& node_proto, uint32_t id) {
+                     onnx::NodeProto& node_proto, uint32_t id, uint32_t target_core) {
   _id = id;
   _model = model;
   _optype = node_proto.op_type();
@@ -75,6 +77,7 @@ Operation::Operation(SimulationConfig config, Model* model,
   _proto = node_proto;
   _finish = false;
   _config = config;
+  this->target_core = target_core;
   spdlog::trace("Node {} op_type {}", _name.c_str(), _optype.c_str());
   for (std::string input_proto : node_proto.input()) {
     Tensor* input_tensor = _model->find_tensor(input_proto);
@@ -90,10 +93,11 @@ Operation::Operation(SimulationConfig config, Model* model,
 }
 
 Operation::Operation(SimulationConfig config, Model* model,
-            std::string name,  std::map<std::string, std::string>&attribute) 
+            std::string name,  std::map<std::string, std::string>&attribute, uint32_t target_core) 
     : _config(config), _model(model) ,_name(name), _attributes(attribute) {
   _id = generate_id();
   _finish = false;
+  target_core = target_core;
   Ndim = 0;
   Cdim = 3;
   Hdim = 1;

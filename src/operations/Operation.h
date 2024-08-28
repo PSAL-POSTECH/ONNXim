@@ -11,12 +11,12 @@ class OpParser;
 class Operation {
  public:
   Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto,
-            uint32_t id);
-  Operation(SimulationConfig config, MappingTable& mapping_table);
-  Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto);
+            uint32_t id, uint32_t target_core);
+  Operation(SimulationConfig config, MappingTable& mapping_table, uint32_t target_core);
+  Operation(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core);
   Operation(const Operation& operation);
   Operation(SimulationConfig config, Model* model,
-            std::string name,  std::map<std::string, std::string>&attribute);
+            std::string name,  std::map<std::string, std::string>&attribute, uint32_t target_core);
   virtual ~Operation() = default;
   virtual void set_finish();
 

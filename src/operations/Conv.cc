@@ -5,8 +5,8 @@
 #include "../Model.h"
 #include "../Tensor.h"
 
-Conv::Conv(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+Conv::Conv(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
   int kernel_dim = 0;
   _activation_fused = false;
   _pool_fused = false;
@@ -210,8 +210,8 @@ void Conv::im2col_nhwc() {
 }
 
 Conv::Conv(SimulationConfig config, MappingTable& mapping_table,
-               convInfo info)
-    : Operation(config, mapping_table){
+               convInfo info, uint32_t target_core)
+    : Operation(config, mapping_table, target_core){
   _kernel_shape = info.kernel_shape;
   _strides = info.strides;
   _dilations = info.dilations;
