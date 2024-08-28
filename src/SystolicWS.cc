@@ -50,9 +50,10 @@ void SystolicWS::cycle() {
           offset = MAX(offset, _config.core_config[_id].core_height);
           _stat_systolic_preload_issue_count++;
         }
-        if (_compute_pipeline.back()->start_cycle+offset < _core_cycle)
+        if (_compute_pipeline.back()->start_cycle+offset < _core_cycle) {
           front->start_cycle = _core_cycle;
-        else
+          _stat_systolic_bubble_cycle += (_core_cycle - _compute_pipeline.back()->start_cycle+offset);
+        } else
           front->start_cycle = _compute_pipeline.back()->start_cycle+offset;
       } else {
         front->start_cycle = _core_cycle;
