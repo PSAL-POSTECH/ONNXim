@@ -22,43 +22,43 @@ SimulationConfig OperationFactory::_config = SimulationConfig();
 void OperationFactory::initialize(SimulationConfig config) { _config = config; }
 
 std::unique_ptr<Operation> OperationFactory::create_operation(
-    Model* model, onnx::NodeProto& node_proto, uint32_t target_core=0) {
+    Model* model, onnx::NodeProto& node_proto, uint32_t target_core) {
   if (node_proto.op_type() == "Conv" || node_proto.op_type() == "FusedConv") {
     if (_config.core_config[target_core].core_type == CoreType::SYSTOLIC_OS)
-      return std::make_unique<ConvOS>(_config, model, node_proto);
+      return std::make_unique<ConvOS>(_config, model, node_proto, target_core);
     else if (_config.core_config[target_core].core_type == CoreType::SYSTOLIC_WS)
-      return std::make_unique<ConvWS>(_config, model, node_proto);
+      return std::make_unique<ConvWS>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "Gemm" ||
              node_proto.op_type() == "FusedGemm") {
     if (_config.core_config[target_core].core_type == CoreType::SYSTOLIC_WS)
-      return std::make_unique<GemmWS>(_config, model, node_proto);
+      return std::make_unique<GemmWS>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "MatMul") {
-    return std::make_unique<GemmWS>(_config, model, node_proto, false);
+    return std::make_unique<GemmWS>(_config, model, node_proto, false, target_core);
   } else if (node_proto.op_type() == "MaxPool") {
-    return std::make_unique<MaxPool>(_config, model, node_proto);
+    return std::make_unique<MaxPool>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "GlobalAveragePool") {
-    return std::make_unique<GlobalAvgPool>(_config, model, node_proto);
+    return std::make_unique<GlobalAvgPool>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "AdaptiveAveragePool" ||
              node_proto.op_type() == "AveragePool") {
-    return std::make_unique<AdaptiveAvgPool>(_config, model, node_proto);
+    return std::make_unique<AdaptiveAvgPool>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "Flatten") {
-    return std::make_unique<Flatten>(_config, model, node_proto);
+    return std::make_unique<Flatten>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "Attention") {
-    return std::make_unique<Attention>(_config, model, node_proto);
+    return std::make_unique<Attention>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "Cast") {
-    return std::make_unique<Dummy>(_config, model, node_proto);
+    return std::make_unique<Dummy>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "EmbedLayerNormalization") {
-    return std::make_unique<EmbedLayerNorm>(_config, model, node_proto);
+    return std::make_unique<EmbedLayerNorm>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "SkipLayerNormalization") {
-    return std::make_unique<SkipLayerNorm>(_config, model, node_proto);
+    return std::make_unique<SkipLayerNorm>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "BiasGelu" || node_proto.op_type() == "FastGelu") {
-    return std::make_unique<BiasGelu>(_config, model, node_proto);
+    return std::make_unique<BiasGelu>(_config, model, node_proto, target_core);
   } else if (node_proto.op_type() == "ReorderOutput") {
-    return std::make_unique<Dummy>(_config, model, node_proto);
+    return std::make_unique<Dummy>(_config, model, node_proto, target_core);
   }
   spdlog::warn("Node Proto optype \"{}\" returned dummy operator!",
                node_proto.op_type().c_str());
-  return std::make_unique<Dummy>(_config, model, node_proto);
+  return std::make_unique<Dummy>(_config, model, node_proto, target_core);
 }
 
 std::unique_ptr<Operation> OperationFactory::copy_operation(Operation* op) {

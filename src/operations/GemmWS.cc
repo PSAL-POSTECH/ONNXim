@@ -3,23 +3,24 @@
 #include "../Model.h"
 
 GemmWS::GemmWS(SimulationConfig config, Model* model,
-               onnx::NodeProto& node_proto)
-    : Gemm(config, model, node_proto) {}
+               onnx::NodeProto& node_proto, uint32_t target_core)
+    : Gemm(config, model, node_proto, target_core) {}
 
-GemmWS::GemmWS(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, bool has_bias)
-        : GemmWS(config, model, node_proto) {
+GemmWS::GemmWS(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, bool has_bias, uint32_t target_core)
+        : GemmWS(config, model, node_proto, target_core) {
         this->has_bias = has_bias;
 }
 
 GemmWS::GemmWS(SimulationConfig config, MappingTable& mapping_table,
                std::vector<uint32_t> input_shape,
                std::vector<uint32_t> weight_shape,
-               std::vector<uint32_t> output_shape)
-    : Gemm(config, mapping_table, input_shape, weight_shape, output_shape) {}
+               std::vector<uint32_t> output_shape,
+               uint32_t target_core)
+    : Gemm(config, mapping_table, input_shape, weight_shape, output_shape, target_core) {}
 
 GemmWS::GemmWS(SimulationConfig config, Model* model, std::string name,
-               std::map<std::string, std::string>& attributes)
-    : Gemm(config, model, name, attributes) {
+               std::map<std::string, std::string>& attributes, uint32_t target_core)
+    : Gemm(config, model, name, attributes, target_core) {
   has_bias = std::stoi(get_attribute("has_bias"));
 }
 
@@ -30,7 +31,8 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
                           .S = 1,
                           .R = 1,
                           .Q = 1,
-                          .P = 1};
+                          .P = 1,
+                          .target_core = target_core};
 
   Mapping mapping;
   try {
@@ -80,7 +82,7 @@ void GemmWS::initialize_tiles(MappingTable& mapping_table) {
     total_memory += bias_memory;
   }
   spdlog::info("[GemmWS]: total {} GFLOPs, {} GB", total_flops, total_memory);
-  float theoretical_compute_time = total_flops / _config.max_systolic_flops(0);
+  float theoretical_compute_time = total_flops / _config.max_systolic_flops(target_core);
   float theoretical_mem_time = total_memory / _config.max_dram_bandwidth();
   float theoretical_time = std::max(theoretical_compute_time, theoretical_mem_time);
   spdlog::info("[GemmWS]: Theoretical time(ms): {} Compute time: {} Memory time: {}",

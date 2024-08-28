@@ -7,8 +7,8 @@
 //                                       // head_size, block_size]
 // const int num_kv_heads,               // [num_heads]
 KVCacheConcat::KVCacheConcat(SimulationConfig config, Model* model,
-                             onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+                             onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
   spdlog::error("KVCacheConcat: Not implemented");
   throw std::runtime_error("KVCacheConcat: Not implemented");
 }
@@ -20,8 +20,8 @@ KVCacheConcat::KVCacheConcat(const KVCacheConcat& src) : Operation(src) {
 
 KVCacheConcat::KVCacheConcat(SimulationConfig config, Model* model,
                              std::string name,
-                             std::map<std::string, std::string>& attributes)
-    : Operation(config, model, name, attributes) {
+                             std::map<std::string, std::string>& attributes, uint32_t target_core)
+    : Operation(config, model, name, attributes, target_core) {
   _input_token_lengths = parse_dims(get_attribute("input_token_lengths"));
   _num_kv_heads = std::stoi(get_attribute("num_kv_heads"));
   _num_attention_heads = std::stoi(get_attribute("num_heads"));

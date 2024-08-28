@@ -4,8 +4,8 @@
 #include "../Tensor.h"
 
 ConvWS::ConvWS(SimulationConfig config, Model* model,
-               onnx::NodeProto& node_proto)
-    : Conv(config, model, node_proto) {}
+               onnx::NodeProto& node_proto, uint32_t target_core)
+    : Conv(config, model, node_proto, target_core) {}
 
 ConvWS::ConvWS(const Conv& src) : Conv(src) {}
 
@@ -50,7 +50,8 @@ void ConvWS::initialize_tiles(MappingTable& mapping_table) {
                           .Q = output_shape[Hdim],
                           .P = output_shape[Wdim],
                           .Padding = _pads.at(0),
-                          .Stride = _strides.at(0)};
+                          .Stride = _strides.at(0),
+                          .target_core = target_core};
   Mapping mapping;
   try {
     mapping = mapping_table.at(key);

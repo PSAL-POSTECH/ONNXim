@@ -2,8 +2,8 @@
 #include "../Model.h"
 #include "../Tensor.h"
 
-Dummy::Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+Dummy::Dummy(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
   _input_shape = get_input(0)->get_dims();
   _output_shape = _input_shape;
   spdlog::trace("output_shape : {}", _output_shape);

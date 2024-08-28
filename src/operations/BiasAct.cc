@@ -9,8 +9,8 @@ static const std::map<std::string, Opcode> activation_map = {
 };
 
 BiasAct::BiasAct(SimulationConfig config, Model* model,
-               onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+               onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
 
     /* Load weight info from node */
     _input_shape = get_input(0)->get_dims();
@@ -34,8 +34,8 @@ BiasAct::BiasAct(SimulationConfig config, Model* model,
 }
 
 BiasAct::BiasAct(SimulationConfig config, Model* model,
-               std::string name, std::map<std::string, std::string> &attributes)
-    : Operation(config, model, name, attributes) {
+               std::string name, std::map<std::string, std::string> &attributes, uint32_t target_core)
+    : Operation(config, model, name, attributes, target_core) {
     _activation = activation_map.at(get_attribute("activation"));
     _use_bias = std::stoi(get_attribute("has_bias"));
     _llama_mlp = std::stoi(get_attribute("llama_mlp"));

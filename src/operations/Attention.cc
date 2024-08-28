@@ -5,8 +5,8 @@
 #include "Softmax.h"
 
 Attention::Attention(SimulationConfig config, Model* model,
-               onnx::NodeProto& node_proto)
-    : Operation(config, model, node_proto) {
+               onnx::NodeProto& node_proto, uint32_t target_core)
+    : Operation(config, model, node_proto, target_core) {
     onnx = true;
     for (auto attribute : node_proto.attribute()) {
         if (attribute.name() == "num_heads") {
@@ -62,8 +62,8 @@ Attention::Attention(SimulationConfig config, Model* model,
 }
 
 Attention::Attention(SimulationConfig config, Model* model, 
-        std::string name, std::map<std::string, std::string>& attributes)
-    :Operation(config, model, name, attributes) {
+        std::string name, std::map<std::string, std::string>& attributes, uint32_t target_core)
+    :Operation(config, model, name, attributes, target_core) {
     _batch_size = 1;
     _q_len = std::stoi(get_attribute("num_tokens"));
     _nh = std::stoi(get_attribute("num_heads"));
@@ -138,7 +138,7 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
     float kv_mem = _seq * _dk * _nkvh * 2  * _config.precision / (float) 1e9; //GB
     float q_mem = _q_len * _dk * _nh * 2 * _config.precision / (float) 1e9; //GB
     float total_mem = kv_mem + q_mem;
-    float compute_time = (qk_flops + kv_flops) / _config.max_systolic_flops(0) * 1e3;
+    float compute_time = (qk_flops + kv_flops) / _config.max_systolic_flops(target_core) * 1e3;
     compute_time += softmax_flops / _config.max_vector_flops(target_core) * 1e3;
     float mem_time = total_mem / _config.max_dram_bandwidth() * 1e3;
     float total_time = std::max(compute_time, mem_time);
@@ -146,9 +146,9 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
     spdlog::info("[Attention] Theoretical time(ms): {} Compute time: {} Memory time: {}",
         total_time, compute_time, mem_time);
     spdlog::info("[Attention] QK compute {:.4f}ms Softmax compute {:.4f}ms SV compute {:.4f}ms",
-        qk_flops / _config.max_systolic_flops(0) * 1e3,
+        qk_flops / _config.max_systolic_flops(target_core) * 1e3,
         softmax_flops / _config.max_vector_flops(target_core) * 1e3,
-        kv_flops / _config.max_systolic_flops(0) * 1e3);
+        kv_flops / _config.max_systolic_flops(target_core) * 1e3);
 }
 
 void Attention::initialize_onnx_tiles(MappingTable& mapping_table) {
@@ -161,7 +161,7 @@ void Attention::initialize_onnx_tiles(MappingTable& mapping_table) {
 
     /* Create linear node and tensors */
     uint32_t fused_op_id = 0;
-    _projection_node = new GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape);
+    _projection_node = new GemmWS(_config, mapping_table, _input_shape, _weight_shape, _liner_output_shape, target_core);
     std::unique_ptr<Tensor> key_projection = std::make_unique<Tensor>(
         _id, "", _projection_output_shape, _config.precision, false);
     std::unique_ptr<Tensor> query_projection = std::make_unique<Tensor>(
@@ -591,7 +591,7 @@ void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
     for (int req_idx = 0; req_idx < _batch_size; req_idx++) {
         for (int head_off=0; head_off<_nh; head_off++) {
             /* Key query matmul */
-            GemmWS key_query = GemmWS(_config, mapping_table, single_head_query_shape, single_head_key_shape, query_key_shape);
+            GemmWS key_query = GemmWS(_config, mapping_table, single_head_query_shape, single_head_key_shape, query_key_shape, target_core);
             /* Todo. dram addr */
             key_query.has_bias = false;
             key_query.initialize_tiles(mapping_table);
@@ -624,7 +624,7 @@ void Attention::initialize_non_fused_tiles(MappingTable& mapping_table) {
             _tiles.push_back(std::make_unique<Tile>(Tile{.status = Tile::Status::BAR, .layer_id = _id}));
 
             /* attention x value */
-            GemmWS attention = GemmWS(_config, mapping_table, query_key_shape, single_head_value_shape, single_output_shape);
+            GemmWS attention = GemmWS(_config, mapping_table, query_key_shape, single_head_value_shape, single_output_shape, target_core);
             /* Todo. dram addr */
             attention.has_bias = false;
             attention.initialize_tiles(mapping_table);

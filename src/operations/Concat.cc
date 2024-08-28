@@ -5,8 +5,8 @@
 #include "../Tensor.h"
 
 Concat::Concat(SimulationConfig config, Model* model,
-              	onnx::NodeProto& node_proto) 
-    : Operation(config, model, node_proto) {
+              	onnx::NodeProto& node_proto, uint32_t target_core) 
+    : Operation(config, model, node_proto, target_core) {
 	for (auto attribute : node_proto.attribute()) {
 		if (attribute.name() == "axis") {
 			spdlog::trace("concat axis {}", attribute.ints(0));
@@ -45,8 +45,8 @@ Concat::Concat(const Concat& src) : Operation(src) {
 }
 
 Concat::Concat(SimulationConfig config, Model* model,
-							 std::string name, std::map<std::string, std::string> &attributes)
-		: Operation(config, model, name, attributes) {
+							 std::string name, std::map<std::string, std::string> &attributes, uint32_t target_core)
+		: Operation(config, model, name, attributes, target_core) {
 			//TODO:implement this
 		_axis = std::stoi(get_attribute("axis"));
 }

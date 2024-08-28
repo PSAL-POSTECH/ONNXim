@@ -39,7 +39,7 @@ GemmWS make_GemmWS(SimulationConfig config, std::string mapping_str, uint32_t n,
   mapping_table[key] = mapping;
   std::vector<uint32_t> output_shape = {1, n, m};
   std::vector<uint32_t> weight_shape = {c, m};
-  GemmWS op(config, mapping_table, input_dims, weight_shape, output_shape);
+  GemmWS op(config, mapping_table, input_dims, weight_shape, output_shape, 0);
   op.initialize_tiles(mapping_table);
   return op;
 }

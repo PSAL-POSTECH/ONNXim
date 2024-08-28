@@ -6,8 +6,8 @@
 #include "../Tensor.h"
 
 ConvOS::ConvOS(SimulationConfig config, Model* model,
-               onnx::NodeProto& node_proto)
-    : Conv(config, model, node_proto) {}
+               onnx::NodeProto& node_proto, uint32_t target_core)
+    : Conv(config, model, node_proto, target_core) {}
 
 ConvOS::ConvOS(const Conv& src) : Conv(src) {}
 
@@ -28,7 +28,8 @@ void ConvOS::initialize_tiles(MappingTable& mapping_table) {
                           .S = weight_shape[Sdim],
                           .R = weight_shape[Rdim],
                           .Q = output_shape[Hdim],
-                          .P = output_shape[Wdim]};
+                          .P = output_shape[Wdim],
+                          .target_core = target_core};
   Mapping mapping;
   try {
     mapping = mapping_table.at(key);
