@@ -190,7 +190,8 @@ MemoryAccess* DramRamulator2::top(uint32_t cid) {
 
 void DramRamulator2::pop(uint32_t cid) {
   assert(!is_empty(cid));
-  _mem[cid]->return_queue_pop();
+  NDPSim::mem_fetch* mf = _mem[cid]->return_queue_pop();
+  delete mf;
 }
 
 void DramRamulator2::print_stat() {
