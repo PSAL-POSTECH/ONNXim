@@ -88,14 +88,11 @@ public:
 		bool downsample, bool trans_weight_0132, bool trans_input_3120,
 		int batches, int porows, int pocols, int ochs,
 		int krows, int kcols, int kchs,
-		int pool_size, int pool_stride);
+		int pool_size, int pool_stride, int dim);
   Mapping calc_conv_mapping(Mapping::LoopCounts &key);
 private:
   
   typedef std::map<Mapping::LoopCounts, Mapping> _MappingTable;
   _MappingTable _mapping_table;
   SimulationConfig _config;
-  uint32_t _dim;
-  uint32_t _max_spad_rows;
-  uint32_t _max_acc_rows;
 };

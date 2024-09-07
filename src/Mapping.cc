@@ -20,7 +20,6 @@ MappingTable::MappingTable () {}
 MappingTable::MappingTable (SimulationConfig config) {
   _mapping_table = _MappingTable();
   _config = config;
-
 }
 
 MappingTable MappingTable::parse_mapping_file(
@@ -52,33 +51,33 @@ MappingTable MappingTable::parse_mapping_file(
 
 void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   uint32_t dim_I, dim_J, dim_K;
-  uint32_t _dim = _config.core_config[key.target_core].core_height;
-  uint32_t _max_spad_rows = (_config.core_config[key.target_core].spad_size KB) / (_dim * _config.precision * 2);
-  uint32_t _max_acc_rows = (_config.core_config[key.target_core].accum_spad_size KB) / (_dim * 4 * 2);
+  uint32_t dim = _config.core_config[key.target_core].core_height;
+  uint32_t max_spad_rows = (_config.core_config[key.target_core].spad_size KB) / (dim * _config.precision * 2);
+  uint32_t max_acc_rows = (_config.core_config[key.target_core].accum_spad_size KB) / (dim * 4 * 2);
 
   assert(_config.core_config[key.target_core].core_height==_config.core_config[key.target_core].core_width);
   dim_I = key.N;
   dim_J = key.M;
   dim_K = key.C;
 
-  const uint32_t dim_I_padded = (dim_I / _dim + (dim_I % _dim != 0 )) * _dim;
-  const uint32_t dim_J_padded = (dim_J / _dim + (dim_J % _dim != 0 )) * _dim;
-  const uint32_t dim_K_padded = (dim_K / _dim + (dim_K % _dim != 0 )) * _dim;
+  const uint32_t dim_I_padded = (dim_I / dim + (dim_I % dim != 0 )) * dim;
+  const uint32_t dim_J_padded = (dim_J / dim + (dim_J % dim != 0 )) * dim;
+  const uint32_t dim_K_padded = (dim_K / dim + (dim_K % dim != 0 )) * dim;
 
   uint32_t tile_I, tile_J, tile_K;
   uint32_t inner_I, inner_J, inner_K;
   uint32_t db_partitions_rows, db_mats_in_partition, db_mats_in_acc;
   uint32_t db_max_tile_i_j, db_max_tile_k;
 
-  db_partitions_rows = _max_spad_rows / 2;
-  db_mats_in_partition = db_partitions_rows / _dim;
-  db_mats_in_acc = _max_acc_rows / _dim;
+  db_partitions_rows = max_spad_rows / 2;
+  db_mats_in_partition = db_partitions_rows / dim;
+  db_mats_in_acc = max_acc_rows / dim;
   db_max_tile_i_j = (uint32_t)sqrt(db_mats_in_acc);
   db_max_tile_k = db_mats_in_partition / db_max_tile_i_j;
 
-  tile_I = std::min(dim_I_padded/_dim, ceil_div(dim_I, db_max_tile_i_j*_dim));
-  tile_J = std::min(dim_J_padded/_dim, ceil_div(dim_J, db_max_tile_i_j*_dim));
-  tile_K = std::min(dim_K_padded/_dim, ceil_div(dim_K, db_max_tile_k*_dim));
+  tile_I = std::min(dim_I_padded/dim, ceil_div(dim_I, db_max_tile_i_j*dim));
+  tile_J = std::min(dim_J_padded/dim, ceil_div(dim_J, db_max_tile_i_j*dim));
+  tile_K = std::min(dim_K_padded/dim, ceil_div(dim_K, db_max_tile_k*dim));
   
   uint32_t num_tiles = tile_I * tile_J; //Skip C dim that needs accum
   if(num_tiles < _config.num_cores) {
@@ -103,9 +102,9 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   inner_J = ceil_div(dim_J_padded, tile_J);
   inner_K = ceil_div(dim_K_padded, tile_K);
 
-  inner_I -= inner_I & (_dim)-1;
-  inner_J -= inner_J & (_dim)-1;
-  inner_K -= inner_K & (_dim)-1;
+  inner_I -= inner_I & (dim)-1;
+  inner_J -= inner_J & (dim)-1;
+  inner_K -= inner_K & (dim)-1;
 
   tile_I = ceil_div(dim_I, inner_I);
   tile_J = ceil_div(dim_J, inner_J);
@@ -359,7 +358,7 @@ int MappingTable::_calc_conv_mapping(bool acc,
 		int batches,
 		int porows, int pocols, int ochs,
 		int krows, int kcols, int kchs,
-		int pool_size, int pool_stride) {
+		int pool_size, int pool_stride, int dim) {
 
 	const int orows = porows * pool_stride + pool_size - 1;
 	const int ocols = pocols * pool_stride + pool_size - 1;
@@ -374,9 +373,9 @@ int MappingTable::_calc_conv_mapping(bool acc,
 	irows = irows / input_dilation + (irows % input_dilation != 0);
 	icols = icols / input_dilation + (icols % input_dilation != 0);
 
-	const int in_channels_per_bank = ichs / _dim + (ichs % _dim != 0);
-	const int out_channels_per_bank = ochs / _dim + (ochs % _dim != 0);
-	const int batches_per_bank = batches / _dim + (batches % _dim != 0);
+	const int in_channels_per_bank = ichs / dim + (ichs % dim != 0);
+	const int out_channels_per_bank = ochs / dim + (ochs % dim != 0);
+	const int batches_per_bank = batches / dim + (batches % dim != 0);
 
 	const int A_rows = trans_input_3120 ?
 		(batches_per_bank * ichs * (irows >> downsample) * (icols >> downsample)) :
@@ -397,9 +396,9 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
   int stride, input_dilation, kernel_dilation, padding, kernel_dim;
   bool trans_input_3120, trans_weight_0132;
   int pool_size, pool_stride, pool_padding;
-  uint32_t _dim = _config.core_config[key.target_core].core_height;
-  uint32_t _max_spad_rows = (_config.core_config[key.target_core].spad_size KB) / (_dim * _config.precision * 2);
-  uint32_t _max_acc_rows = (_config.core_config[key.target_core].accum_spad_size KB) / (_dim * 4 * 2);
+  uint32_t dim = _config.core_config[key.target_core].core_height;
+  uint32_t max_spad_rows = (_config.core_config[key.target_core].spad_size KB) / (dim * _config.precision * 2);
+  uint32_t max_acc_rows = (_config.core_config[key.target_core].accum_spad_size KB) / (dim * 4 * 2);
 
   batch_size = 1;
   out_channels = key.M;
@@ -437,16 +436,12 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 	const int out_channels_idx = 3;
 	const int in_channels_idx = 6;
 
-	// We divide by 2 for the sake of double-buffering
-	const int max_spad_rows = _max_spad_rows;
-	const int max_acc_rows = _max_acc_rows;
-
 	int spad_rows = _calc_conv_mapping(false,
 		stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-		args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride);
+		args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride, dim);
 	int acc_rows = _calc_conv_mapping(true,
 		stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-		args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride);
+		args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride, dim);
 
 	while (spad_rows > max_spad_rows || acc_rows > max_acc_rows) {
 		int max_val = -1;
@@ -454,7 +449,7 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 
 		for (size_t i = 0; i < sizeof(args)/sizeof(args[0]); i++) {
 			// We avoid reducing ocols when possible to keep the spatial array fully utilized
-			if (!(i == ocols_idx && args[i] <= _dim && args[orows_idx] > 1)
+			if (!(i == ocols_idx && args[i] <= dim && args[orows_idx] > 1)
 					&& args[i] > max_val) {
 				max_val = args[i];
 				max_idx = i;
@@ -463,10 +458,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 
 		if (max_idx == out_channels_idx || max_idx == in_channels_idx) {
 			// For input and output channels, there's no point in subtracting by just one
-			if (args[max_idx] % _dim != 0) {
-				args[max_idx] = (args[max_idx] / _dim) * _dim;
+			if (args[max_idx] % dim != 0) {
+				args[max_idx] = (args[max_idx] / dim) * dim;
 			} else {
-				args[max_idx] -= _dim;
+				args[max_idx] -= dim;
 			}
 			args[max_idx] = args[max_idx] == 0 ? 1 : args[max_idx];
 		} else {
@@ -475,10 +470,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 
 		spad_rows = _calc_conv_mapping(false,
 			stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-			args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride);
+			args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride, dim);
 		acc_rows = _calc_conv_mapping(true,
 			stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-			args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride);
+			args[0], args[1], args[2], args[3], args[4], args[5], args[6], pool_size, pool_stride, dim);
 	}
 
 	// Check if we can increase ocols
@@ -494,10 +489,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 
 		spad_rows = _calc_conv_mapping(false,
 			stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-			args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride);
+			args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride, dim);
 		acc_rows = _calc_conv_mapping(true,
 			stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-			args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride);
+			args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride, dim);
 
 		if (spad_rows <= max_spad_rows && acc_rows <= max_acc_rows) {
 			args[ocols_idx] = args_candidate[ocols_idx];
@@ -518,10 +513,10 @@ Mapping MappingTable::calc_conv_mapping(Mapping::LoopCounts &key) {
 
 			spad_rows = _calc_conv_mapping(false,
 				stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-				args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride);
+				args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride, dim);
 			acc_rows = _calc_conv_mapping(true,
 				stride, input_dilation, kernel_dilation, downsample, trans_weight_0132, trans_input_3120,
-				args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride);
+				args_candidate[0], args_candidate[1], args_candidate[2], args_candidate[3], args_candidate[4], args_candidate[5], args_candidate[6], pool_size, pool_stride, dim);
       // B * O_ch * K_row * K_col * K_ch
       int weight_tile_size = args[0] * args[3] * args[4] * args[5] * args[6] * _config.precision;
       // B * O_row * O_col * O_ch
