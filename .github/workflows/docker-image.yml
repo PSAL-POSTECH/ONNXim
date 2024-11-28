@@ -1,18 +1,36 @@
-name: Docker Image CI
+name: Docker Build and Test
 
 on:
   push:
-    branches: [ "master" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "master" ]
+    branches:
+      - main
 
 jobs:
-
-  build:
-
-    runs-on: self-hosted
+  docker-build:
+    runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag onnxim:$(date +%s)
+      # 1. 저장소 체크아웃
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # 2. Docker 빌드
+      - name: Build Docker image
+        run: |
+          docker build -t onxxim-test .
+
+      # 3. Docker 빌드 테스트 (빌드 성공 여부 확인)
+      - name: Test Docker image
+        run: |
+          docker run --rm onxxim-test echo "Docker build successful!"
+
+      # 4. (선택 사항) 캐시 설정
+      # Docker 이미지 캐싱으로 빌드 시간을 줄일 수 있음
+      - name: Cache Docker layers
+        uses: actions/cache@v3
+        with:
+          path: /var/lib/docker
+          key: ${{ runner.os }}-docker-${{ github.sha }}
