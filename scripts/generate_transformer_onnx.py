@@ -37,6 +37,13 @@ else:
 pathlib.Path(f'{HOME}/models/{args.model}/').mkdir(parents=True, exist_ok=True)
 pathlib.Path(f"{HOME}/model_lists").mkdir(parents=True, exist_ok=True)
 
+# Check attention node
+nodes = optimized_model.graph().node
+node_types = [node.op_type for node in nodes]
+if "Attention" not in node_types:
+    print("Opimizing model failed...")
+    exit(1)
+
 # Save optimized onnx file
 optimized_model.save_model_to_file(f'{HOME}/models/{args.model}/{args.model}.onnx', use_external_data_format=True)
 
