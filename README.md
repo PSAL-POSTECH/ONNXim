@@ -46,6 +46,8 @@ $ python3 ./scripts/generate_transformer_onnx.py --model gpt2
 $ python3 ./scripts/generate_transformer_onnx.py --model bert
 ```
 
+## Custom format
+ONNXim suppo
 ------------
 
 ## Hardware Configuration
@@ -128,6 +130,33 @@ $ make -j
 $ cd ..
 $ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc_tpuv4.json --model ./example/models_list.json
 ```
+
+ONNXim supports custom model formats, with models like Llama and OPT implemented using this feature. Based on this, iteration-level scheduling policy is implemented.
+
+Below is an example of how to execute it (**Note**: You have to add `--language` option):
+
+```
+$ ./build/bin/Simulator --config ./configs/systolic_ws_128x128_c4_simple_noc_tpuv4.json --models_list example/language_models.json --mode language
+```
+
+`language_models.json` is structured as follows:
+```
+{
+  "models": [
+    {
+      "name": "opt-125m",
+      "trace_file": "input.csv",
+      "scheduler": "simple",
+      "scheduler_config": {
+        "max_batch_size": 8
+      }
+    }
+  ]
+}
+```
+- name: Specifies the LLM model to be selected.
+- trace_file: Sets the request trace file.
+- scheduler: Defines the scheduling policy to be used.
 
 ------------
 ## Result
