@@ -24,6 +24,14 @@ jobs:
         run: |
           docker run --rm onxxim-test echo "Docker build successful!"
 
+      - name: Test generating onnx file - GPT2
+        run: |
+          docker run --rm onxxim-test python3 /workspace/ONNXim/scripts/generate_transformer_onnx.py --model gpt2
+
+      - name: Test generating onnx file - BERT
+        run: |
+          docker run --rm onxxim-test python3 /workspace/ONNXim/scripts/generate_transformer_onnx.py --model bert
+
       - name: Cache Docker layers
         uses: actions/cache@v3
         with:

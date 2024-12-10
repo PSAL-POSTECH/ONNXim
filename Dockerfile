@@ -25,7 +25,7 @@ RUN wget https://github.com/Kitware/CMake/releases/download/v3.22.0/cmake-3.22.0
     make install
 
 # Install specific Python packages with pip
-RUN pip3 install conan==1.57.0 onnx onnxruntime torch torchvision optimum
+RUN pip3 install conan==1.57.0 transformers==4.40.1 onnx onnxruntime torch==2.3.1 torchvision optimum
 
 # Copy your project files into the image
 COPY ./ ONNXim
