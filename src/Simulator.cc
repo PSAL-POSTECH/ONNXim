@@ -169,8 +169,13 @@ void Simulator::cycle() {
         // ICNT to memory
         if (!_icnt->is_empty(_n_cores + mem_id) &&
             !_dram->is_full(mem_id, _icnt->top(_n_cores + mem_id))) {
-          _dram->push(mem_id, _icnt->top(_n_cores + mem_id));
-          _icnt->pop(_n_cores + mem_id);
+          
+              _dram->push(mem_id, _icnt->top(_n_cores + mem_id));
+                         // Call tensor_track is added 
+            //if (!_models.empty()) {
+            //    _models.front()->tensor_track(//how to get tensor id);
+            //}
+              _icnt->pop(_n_cores + mem_id);
           _nr_to_mem++;
         }
         // Pop response to ICNT from dram
@@ -179,6 +184,10 @@ void Simulator::cycle() {
           _icnt->push(_n_cores + mem_id, get_dest_node(_dram->top(mem_id)),
                       _dram->top(mem_id));
           _dram->pop(mem_id);
+          // Call tensor_track is added 
+           // if (!_models.empty()) {
+           //   _models.front()->tensor_track(//how to get tensor id);
+            //}
           _nr_from_mem++;
         }
       }

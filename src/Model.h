@@ -29,6 +29,9 @@ class Model {
     bool check_finish();
     uint32_t get_partition_id() { return _partition_id; }
     
+    //added function
+  void Model::tensor_track(uint32_t _id);
+  //end
     virtual bool check_language_model() { return false; }
     virtual bool check_regressive();
     virtual void prepare_regressive();

@@ -44,7 +44,9 @@ typedef struct {
   cycle_type dram_enter_cycle;
   cycle_type dram_finish_cycle;
   int buffer_id;
-} MemoryAccess;
+  //Tensor *T; // to have tensor id when core requests memory access but we would need to fill it in core ld/str requests 
+            // But dram_address cant be seen in simulator.cc 
+             } MemoryAccess;
 
 enum class Opcode {
   MOVIN,

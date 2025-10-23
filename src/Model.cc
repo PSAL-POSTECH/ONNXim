@@ -250,3 +250,9 @@ void Model::prepare_regressive() {
   _start_time = 0;
   _started = false;
 }
+
+//added a custom function for tracking tensor
+ void Model::tensor_track(uint32_t _id)  {
+              Tensor *T=get_tensor(_id);
+              if (T) T->print_tensor();
+}
