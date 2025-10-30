@@ -1,0 +1,1 @@
+cmd='/usr/local/bin/cmake;-DCMAKE_CXX_FLAGS:STRING="-D_GLIBCXX_USE_CXX11_ABI=0";-GUnix Makefiles;<SOURCE_DIR><SOURCE_SUBDIR>'

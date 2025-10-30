@@ -1,0 +1,43 @@
+{
+	"sources" : 
+	[
+		{
+			"file" : "/workspace/ONNXim/build/tests/CMakeFiles/GoogleTest"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/CMakeFiles/GoogleTest.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/CMakeFiles/GoogleTest-complete.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-build.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-configure.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-download.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-install.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-mkdir.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-patch.rule"
+		},
+		{
+			"file" : "/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-update.rule"
+		}
+	],
+	"target" : 
+	{
+		"labels" : 
+		[
+			"GoogleTest"
+		],
+		"name" : "GoogleTest"
+	}
+}

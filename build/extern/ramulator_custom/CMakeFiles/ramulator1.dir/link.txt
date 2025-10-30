@@ -1,0 +1,2 @@
+/usr/bin/ar qc ../../lib/libramulator1.a CMakeFiles/ramulator1.dir/src/Config.cpp.o CMakeFiles/ramulator1.dir/src/DDR4.cpp.o CMakeFiles/ramulator1.dir/src/HBM.cpp.o CMakeFiles/ramulator1.dir/src/MemoryFactory.cpp.o CMakeFiles/ramulator1.dir/src/Ramulator.cpp.o CMakeFiles/ramulator1.dir/src/Refresh.cpp.o CMakeFiles/ramulator1.dir/src/Request.cpp.o CMakeFiles/ramulator1.dir/src/StatType.cpp.o
+/usr/bin/ranlib ../../lib/libramulator1.a

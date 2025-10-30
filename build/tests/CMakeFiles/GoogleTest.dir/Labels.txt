@@ -1,0 +1,13 @@
+# Target labels
+ GoogleTest
+# Source files and their labels
+/workspace/ONNXim/build/tests/CMakeFiles/GoogleTest
+/workspace/ONNXim/build/tests/CMakeFiles/GoogleTest.rule
+/workspace/ONNXim/build/tests/CMakeFiles/GoogleTest-complete.rule
+/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-build.rule
+/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-configure.rule
+/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-download.rule
+/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-install.rule
+/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-mkdir.rule
+/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-patch.rule
+/workspace/ONNXim/build/tests/lib/src/GoogleTest-stamp/GoogleTest-update.rule
