@@ -4,6 +4,17 @@
 class Model;
 class Operation;
 
+  // ---------------- Tensor Global Tracking ----------------
+struct TensorInfo {
+    std::string name;
+    uint64_t start_addr;
+    uint64_t end_addr;
+    uint64_t size;
+};
+       // Post-simulation logging
+void log_tensor_allocation_table();
+
+
 class Tensor {
  public:
   Tensor(uint32_t src_node, onnx::TensorProto &tensor_proto, int precision, bool produced);
@@ -31,6 +42,8 @@ class Tensor {
   uint64_t get_size() { return _size; }
   void print_tensor();
 
+
+
  private:
   bool _temporal;
   uint32_t _precision;
@@ -44,3 +57,7 @@ class Tensor {
   uint64_t _size;
   friend Model;
 };
+
+// Declare globals for external linkage
+extern std::unordered_map<uint32_t, TensorInfo> g_tensor_addr_map;
+extern std::mutex g_tensor_map_mutex;

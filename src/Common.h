@@ -29,6 +29,8 @@
 
 using json = nlohmann::json;
 
+struct Tensor;
+
 typedef uint64_t addr_type;
 typedef uint64_t cycle_type;
 
@@ -44,8 +46,8 @@ typedef struct {
   cycle_type dram_enter_cycle;
   cycle_type dram_finish_cycle;
   int buffer_id;
-  //Tensor *T; // to have tensor id when core requests memory access but we would need to fill it in core ld/str requests 
-            // But dram_address cant be seen in simulator.cc 
+    addr_type tensor_id;   // what is the type in instruction struct from lowering operation.h 
+    // I should get assign and assing it to tensor id there then initilize this memoryaccess member with it
              } MemoryAccess;
 
 enum class Opcode {
@@ -79,6 +81,7 @@ typedef struct {
   std::string dest_id;
   addr_type dest_addr;
   uint32_t size;          // Used for sram allocation. Multiple of _config.dram_req_size
+     std::shared_ptr<Tensor> tensor; // <-- use shared_ptr
   uint32_t compute_size;
   std::vector<addr_type> src_addrs;
   int spad_id;

@@ -8,6 +8,7 @@
 #include "SimulationConfig.h"
 #include "Sram.h"
 #include "Stat.h"
+#include "Tensor.h"
 
 class Core {
  public:

@@ -31,8 +31,9 @@ Model::Model(json model_config, SimulationConfig config, std::string name)
 }
 
 Tensor* Model::get_tensor(uint32_t id) {
-  return _tensor_map[id].get();
-}
+    return _tensor_map[id].get();
+    }
+
 
 Tensor* Model::find_tensor(std::string name) {
   for(auto const& [key, val]: _tensor_map) {
@@ -251,8 +252,15 @@ void Model::prepare_regressive() {
   _started = false;
 }
 
-//added a custom function for tracking tensor
- void Model::tensor_track(uint32_t _id)  {
-              Tensor *T=get_tensor(_id);
-              if (T) T->print_tensor();
+void Model::tensor_track(uint32_t tensor_id) {
+    Tensor* t = get_tensor(tensor_id); //once we get tensorid from lowering operation.cc assigned to a member in instruction struct and then passed to Memoryaccess we can do this   
+    if (!t) {
+        spdlog::info("[debug] Tracking tensor: '{}'", tensor_id);
+        return;
+    }
+    t->print_tensor();
 }
+
+
+
+
