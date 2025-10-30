@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <robin_hood.h>
@@ -29,6 +30,8 @@
 
 using json = nlohmann::json;
 
+struct Tensor;
+
 typedef uint64_t addr_type;
 typedef uint64_t cycle_type;
 
@@ -44,7 +47,9 @@ typedef struct {
   cycle_type dram_enter_cycle;
   cycle_type dram_finish_cycle;
   int buffer_id;
-} MemoryAccess;
+   // addr_type? tensor_id;   // what is the type in instruction struct from lowering operation.h 
+    // I should get assign and assing it to tensor id there then initilize this memoryaccess member with it
+             } MemoryAccess;
 
 enum class Opcode {
   MOVIN,
@@ -77,6 +82,7 @@ typedef struct {
   std::string dest_id;
   addr_type dest_addr;
   uint32_t size;          // Used for sram allocation. Multiple of _config.dram_req_size
+//     std::shared_ptr<Tensor> tensor; // <-- use shared_ptr
   uint32_t compute_size;
   std::vector<addr_type> src_addrs;
   int spad_id;

@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "Common.h"
@@ -41,6 +42,8 @@ class Simulator {
   std::unique_ptr<Interconnect> _icnt;
   std::unique_ptr<Dram> _dram;
   std::unique_ptr<Scheduler> _scheduler;
+  std::unique_ptr<Model> _active_model;  // member variable
+  Model* _active_model_ptr = nullptr;     // non-owning pointer for tracking
   
   // period information (ps)
   uint64_t _core_period;
@@ -81,3 +84,4 @@ class Simulator {
 
   bool check_defined_model(std::string model_name);
 };
+
