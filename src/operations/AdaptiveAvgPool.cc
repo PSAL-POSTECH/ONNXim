@@ -72,5 +72,28 @@ void AdaptiveAvgPool::initialize_tiles(MappingTable& mapping_table) {
 }
 
 void AdaptiveAvgPool::initialize_instructions(Tile* tile, Mapping mapping) {
-  return;
+    if (_outputs.empty()) return;  // no tensor to track
+
+    Tensor* output_tensor = _model->get_tensor(_outputs[0]); // get tensor pointer
+    if (!output_tensor) return;
+
+    addr_type sram_base = SPAD_BASE;  // example SRAM location
+    uint32_t tensor_size = 1;
+    for (auto dim : output_tensor->get_dims()) tensor_size *= dim;
+    tensor_size *= _config.precision;
+
+    // MOVOUT instruction: write back result to DRAM
+tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
+    .opcode = Opcode::MOVOUT,
+    .id = "",  // or some string if needed
+    .dependent_ids = {},  // empty vector since not used here
+    .dest_id = std::to_string(output_tensor->get_id()), // <-- link tensor ID
+    .dest_addr = sram_base,
+    .size = tensor_size,
+    .src_addrs = {sram_base},
+    .operand_id = _OUTPUT_OPERAND
+}));
+
+    spdlog::info("[AdaptiveAvgPool] Instruction created for tensor ID {}",
+                 output_tensor->get_id());
 }

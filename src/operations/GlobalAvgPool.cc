@@ -3,6 +3,7 @@
 #include "../Model.h"
 
 
+
 GlobalAvgPool::GlobalAvgPool(SimulationConfig config, Model* model, onnx::NodeProto& node_proto, uint32_t target_core) 
   : Operation(config, model, node_proto, target_core) {
 
@@ -56,6 +57,7 @@ void GlobalAvgPool::initialize_tiles(MappingTable& mapping_table) {
 }
 
 void GlobalAvgPool::initialize_instructions(Tile* tile, Mapping mapping) {
+ //uncommented these
   // std::vector<uint32_t> output_shape = get_output(0)->get_dims();
   // std::vector<uint32_t> input_shape = get_input(0)->get_dims();
 

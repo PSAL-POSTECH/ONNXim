@@ -18,7 +18,10 @@ class Model {
     uint32_t get_root_node_id() { return _root_node_id; }
     void add_tensor(std::unique_ptr<Tensor> tensor);
     void set_layer_finish(uint32_t id); 
-
+    //added
+   void tensor_track(uint64_t tensor_id);
+ 
+//end
     std::string get_name() { return _name; }
     uint32_t executable_layer_size();
     Operation* get_executable_tile();

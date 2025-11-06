@@ -3,6 +3,15 @@
 
 class Model;
 class Operation;
+struct TensorInfo {
+    std::string name;
+    uint64_t start_addr;
+    uint64_t end_addr;
+    uint64_t size;
+};
+       // Post-simulation logging
+void log_tensor_allocation_table();
+
 
 class Tensor {
  public:

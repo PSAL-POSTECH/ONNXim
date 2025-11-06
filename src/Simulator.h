@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include "Common.h"
@@ -22,6 +23,9 @@ class Simulator {
   void run_simulator();
   const double get_tile_ops();
   const size_t get_number_tile() { return _tile_timestamp.size(); }
+  // Map memory requests/responses to tensor IDs
+std::unordered_map<MemoryAccess*, uint32_t> _memaccess_to_tensor;
+
   // void run_offline(std::string model_name, uint32_t sample_count);
   // void run_multistream(std::string model_name, uint32_t sample_count,
   // uint32_t ); void run_server(std::string trace_path);
@@ -41,6 +45,8 @@ class Simulator {
   std::unique_ptr<Interconnect> _icnt;
   std::unique_ptr<Dram> _dram;
   std::unique_ptr<Scheduler> _scheduler;
+  std::unique_ptr<Model> _active_model;  // member variable
+  Model* _active_model_ptr = nullptr;     // non-owning pointer for tracking
   
   // period information (ps)
   uint64_t _core_period;
@@ -81,3 +87,4 @@ class Simulator {
 
   bool check_defined_model(std::string model_name);
 };
+

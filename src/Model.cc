@@ -31,8 +31,9 @@ Model::Model(json model_config, SimulationConfig config, std::string name)
 }
 
 Tensor* Model::get_tensor(uint32_t id) {
-  return _tensor_map[id].get();
-}
+    return _tensor_map[id].get();
+    }
+
 
 Tensor* Model::find_tensor(std::string name) {
   for(auto const& [key, val]: _tensor_map) {
@@ -122,19 +123,28 @@ void Model::initialize_model(std::vector<std::unique_ptr<Tensor>>& weight_table)
     }
   }
 
-  for(auto& [key, val] : _operation_map) {
-    /* Attention is speacial case */
+for (auto& [key, val] : _operation_map) {
+    /* Attention is special case */
     if (val->get_optype() == "Attention") {
-      Attention* attention_node = static_cast<Attention*>(val.get());
-      attention_node->initialize_onnx_tiles(_mapping_table);
-      int projection_id = attention_node->_projection_node->get_id();
-      _operation_map[projection_id] = std::move(std::unique_ptr<GemmWS>(attention_node->_projection_node));
-      _operation_map[projection_id]->initialize_tiles(_mapping_table);
+        Attention* attention_node = static_cast<Attention*>(val.get());
+
+        // ✅ get the output tensor id and make a string version of it
+        uint32_t tensor_id_str;
+        if (!attention_node->_outputs.empty()) {
+            tensor_id_str = attention_node->_outputs.back();
+        }
+
+        // ✅ pass it to the specialized initializer
+        attention_node->initialize_onnx_tiles(_mapping_table, tensor_id_str);
+
+        int projection_id = attention_node->_projection_node->get_id();
+        _operation_map[projection_id] = std::move(std::unique_ptr<GemmWS>(attention_node->_projection_node));
+        _operation_map[projection_id]->initialize_tiles(_mapping_table);
+    } else {
+        val->initialize_tiles(_mapping_table);
     }
-    else {
-      val->initialize_tiles(_mapping_table);
-    }
-  }
+}
+
 
   for (auto& [key, val]: _operation_map) {
     if(val->check_executable()) {
@@ -250,3 +260,22 @@ void Model::prepare_regressive() {
   _start_time = 0;
   _started = false;
 }
+extern std::unordered_map<uint32_t, TensorInfo> g_tensor_addr_map;
+extern std::mutex g_tensor_map_mutex;
+
+void Model::tensor_track(uint64_t dram_addr) {
+    std::lock_guard<std::mutex> lock(g_tensor_map_mutex);
+
+    for (auto& [id, info] : g_tensor_addr_map) {
+        if (dram_addr >= info.start_addr && dram_addr < info.end_addr) {
+            spdlog::info("DRAM access 0x{:x} → TensorID={} Name={} Range=[0x{:x}-0x{:x}) Size={}",
+                         dram_addr, id, info.name, info.start_addr, info.end_addr, info.size);
+            return;
+        }
+    }
+
+    spdlog::info("DRAM access 0x{:x} → [no matching tensor found]", dram_addr);
+}
+
+
+

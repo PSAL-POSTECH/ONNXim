@@ -1,8 +1,11 @@
+
 #include "Core.h"
 #include "SystolicWS.h"
 #include "SystolicOS.h"
 
 #include "helper/HelperFunctions.h"
+
+struct Tensor;
 
 std::unique_ptr<Core> Core::create(uint32_t id, SimulationConfig config) {
   if (config.core_config[id].core_type == CoreType::SYSTOLIC_WS) {
@@ -342,6 +345,7 @@ void Core::handle_ld_inst_queue() {
       }
       for (addr_type addr : front->src_addrs) {
         assert(front->base_addr != GARBEGE_ADDR);
+        
         MemoryAccess *access =
             new MemoryAccess({.id = generate_mem_access_id(),
                               .dram_address = addr + front->base_addr,
@@ -351,7 +355,9 @@ void Core::handle_ld_inst_queue() {
                               .request = true,
                               .core_id = _id,
                               .start_cycle = _core_cycle,
-                              .buffer_id = buffer_id});
+                              .buffer_id = buffer_id,
+                               .tensor_id= front->dest_addr //id is from output_id tensor
+                            });
         _request_queue.push(access);
       }
       _ld_inst_queue.pop();
@@ -364,7 +370,7 @@ void Core::handle_ld_inst_queue() {
 void Core::handle_st_inst_queue() {
   if (!_st_inst_queue.empty()) {
     std::unique_ptr<Instruction> front = std::move(_st_inst_queue.front());
-    if (front->opcode == Opcode::MOVOUT || front->opcode == Opcode::MOVOUT_POOL) {
+       if (front->opcode == Opcode::MOVOUT || front->opcode == Opcode::MOVOUT_POOL) {
       Sram *buffer;
       int buffer_id;
       if (front->dest_addr >= ACCUM_SPAD_BASE) {
@@ -386,7 +392,10 @@ void Core::handle_st_inst_queue() {
                               .request = true,
                               .core_id = _id,
                               .start_cycle = _core_cycle,
-                              .buffer_id = buffer_id};
+                              .buffer_id = buffer_id,
+                             .tensor_id = front->dest_addr////id is from input_id in tensor
+
+};
           _waiting_write_reqs++;
           _request_queue.push(access);
         }

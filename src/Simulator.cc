@@ -1,3 +1,4 @@
+
 #include "Simulator.h"
 
 #include <filesystem>
@@ -78,131 +79,214 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
   std::make_heap(_models.begin(), _models.end(), CompareModel());
 }
 
+
 void Simulator::run_simulator() {
   spdlog::info("======Start Simulation=====");
   cycle();
 }
 
 void Simulator::handle_model() {
-  if(_language_mode) {
-    _lang_scheduler->cycle();
-    if(_lang_scheduler->can_schedule_model()) {
-      _models.push_back(_lang_scheduler->pop_model());
-      std::push_heap(_models.begin(), _models.end(), CompareModel());
+    if (_language_mode) {
+        _lang_scheduler->cycle();
+        if (_lang_scheduler->can_schedule_model()) {
+            _models.push_back(_lang_scheduler->pop_model());
+            std::push_heap(_models.begin(), _models.end(), CompareModel());
+        }
     }
-  }
-  while (!_models.empty() && _models.front()->get_request_time() <= _core_time) {
-    std::unique_ptr<Model> launch_model = std::move(_models.front());
-    std::pop_heap(_models.begin(), _models.end(), CompareModel());
-    _models.pop_back();
 
-    launch_model->initialize_model(_weight_table[launch_model->get_name()]);
-    launch_model->set_request_time(_core_time);
-    spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time);
-    _scheduler->schedule_model(std::move(launch_model), 1);
-  }
+    while (!_models.empty() && _models.front()->get_request_time() <= _core_time) {
+        std::unique_ptr<Model> launch_model = std::move(_models.front());
+
+        std::pop_heap(_models.begin(), _models.end(), CompareModel());
+        _models.pop_back();
+
+        launch_model->initialize_model(_weight_table[launch_model->get_name()]);
+        launch_model->set_request_time(_core_time);
+        spdlog::info("Schedule model: {} at {} us", launch_model->get_name(), _core_time);
+
+      // --- set active model before handing off to scheduler ---
+_active_model_ptr = launch_model.get();  // non-owning pointer for tracking
+_active_model = std::move(launch_model); // transfer ownership to simulator
+
+// schedule the active model (transfer ownership to scheduler)
+_scheduler->schedule_model(std::move(_active_model), 1);
+
+    }
 }
+
 
 void Simulator::cycle() {
-  OpStat op_stat;
-  ModelStat model_stat;
-  uint32_t tile_count;
-  bool is_accum_tile;
-  while (running()) {
-    int model_id = 0;
+    OpStat op_stat;
+    ModelStat model_stat;
+    uint32_t tile_count;
+    bool is_accum_tile;
 
-    set_cycle_mask();
-    // Core Cycle
-    if (_cycle_mask & CORE_MASK) {
-      /* Handle requested model */
-      handle_model();
+    while (running()) {
+        int model_id = 0;
 
-      for (int core_id = 0; core_id < _n_cores; core_id++) {
-        std::unique_ptr<Tile> finished_tile = _cores[core_id]->pop_finished_tile();
-        if (finished_tile->status == Tile::Status::FINISH) {
-          _scheduler->finish_tile(core_id, finished_tile->layer_id);
-        }
-        // Issue new tile to core
-        if (!_scheduler->empty()) {
-          is_accum_tile = _scheduler->is_accum_tile(core_id, 0);
-          if (_cores[core_id]->can_issue(is_accum_tile)) {
-            std::unique_ptr<Tile> tile = _scheduler->get_tile(core_id);
-            if (tile->status == Tile::Status::INITIALIZED) {
-              _cores[core_id]->issue(std::move(tile));
-              _tile_timestamp.push_back(std::chrono::high_resolution_clock::now());
+        set_cycle_mask();
+
+        // --- Core Cycle ---
+        if (_cycle_mask & CORE_MASK) {
+            handle_model();
+
+            for (int core_id = 0; core_id < _n_cores; core_id++) {
+                std::unique_ptr<Tile> finished_tile = _cores[core_id]->pop_finished_tile();
+                if (finished_tile->status == Tile::Status::FINISH) {
+                    _scheduler->finish_tile(core_id, finished_tile->layer_id);
+                }
+
+                if (!_scheduler->empty()) {
+                    is_accum_tile = _scheduler->is_accum_tile(core_id, 0);
+                      if (_cores[core_id]->can_issue(is_accum_tile)) {
+                          std::unique_ptr<Tile> tile = _scheduler->get_tile(core_id);
+                          if (tile->status == Tile::Status::INITIALIZED) {
+                              _cores[core_id]->issue(std::move(tile));
+                              _tile_timestamp.push_back(std::chrono::high_resolution_clock::now());
+                        }
+                    } 
+                }
+                _cores[core_id]->cycle();
             }
-          }
+            _core_cycles++;
         }
-        _cores[core_id]->cycle();
-      }
-      _core_cycles++;
-    }
 
-    // DRAM cycle
-    if (_cycle_mask & DRAM_MASK) {
-      _dram->cycle();
-    }
-    // Interconnect cycle
-    if (_cycle_mask & ICNT_MASK) {
-      _icnt_cycle++;
+        // --- DRAM Cycle ---
+        if (_cycle_mask & DRAM_MASK) {
+            _dram->cycle();
+        }
 
-      for (int core_id = 0; core_id < _n_cores; core_id++) {
-        // PUHS core to ICNT. memory request
-        if (_cores[core_id]->has_memory_request()) {
-          MemoryAccess *front = _cores[core_id]->top_memory_request();
-          front->core_id = core_id;
-          if (!_icnt->is_full(core_id, front)) {
+        // --- Interconnect Cycle ---
+        if (_cycle_mask & ICNT_MASK) {
+            _icnt_cycle++;
+
+            // --- Core <-> ICNT ---
+            for (int core_id = 0; core_id < _n_cores; core_id++) {
+
+                // Push core request to ICNT
+                if (_cores[core_id]->has_memory_request()) {
+                    MemoryAccess* front = _cores[core_id]->top_memory_request();
+                    front->core_id = core_id;
+
+                    if (!_icnt->is_full(core_id, front)) {
+                        _icnt->push(core_id, get_dest_node(front), front);
+                        _cores[core_id]->pop_memory_request();
+                        _nr_from_core++;
+
+                   
+                    }
+                }
+
+                // Push response from ICNT to core
+                if (!_icnt->is_empty(core_id)) {
+                    MemoryAccess* resp = _icnt->top(core_id);
+                    _cores[core_id]->push_memory_response(resp);
+
+
+                    _icnt->pop(core_id);
+                    _nr_to_core++;
+                }
+            }
+
+ 
+// Loop over cores
+for (int core_id = 0; core_id < _n_cores; core_id++) {
+
+    // Push core request to ICNT
+    if (_cores[core_id]->has_memory_request()) {
+        MemoryAccess* front = _cores[core_id]->top_memory_request();
+        front->core_id = core_id;
+
+             // **Log tensor memory request**
+        
+
+
+        if (!_icnt->is_full(core_id, front)) {
             _icnt->push(core_id, get_dest_node(front), front);
             _cores[core_id]->pop_memory_request();
-            _nr_from_core++;
-          }
-        }
-        // Push response from ICNT. to Core.
-        if (!_icnt->is_empty(core_id)) {
-          _cores[core_id]->push_memory_response(_icnt->top(core_id));
-          _icnt->pop(core_id);
-          _nr_to_core++;
-        }
-      }
 
-      for (int mem_id = 0; mem_id < _n_memories; mem_id++) {
-        // ICNT to memory
-        if (!_icnt->is_empty(_n_cores + mem_id) &&
-            !_dram->is_full(mem_id, _icnt->top(_n_cores + mem_id))) {
-          _dram->push(mem_id, _icnt->top(_n_cores + mem_id));
-          _icnt->pop(_n_cores + mem_id);
-          _nr_to_mem++;
+            _nr_from_core++;
+
         }
-        // Pop response to ICNT from dram
-        if (!_dram->is_empty(mem_id) &&
-            !_icnt->is_full(_n_cores + mem_id, _dram->top(mem_id))) {
-          _icnt->push(_n_cores + mem_id, get_dest_node(_dram->top(mem_id)),
-                      _dram->top(mem_id));
-          _dram->pop(mem_id);
-          _nr_from_mem++;
-        }
-      }
-      if (_icnt_interval!=0 && _icnt_cycle % _icnt_interval == 0) {
-        spdlog::info("[ICNT] Core->ICNT request {}GB/Sec", ((_memory_req_size*_nr_from_core*(1000/_icnt_period)/_icnt_interval)));
-        spdlog::info("[ICNT] Core<-ICNT request {}GB/Sec", ((_memory_req_size*_nr_to_core*(1000/_icnt_period)/_icnt_interval)));
-        spdlog::info("[ICNT] ICNT->MEM request {}GB/Sec", ((_memory_req_size*_nr_to_mem*(1000/_icnt_period)/_icnt_interval)));
-        spdlog::info("[ICNT] ICNT<-MEM request {}GB/Sec", ((_memory_req_size*_nr_from_mem*(1000/_icnt_period)/_icnt_interval)));
-        _nr_from_core=0;
-        _nr_to_core=0;
-        _nr_to_mem=0;
-        _nr_from_mem=0;
-      }
-      _icnt->cycle();
     }
-  }
-  spdlog::info("Simulation Finished at {} cycle {} us", _core_cycles, _core_cycles / (_config.core_freq) );
-  /* Print simulation stats */
-  for (int core_id = 0; core_id < _n_cores; core_id++) {
-    _cores[core_id]->print_stats();
-  }
-  _icnt->print_stats();
-  _dram->print_stat();
+
+    // Push response from ICNT to core
+    if (!_icnt->is_empty(core_id)) {
+        MemoryAccess* top_access = _icnt->top(core_id);
+        _cores[core_id]->push_memory_response(top_access);
+
+        _icnt->pop(core_id);
+        _nr_to_core++;
+    }
 }
+
+// Loop over memories
+for (int mem_id = 0; mem_id < _n_memories; mem_id++) {
+
+    // ICNT -> DRAM
+    if (!_icnt->is_empty(_n_cores + mem_id) &&
+        !_dram->is_full(mem_id, _icnt->top(_n_cores + mem_id))) {
+
+        MemoryAccess* top_access = _icnt->top(_n_cores + mem_id);
+// **Log tensor coming back from DRAM**
+        spdlog::debug("[DRAM->ICNT] Mem {} sends TensorID {} Size={}",
+                      mem_id, top_access->dram_address, top_access->size);
+
+if (_active_model_ptr) {
+    _active_model_ptr->tensor_track(top_access->dram_address);
+}
+
+        _dram->push(mem_id, top_access);
+
+        _icnt->pop(_n_cores + mem_id);
+        _nr_to_mem++;
+    }
+
+    // DRAM -> ICNT
+    if (!_dram->is_empty(mem_id) &&
+        !_icnt->is_full(_n_cores + mem_id, _dram->top(mem_id))) {
+
+        MemoryAccess* top_access = _dram->top(mem_id);
+// **Log tensor coming back from DRAM** //tensor_id is not passed right
+
+        spdlog::debug("[DRAM->ICNT] Mem {} sends TensorID {} Size={}",
+                      mem_id, top_access->dram_address, top_access->size);
+
+        if (_active_model_ptr) {
+    _active_model_ptr->tensor_track(top_access->dram_address);
+}
+
+        _icnt->push(_n_cores + mem_id, get_dest_node(top_access), top_access);
+
+        _dram->pop(mem_id);
+        _nr_from_mem++;
+    }
+}
+
+            if (_icnt_interval != 0 && _icnt_cycle % _icnt_interval == 0) {
+                spdlog::info("[ICNT] Core->ICNT request {}GB/Sec", ((_memory_req_size*_nr_from_core*(1000/_icnt_period)/_icnt_interval)));
+                spdlog::info("[ICNT] Core<-ICNT request {}GB/Sec", ((_memory_req_size*_nr_to_core*(1000/_icnt_period)/_icnt_interval)));
+                spdlog::info("[ICNT] ICNT->MEM request {}GB/Sec", ((_memory_req_size*_nr_to_mem*(1000/_icnt_period)/_icnt_interval)));
+                spdlog::info("[ICNT] ICNT<-MEM request {}GB/Sec", ((_memory_req_size*_nr_from_mem*(1000/_icnt_period)/_icnt_interval)));
+                _nr_from_core=0;
+                _nr_to_core=0;
+                _nr_to_mem=0;
+                _nr_from_mem=0;
+            }
+
+            _icnt->cycle();
+        }
+    }
+
+    spdlog::info("Simulation Finished at {} cycle {} us", _core_cycles, _core_cycles / (_config.core_freq) );
+    for (int core_id = 0; core_id < _n_cores; core_id++) {
+        _cores[core_id]->print_stats();
+    }
+    _icnt->print_stats();
+    _dram->print_stat();
+    log_tensor_allocation_table();
+}
+
 
 void Simulator::register_model(std::unique_ptr<Model> model) {
   if(_weight_table.find(model->get_name()) == _weight_table.end()) {
