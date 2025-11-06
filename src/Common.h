@@ -47,8 +47,7 @@ typedef struct {
   cycle_type dram_enter_cycle;
   cycle_type dram_finish_cycle;
   int buffer_id;
-   // addr_type? tensor_id;   // what is the type in instruction struct from lowering operation.h 
-    // I should get assign and assing it to tensor id there then initilize this memoryaccess member with it
+  addr_type tensor_id;   // if it doesnt work then id from instruciton should be uint64_t like addr_type so we use uint64_t instead of 32
              } MemoryAccess;
 
 enum class Opcode {
@@ -77,12 +76,12 @@ typedef struct {
   Opcode opcode;
   cycle_type start_cycle;
   cycle_type finish_cycle;
-  std::string id;
+  std::string id; //changes this here since id in instruction.h is uint32_t which is passed by _outputid in global.cc
   std::vector<std::string> dependent_ids;
+  uint32_t tensor_id;
   std::string dest_id;
   addr_type dest_addr;
   uint32_t size;          // Used for sram allocation. Multiple of _config.dram_req_size
-//     std::shared_ptr<Tensor> tensor; // <-- use shared_ptr
   uint32_t compute_size;
   std::vector<addr_type> src_addrs;
   int spad_id;
@@ -123,6 +122,7 @@ struct Tile {
 
   TileStat stat;
   std::deque<std::unique_ptr<Instruction>> instructions;
+  uint32_t tensor_id; //<-- added this
   bool accum;
   bool skip;
   int spad_id;

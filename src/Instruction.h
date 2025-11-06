@@ -25,7 +25,7 @@ class Instruction {
   enum class Type {
     LD_INST, ST_INST, EXE_INST
   };
-  uint32_t id; 
+  std::string id;  //change
   Opcode opcode;
   Type type;
   size_t tile_size;

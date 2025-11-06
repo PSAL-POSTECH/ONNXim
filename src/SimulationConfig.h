@@ -69,6 +69,8 @@ struct SimulationConfig {
   uint32_t precision;
   uint32_t full_precision = 4;
   std::string layout;
+//added this here only
+uint32_t vector_process_bit = 256; // added line
 
   /*
    * This map stores the partition information: <partition_id, core_id>

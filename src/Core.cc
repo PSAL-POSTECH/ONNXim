@@ -355,8 +355,8 @@ void Core::handle_ld_inst_queue() {
                               .request = true,
                               .core_id = _id,
                               .start_cycle = _core_cycle,
-                              .buffer_id = buffer_id
-                   //            .tensor_id = front->dest_addr //dest_addr is passed during lowering from the tiles
+                              .buffer_id = buffer_id,
+                               .tensor_id= front->dest_addr //id is from output_id tensor
                             });
         _request_queue.push(access);
       }
@@ -392,8 +392,8 @@ void Core::handle_st_inst_queue() {
                               .request = true,
                               .core_id = _id,
                               .start_cycle = _core_cycle,
-                              .buffer_id = buffer_id
-                         //     .tensor_id = front->dest_addr//dest_addr is passed during lowering from the tiles
+                              .buffer_id = buffer_id,
+                             .tensor_id = front->dest_addr////id is from input_id in tensor
 
 };
           _waiting_write_reqs++;

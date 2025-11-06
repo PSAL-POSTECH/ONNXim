@@ -59,6 +59,11 @@ Attention::Attention(SimulationConfig config, Model* model,
     } else {
         pre_defind_tensor->redefine_tensor(_id, _output_shape);
     }
+    uint32_t tensor_id = (pre_defind_tensor != nullptr)
+    ? pre_defind_tensor->get_id()
+    : _outputs.back(); // last pushed when we created new tensor
+
+uint32_t tensor_id_str = tensor_id;
 }
 
 Attention::Attention(SimulationConfig config, Model* model, 
@@ -71,7 +76,7 @@ Attention::Attention(SimulationConfig config, Model* model,
     _dmodel = std::stoi(get_attribute("hidden_size"));
     _dk = _dmodel / _nh;
 }
-
+ //here we need to pass the id 
 void Attention::initialize_tiles(MappingTable& mapping_table) {
     if(_outputs.empty()) {
         _output_shape =  {_q_len, _dmodel};
@@ -126,6 +131,8 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
             });
             /* dummy mapping */
             _tiles.push_back(std::move(tile));
+            //added this line here
+                    _tiles.back()->tensor_id = _outputs.back();  // assign the output tensor ID
             initialize_instructions(_tiles.back().get(), mapping, head_off, heads_per_kv);
         }
     }
@@ -151,7 +158,12 @@ void Attention::initialize_tiles(MappingTable& mapping_table) {
         kv_flops / _config.max_systolic_flops(target_core) * 1e3);
 }
 
+//dummy
 void Attention::initialize_onnx_tiles(MappingTable& mapping_table) {
+    initialize_onnx_tiles(mapping_table, 0);
+}
+
+void Attention::initialize_onnx_tiles(MappingTable& mapping_table, uint32_t tensor_id_str) {
     calculate_loops();
     /* Check using fusion */
     if (!use_fused) {
@@ -210,6 +222,9 @@ void Attention::initialize_onnx_tiles(MappingTable& mapping_table) {
             });
             /* dummy mapping */
             _tiles.push_back(std::move(tile));
+
+            tile->tensor_id = tensor_id_str;   // ✅ assign the correct field here
+
             initialize_instructions(_tiles.back().get(), head_off, heads_per_tile);
         }
     }
@@ -329,6 +344,8 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
         // MOVOUT
         tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
             .opcode = Opcode::MOVOUT,
+            .tensor_id = tile->tensor_id,
+
             .dest_addr = sram_l_ofs,
             .size = (uint32_t)dram_output_addrs.size(),
             .src_addrs = std::vector<addr_type>(dram_output_addrs.begin(), dram_output_addrs.end()),
@@ -569,6 +586,9 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             // MOVOUT
             tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
                 .opcode = Opcode::MOVOUT,
+                .tensor_id = tile->tensor_id,
+
+
                 .dest_addr = sram_l_ofs,
                 .size = (uint32_t)dram_output_addrs.size(),
                 .src_addrs = std::vector<addr_type>(dram_output_addrs.begin(), dram_output_addrs.end()),
@@ -724,3 +744,4 @@ void Attention::calculate_loops(Mapping& mapping) {
 }
 
 uint32_t Attention::sram_size_needed() { return 0; }
+

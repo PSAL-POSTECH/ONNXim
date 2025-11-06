@@ -23,6 +23,9 @@ class Simulator {
   void run_simulator();
   const double get_tile_ops();
   const size_t get_number_tile() { return _tile_timestamp.size(); }
+  // Map memory requests/responses to tensor IDs
+std::unordered_map<MemoryAccess*, uint32_t> _memaccess_to_tensor;
+
   // void run_offline(std::string model_name, uint32_t sample_count);
   // void run_multistream(std::string model_name, uint32_t sample_count,
   // uint32_t ); void run_server(std::string trace_path);

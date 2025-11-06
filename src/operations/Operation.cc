@@ -117,7 +117,7 @@ void Operation::set_finish() {
   for (auto id : _outputs) {
     Tensor* output = _model->get_tensor(id);
     output->set_produced();
-  }
+   }
   _finish = true;
   spdlog::trace("layer {} finish", _name.c_str());
 }
@@ -154,6 +154,7 @@ bool Operation::check_executable() {
   for (auto id : _inputs) {
     Tensor* input = _model->get_tensor(id);
     result = result && input->get_produced();
+    
     spdlog::trace("Layer {}: Input {} Produced {}", _name.c_str(),
                   input->get_name().c_str(), input->get_produced());
   }

@@ -138,13 +138,13 @@ void Simulator::cycle() {
 
                 if (!_scheduler->empty()) {
                     is_accum_tile = _scheduler->is_accum_tile(core_id, 0);
-                    if (_cores[core_id]->can_issue(is_accum_tile)) {
-                        std::unique_ptr<Tile> tile = _scheduler->get_tile(core_id);
-                        if (tile->status == Tile::Status::INITIALIZED) {
-                            _cores[core_id]->issue(std::move(tile));
-                            _tile_timestamp.push_back(std::chrono::high_resolution_clock::now());
+                      if (_cores[core_id]->can_issue(is_accum_tile)) {
+                          std::unique_ptr<Tile> tile = _scheduler->get_tile(core_id);
+                          if (tile->status == Tile::Status::INITIALIZED) {
+                              _cores[core_id]->issue(std::move(tile));
+                              _tile_timestamp.push_back(std::chrono::high_resolution_clock::now());
                         }
-                    }
+                    } 
                 }
                 _cores[core_id]->cycle();
             }
@@ -197,6 +197,10 @@ for (int core_id = 0; core_id < _n_cores; core_id++) {
         MemoryAccess* front = _cores[core_id]->top_memory_request();
         front->core_id = core_id;
 
+             // **Log tensor memory request**
+        
+
+
         if (!_icnt->is_full(core_id, front)) {
             _icnt->push(core_id, get_dest_node(front), front);
             _cores[core_id]->pop_memory_request();
@@ -224,10 +228,14 @@ for (int mem_id = 0; mem_id < _n_memories; mem_id++) {
         !_dram->is_full(mem_id, _icnt->top(_n_cores + mem_id))) {
 
         MemoryAccess* top_access = _icnt->top(_n_cores + mem_id);
-/*if (_active_model_ptr) {
-    _active_model_ptr->tensor_track(top_access->tensor_id);
+// **Log tensor coming back from DRAM**
+        spdlog::debug("[DRAM->ICNT] Mem {} sends TensorID {} Size={}",
+                      mem_id, top_access->dram_address, top_access->size);
+
+if (_active_model_ptr) {
+    _active_model_ptr->tensor_track(top_access->dram_address);
 }
-*/
+
         _dram->push(mem_id, top_access);
 
         _icnt->pop(_n_cores + mem_id);
@@ -239,11 +247,15 @@ for (int mem_id = 0; mem_id < _n_memories; mem_id++) {
         !_icnt->is_full(_n_cores + mem_id, _dram->top(mem_id))) {
 
         MemoryAccess* top_access = _dram->top(mem_id);
-/*
+// **Log tensor coming back from DRAM** //tensor_id is not passed right
+
+        spdlog::debug("[DRAM->ICNT] Mem {} sends TensorID {} Size={}",
+                      mem_id, top_access->dram_address, top_access->size);
+
         if (_active_model_ptr) {
-    _active_model_ptr->tensor_track(top_access->tensor_id);
+    _active_model_ptr->tensor_track(top_access->dram_address);
 }
-*/
+
         _icnt->push(_n_cores + mem_id, get_dest_node(top_access), top_access);
 
         _dram->pop(mem_id);
