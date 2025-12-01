@@ -82,10 +82,11 @@ ONNXim suppo
   "dram_print_interval": 10000, // DRAM stat print interval (cycle)
   "dram_config_path" : "../configs/ramulator_configs/HBM-config.cfg", // Ramulator config file path
 
-  "icnt_type" : "simple",       // Interconnect type (ex. booksim, simple)
-  "icnt_latency" : 1,           // Interconnect latency (cycle)
-  "icnt_freq" : 2000,           // Interconnect frequency (MHz)
-  "icnt_config_path" : "../configs/booksim2_configs/fly_c4_m32.icnt", // Booksim2 config file path
+  "icnt_type" : "simple",               // Interconnect type (ex. booksim, simple)
+  "icnt_latency" : 1,                   // Interconnect latency (cycle)
+  "icnt_freq" : 1000,                   // Interconnect frequency (MHz)
+  "icnt_injection_ports_per_core" : 16, // Interconnect injection ports per core (Requests/cycle)
+  "icnt_config_path" : "../configs/booksim2_configs/fly_c64_m32.icnt", // Booksim2 config file path
 
   "precision" : 2,              // Element's precision in tensor (Byte)
   "layout" : "NHWC",            // Data Layout

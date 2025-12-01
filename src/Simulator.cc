@@ -66,6 +66,7 @@ Simulator::Simulator(SimulationConfig config, bool language_mode)
   _cores.resize(config.num_cores);
   _n_cores = config.num_cores;
   _n_memories = config.dram_channels;
+  _noc_node_per_core = config.icnt_injection_ports_per_core;
   _memory_req_size = config.dram_req_size;
   for (int core_index = 0; core_index < _n_cores; core_index++) {
     _cores[core_index] = Core::create(core_index, config);
@@ -147,36 +148,40 @@ void Simulator::cycle() {
       _icnt_cycle++;
 
       for (int core_id = 0; core_id < _n_cores; core_id++) {
-        // PUHS core to ICNT. memory request
-        if (_cores[core_id]->has_memory_request()) {
-          MemoryAccess *front = _cores[core_id]->top_memory_request();
-          front->core_id = core_id;
-          if (!_icnt->is_full(core_id, front)) {
-            _icnt->push(core_id, get_dest_node(front), front);
-            _cores[core_id]->pop_memory_request();
-            _nr_from_core++;
+        for (int noc_id = 0; noc_id < _noc_node_per_core; noc_id++) {
+          // PUHS core to ICNT. memory request
+          int port_id = core_id * _noc_node_per_core + noc_id;
+          if (_cores[core_id]->has_memory_request()) {
+            MemoryAccess *front = _cores[core_id]->top_memory_request();
+            front->core_id = core_id;
+            if (!_icnt->is_full(port_id, front)) {
+              _icnt->push(port_id, get_dest_node(front), front);
+              _cores[core_id]->pop_memory_request();
+              _nr_from_core++;
+            }
           }
-        }
-        // Push response from ICNT. to Core.
-        if (!_icnt->is_empty(core_id)) {
-          _cores[core_id]->push_memory_response(_icnt->top(core_id));
-          _icnt->pop(core_id);
-          _nr_to_core++;
+          // Push response from ICNT. to Core.
+          if (!_icnt->is_empty(port_id)) {
+            _cores[core_id]->push_memory_response(_icnt->top(port_id));
+            _icnt->pop(port_id);
+            _nr_to_core++;
+          }
         }
       }
 
       for (int mem_id = 0; mem_id < _n_memories; mem_id++) {
         // ICNT to memory
-        if (!_icnt->is_empty(_n_cores + mem_id) &&
-            !_dram->is_full(mem_id, _icnt->top(_n_cores + mem_id))) {
-          _dram->push(mem_id, _icnt->top(_n_cores + mem_id));
-          _icnt->pop(_n_cores + mem_id);
+        int core_offset = _n_cores * _noc_node_per_core;
+        if (!_icnt->is_empty(core_offset + mem_id) &&
+            !_dram->is_full(mem_id, _icnt->top(core_offset+ mem_id))) {
+          _dram->push(mem_id, _icnt->top(core_offset + mem_id));
+          _icnt->pop(core_offset + mem_id);
           _nr_to_mem++;
         }
         // Pop response to ICNT from dram
         if (!_dram->is_empty(mem_id) &&
-            !_icnt->is_full(_n_cores + mem_id, _dram->top(mem_id))) {
-          _icnt->push(_n_cores + mem_id, get_dest_node(_dram->top(mem_id)),
+            !_icnt->is_full(core_offset + mem_id, _dram->top(mem_id))) {
+          _icnt->push(core_offset + mem_id, get_dest_node(_dram->top(mem_id)),
                       _dram->top(mem_id));
           _dram->pop(mem_id);
           _nr_from_mem++;
@@ -263,9 +268,9 @@ void Simulator::set_cycle_mask() {
 
 uint32_t Simulator::get_dest_node(MemoryAccess *access) {
   if (access->request) {
-    return _config.num_cores + _dram->get_channel_id(access);
+    return _config.num_cores * _config.icnt_injection_ports_per_core + _dram->get_channel_id(access);
   } else {
-    return access->core_id;
+    return access->core_id * _config.icnt_injection_ports_per_core + (_dram->get_channel_id(access) % _config.icnt_injection_ports_per_core);
   }
 }
 

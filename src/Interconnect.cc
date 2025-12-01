@@ -10,12 +10,15 @@ SimpleInterconnect::SimpleInterconnect(SimulationConfig config)
   spdlog::info("Initialize SimpleInterconnect");
   _cycles = 0;
   _config = config;
-  _n_nodes = config.num_cores + config.dram_channels;
+  _n_nodes = config.num_cores * _config.icnt_injection_ports_per_core + config.dram_channels;
   _in_buffers.resize(_n_nodes);
   _out_buffers.resize(_n_nodes);
   _busy_node.resize(_n_nodes);
+  _rr_next_src.resize(_n_nodes);
   for(int node = 0; node < _n_nodes; node++) {
     _busy_node[node] = false;
+    _in_buffers.at(node).resize(_n_nodes);
+    _rr_next_src[node] = 0;
   }
 }
 
@@ -25,34 +28,36 @@ bool SimpleInterconnect::running() {
 }
 
 void SimpleInterconnect::cycle() {
-  for(int node = 0; node < _n_nodes; node++) {
-    int src_node = (_rr_start + node ) % _n_nodes;
-    if(!_in_buffers[src_node].empty() && _in_buffers[src_node].front().finish_cycle <= _cycles) {
-      uint32_t dest = _in_buffers[src_node].front().dest;
-      if(!_busy_node[dest]) {
-        _out_buffers[dest].push(_in_buffers[src_node].front().access);  
-        _in_buffers[src_node].pop();
-        _busy_node[dest] = true;
+  for(int dest = 0; dest < _n_nodes; dest++) {
+    int src_start = _rr_next_src[dest];
+    bool pushed = false;
+
+    for(int i = 0; i < _n_nodes; i++) {
+      int src = (src_start + i) % _n_nodes;
+
+      if (!_in_buffers[src][dest].empty() &&
+          _in_buffers[src][dest].front().finish_cycle <= _cycles) {
+
+        _out_buffers[dest].push(_in_buffers[src][dest].front().access);
+        _in_buffers[src][dest].pop();
+        _rr_next_src[dest] = (src + 1) % _n_nodes;
+        pushed = true;
+        break;
       }
     }
   }
-  
-  for(int node = 0; node < _n_nodes; node++) {
-    _busy_node[node] = false;
-  }
-  _rr_start = (_rr_start + 1) % _n_nodes;
   _cycles++;
 }
 
 void SimpleInterconnect::push(uint32_t src, uint32_t dest, MemoryAccess* request) {
   SimpleInterconnect::Entity entity;
-  if(_in_buffers[src].empty())
+  if(_in_buffers[src][dest].empty())
     entity.finish_cycle =  _cycles + _latency;
   else
-    entity.finish_cycle =  _in_buffers[src].back().finish_cycle + 1;
+    entity.finish_cycle =  _in_buffers[src][dest].back().finish_cycle + 1;
   entity.dest = dest;
   entity.access = request;
-  _in_buffers[src].push(entity);
+  _in_buffers[src][dest].push(entity);
 }
 
 bool SimpleInterconnect::is_full(uint32_t nid, MemoryAccess* request) {

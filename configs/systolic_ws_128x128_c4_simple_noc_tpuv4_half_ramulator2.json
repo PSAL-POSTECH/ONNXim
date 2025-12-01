@@ -101,8 +101,9 @@
 
   "icnt_type" : "simple",
   "icnt_latency" : 1,
-  "icnt_freq" : 8400,
-  "icnt_config_path" : "../configs/booksim2_configs/fly_c4_m32.icnt",
+  "icnt_freq" : 1000,
+  "icnt_injection_ports_per_core" : 16,
+  "icnt_config_path" : "../configs/booksim2_configs/fly_c64_m32.icnt",
 
   "precision" : 2,
   "layout" : "NHWC",

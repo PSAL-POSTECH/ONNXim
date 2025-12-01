@@ -57,6 +57,7 @@ struct SimulationConfig {
 
   /* ICNT config */
   IcntType icnt_type;
+  uint32_t icnt_injection_ports_per_core = 1;
   std::string icnt_config_path;
   uint32_t icnt_freq;
   uint32_t icnt_latency;

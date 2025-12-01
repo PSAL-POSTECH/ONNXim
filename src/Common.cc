@@ -128,6 +128,8 @@ SimulationConfig initialize_config(json config) {
     parsed_config.icnt_config_path = config["icnt_config_path"];
   if (config.contains("icnt_print_interval"))
     parsed_config.icnt_print_interval = config["icnt_print_interval"];
+  if (config.contains("icnt_injection_ports_per_core"))
+    parsed_config.icnt_injection_ports_per_core = config["icnt_injection_ports_per_core"];
 
   parsed_config.scheduler_type = get_config_value<std::string>(config, "scheduler");
   parsed_config.precision = get_config_value<uint32_t>(config, "precision");
