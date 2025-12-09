@@ -55,24 +55,39 @@ ONNXim support
 
 ```
   "num_cores" : 4,              // Number of NPU cores
-  "core_type" : "systolic_ws",  // Core's data flow (Only weight stationary is supported)
   "core_freq" : 1000,           // Core's frequency (MHz)
-  "core_width" : 128,           // Systolic array width
-  "core_height" : 128,          // Systolic array height
+  "core_print_interval" : 8000, // Interval for printing core statistics (cycles)
+  
+  "core_config" : {
+    // Configuration for Core 0
+    "core_0"  : {
+      // 1. Architecture & Dataflow
+      "core_type" : "systolic_ws",  // Core architecture/Dataflow type (e.g., systolic_ws: Weight Stationary)
+      "core_width" : 128,           // Width of the systolic array
+      "core_height" : 128,          // Height of the systolic array
 
-  "spad_size" : 65536,          // Scratchpad size (KB)
-  "accum_spad_size" : 8192,     // Accumulator SRAM size (KB)
-  "sram_width" : 32,            // SRAM word size (B)
+      // 2. On-Chip Memory
+      "spad_size" : 32768,          // Scratchpad memory size (KB)
+      "accum_spad_size" : 4096,     // Accumulator SRAM size (KB)
+      "sram_width" : 32,            // SRAM word size (Bytes) - Data access granularity
 
-  "vector_process_bit" : 65536, // Vector unit compute throughput (bit)
-  "add_latency" : 1,            // Vector add latency (cycle)
-  "mul_latency" : 1,            // Vector mul latency (cycle)
-  "exp_latency" : 1,            // Vector exp latency (cycle)
-  "gelu_latency" : 1,           // Vector gelu latency (cycle)
-  "add_tree_latency" : 1,       // Adder tree latency (cycle)
-  "scalar_sqrt_latency" : 1,    // Scalar square root latency (cycle)
-  "scalar_add_latency" : 1,     // Scalar add latency (cycle)
-  "scalar_mul_latency" : 1,     // Scalar mul latency (cycle)
+      // 3. Compute Capability & Latency
+      "vector_process_bit" : 65536, // Vector unit processing throughput (bits per cycle)
+      "add_latency" : 1,            // Vector Addition latency (cycles)
+      "mul_latency" : 1,            // Vector Multiplication latency (cycles)
+      "mac_latency" : 1,            // Vector MAC (Multiply-Accumulate) latency (cycles)
+      "div_latency" : 1,            // Vector Division latency (cycles)
+      "exp_latency" : 1,            // Vector Exponential function latency (cycles)
+      "gelu_latency" : 1,           // Vector GeLU activation latency (cycles)
+      "add_tree_latency" : 1,       // Latency of the adder tree in the systolic array (cycles)
+      "scalar_sqrt_latency" : 1,    // Scalar Square Root latency (cycles)
+      "scalar_add_latency" : 1,     // Scalar Addition latency (cycles)
+      "scalar_mul_latency" : 1      // Scalar Multiplication latency (cycles)
+    },
+    "core_1" : { /* ... */ },
+    "core_2" : { /* ... */ },
+    "core_3" : { /* ... */ },
+  },
 
   "dram_type" : "ramulator",    // DRAM type (ex. ramulator, simple)
   "dram_freq" : 877,            // DRAM frequency (MHz)
@@ -86,7 +101,7 @@ ONNXim support
   "icnt_latency" : 1,                   // Interconnect latency (cycle)
   "icnt_freq" : 1000,                   // Interconnect frequency (MHz)
   "icnt_injection_ports_per_core" : 16, // Interconnect injection ports per core (Requests/cycle)
-  "icnt_config_path" : "../configs/booksim2_configs/fly_c64_m32.icnt", // Booksim2 config file path
+  "icnt_config_path" : "../configs/booksim2_configs/fly_c64_m32.icnt", // Booksim2 config file path (Optional)
 
   "precision" : 2,              // Element's precision in tensor (Byte)
   "layout" : "NHWC",            // Data Layout
