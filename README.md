@@ -47,7 +47,7 @@ $ python3 ./scripts/generate_transformer_onnx.py --model bert
 ```
 
 ## Custom format
-ONNXim suppo
+ONNXim support
 ------------
 
 ## Hardware Configuration
