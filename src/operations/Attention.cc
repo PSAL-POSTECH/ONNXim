@@ -231,7 +231,7 @@ void Attention::initialize_instructions(Tile* tile, int head_idx, int num_heads)
     addr_type key_addr = get_operand_addr(_INPUT_OPERAND + 1);
     addr_type value_addr = get_operand_addr(_INPUT_OPERAND + 2);
     addr_type ouput_addr = get_operand_addr(_OUTPUT_OPERAND);
-    assert(num_heads <= _nkvh);
+    assert(num_heads == _nh / _nkvh);
     int kv_head_idx = head_idx / num_heads;
     addr_type sram_k_ofs = sram_key_base + kv_head_idx * (_dk * seq_len) * _config.precision;
     addr_type sram_v_ofs = sram_value_base + kv_head_idx * (_dk * seq_len) * _config.precision;
@@ -355,7 +355,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
     addr_type value_addr = get_operand_addr(_INPUT_OPERAND + 2);
     addr_type ouput_addr = get_operand_addr(_OUTPUT_OPERAND);
     addr_type logits_addr = get_operand_addr(_OUTPUT_OPERAND) + _dmodel * _q_len * _config.precision; // logits addr for scale
-    assert(num_heads <= _nkvh);
+    assert(num_heads == _nh / _nkvh);
     int kv_head_idx = head_idx / num_heads;
     addr_type sram_k_ofs = sram_key_base + kv_head_idx * (_dk * seq_len) * _config.precision;
     addr_type sram_v_ofs = sram_value_base + kv_head_idx * (_dk * seq_len) * _config.precision;
