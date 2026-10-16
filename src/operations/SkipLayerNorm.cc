@@ -117,8 +117,8 @@ void SkipLayerNorm::initialize_instructions(Tile* tile, Mapping mapping, uint32_
     tile->instructions.push_back(std::make_unique<Instruction>(Instruction{
         .opcode = Opcode::MOVOUT,
         .dest_addr = sram_base,
-        .size = (uint32_t)dram_addrs.size(),
-        .src_addrs = std::vector<addr_type>(dram_addrs.begin(), dram_addrs.end()),
+        .size = (uint32_t)dram_output_addrs.size(),
+        .src_addrs = std::vector<addr_type>(dram_output_addrs.begin(), dram_output_addrs.end()),
         .operand_id = _OUTPUT_OPERAND,
     }));
 }

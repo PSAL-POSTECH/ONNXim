@@ -85,7 +85,11 @@ void BiasAct::initialize_instructions(Tile* tile, Mapping mapping, uint32_t toke
     std::set<addr_type> dram_skip_addrs;
     for (int offset=0; offset<tokens*_dk*_config.precision; offset+=_config.dram_req_size) {
         dram_addrs.insert(first_addr + token_offset*_dk*_config.precision + offset);
-        dram_output_addrs.insert(output_addr + token_offset*_dk*_config.precision + offset);
+    }
+    /* With llama_mlp the output is half the input width */
+    uint32_t out_dk = _output_shape[1];
+    for (int offset=0; offset<tokens*out_dk*_config.precision; offset+=_config.dram_req_size) {
+        dram_output_addrs.insert(output_addr + token_offset*out_dk*_config.precision + offset);
     }
 
     for (int offset=0;offset<_dk*_config.precision; offset+=_config.dram_req_size)
