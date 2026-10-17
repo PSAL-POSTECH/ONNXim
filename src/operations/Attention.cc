@@ -542,7 +542,7 @@ void Attention::initialize_instructions(Tile* tile, Mapping mapping, int head_id
             std::set<addr_type> dram_output_addrs;
             for (int seq_idx = 0; seq_idx < q_len; seq_idx++) {
                 for (int i = 0; i < _dk; i++) {
-                    int q_index = tile->M * q_len + seq_idx;
+                    int q_index = q_ffset * q_len + seq_idx;
                     if(q_index >= _q_len) break;
                     std::vector<uint32_t> output_idx = {(uint32_t)q_index, (uint32_t)(h_idx), (uint32_t)i};
                     dram_output_addrs.insert(ouput_addr + make_address(output_idx, output_shape)); // Used query_shape intentionally
