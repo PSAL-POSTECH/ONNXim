@@ -73,6 +73,12 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   db_mats_in_partition = db_partitions_rows / dim;
   db_mats_in_acc = max_acc_rows / dim;
   db_max_tile_i_j = (uint32_t)sqrt(db_mats_in_acc);
+  if (db_max_tile_i_j == 0 || db_mats_in_partition < db_max_tile_i_j) {
+    spdlog::error("[Configuration] SRAM is too small for a {}x{} GEMM tile (spad {} KB, accum {} KB)",
+                  dim, dim, _config.core_config[key.target_core].spad_size,
+                  _config.core_config[key.target_core].accum_spad_size);
+    exit(EXIT_FAILURE);
+  }
   db_max_tile_k = db_mats_in_partition / db_max_tile_i_j;
 
   tile_I = std::min(dim_I_padded/dim, ceil_div(dim_I, db_max_tile_i_j*dim));
@@ -102,9 +108,10 @@ void MappingTable::gemm_mapping(Mapping::LoopCounts &key) {
   inner_J = ceil_div(dim_J_padded, tile_J);
   inner_K = ceil_div(dim_K_padded, tile_K);
 
-  inner_I -= inner_I & (dim)-1;
-  inner_J -= inner_J & (dim)-1;
-  inner_K -= inner_K & (dim)-1;
+  // Keep at least one array per tile (a small GEMM split over many cores can get less than dim)
+  inner_I = std::max(dim, inner_I / dim * dim);
+  inner_J = std::max(dim, inner_J / dim * dim);
+  inner_K = std::max(dim, inner_K / dim * dim);
 
   tile_I = ceil_div(dim_I, inner_I);
   tile_J = ceil_div(dim_J, inner_J);
